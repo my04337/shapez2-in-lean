@@ -1,0 +1,10 @@
+name = "shapez2-in-lean"
+version = "0.1.0"
+defaultTargets = ["s2il"]
+
+[[lean_lib]]
+name = "S2IL"
+
+[[lean_exe]]
+name = "s2il"
+root = "Main"
