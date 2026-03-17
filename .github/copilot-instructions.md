@@ -1,7 +1,11 @@
 # Copilot Instructions - Shapez2 in Lean
 
+## 応答言語
+- 日本語で応答する
+
 ## プロジェクト概要
 - **正式名称**: Shapez2 in Lean（略称: **S2IL**）
+- ゲーム内容に関する用語（シェイプ・建物・操作など）は `docs/GLOSSARY.md` に定義されている。推論時に必要に応じて参照すること。
 
 ## コーディング規約
 - 文字コード: UTF-8 (BOMなし)。ただしBOMが必要な場合はBOMを付ける
