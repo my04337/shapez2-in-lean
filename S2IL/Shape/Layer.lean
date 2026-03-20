@@ -46,34 +46,37 @@ namespace Layer
 def isEmpty (l : Layer) : Bool :=
     l.ne.isEmpty && l.se.isEmpty && l.sw.isEmpty && l.nw.isEmpty
 
-/-- レイヤをシェイプコード記法に変換する（右上起点で時計回り） -/
-def toNotation (l : Layer) : String :=
-    l.ne.toNotation ++ l.se.toNotation ++ l.sw.toNotation ++ l.nw.toNotation
+/-- レイヤをシェイプコード文字列に変換する（右上起点で時計回り） -/
+protected def toString (l : Layer) : String :=
+    l.ne.toString ++ l.se.toString ++ l.sw.toString ++ l.nw.toString
 
-/-- 8文字のシェイプコード記法からレイヤをパースする。無効な入力の場合は `none` -/
-def fromNotation? (s : String) : Option Layer :=
+instance : ToString Layer where
+    toString := Layer.toString
+
+/-- 8文字のシェイプコード文字列からレイヤをパースする。無効な入力の場合は `none` -/
+def ofString? (s : String) : Option Layer :=
     match s.toList with
     | [a, b, c, d, e, f, g, h] =>
-        match Quarter.fromNotation? (String.ofList [a, b]),
-              Quarter.fromNotation? (String.ofList [c, d]),
-              Quarter.fromNotation? (String.ofList [e, f]),
-              Quarter.fromNotation? (String.ofList [g, h]) with
+        match Quarter.ofString? (String.ofList [a, b]),
+              Quarter.ofString? (String.ofList [c, d]),
+              Quarter.ofString? (String.ofList [e, f]),
+              Quarter.ofString? (String.ofList [g, h]) with
         | some ne, some se, some sw, some nw => some { ne, se, sw, nw }
         | _, _, _, _ => none
     | _ => none
 
-/-- `toNotation` の各象限部分を `String.ofList` で再構築すると元の `toNotation` に戻る -/
+/-- `toString` の各象限部分を `String.ofList` で再構築すると元の `toString` に戻る -/
 private theorem ofList_quarter_toList (q : Quarter) :
-        String.ofList q.toNotation.toList = q.toNotation :=
+        String.ofList q.toString.toList = q.toString :=
     String.ofList_toList
 
-/-- `fromNotation?` と `toNotation` のラウンドトリップ: 任意の `Layer` に対して
-    `fromNotation? (toNotation l) = some l` が成り立つ -/
-theorem fromNotation_toNotation (l : Layer) : fromNotation? (toNotation l) = some l := by
-    simp only [fromNotation?, toNotation, String.toList_append]
+/-- `ofString?` と `toString` のラウンドトリップ: 任意の `Layer` に対して
+    `ofString? (toString l) = some l` が成り立つ -/
+theorem ofString_toString (l : Layer) : ofString? l.toString = some l := by
+    simp only [ofString?, Layer.toString, String.toList_append]
     suffices h : ∀ (q : Quarter),
-            ∃ a b, q.toNotation.toList = [a, b] ∧
-                   Quarter.fromNotation? (String.ofList [a, b]) = some q by
+            ∃ a b, q.toString.toList = [a, b] ∧
+                   Quarter.ofString? (String.ofList [a, b]) = some q by
         obtain ⟨a, b, hab, hne⟩ := h l.ne
         obtain ⟨c, d, hcd, hse⟩ := h l.se
         obtain ⟨e, f, hef, hsw⟩ := h l.sw
@@ -84,8 +87,11 @@ theorem fromNotation_toNotation (l : Layer) : fromNotation? (toNotation l) = som
     cases q with
     | empty => exact ⟨'-', '-', rfl, rfl⟩
     | pin   => exact ⟨'P', '-', rfl, rfl⟩
+    | crystal c =>
+        -- toString は "cY" 形式（Yがカラー文字）
+        cases c <;> exact ⟨_, _, rfl, rfl⟩
     | colored p c =>
-        -- toNotation は "XY" 形式（Xがパーツ文字、Yがカラー文字）
+        -- toString は "XY" 形式（Xがパーツ文字、Yがカラー文字）
         -- cases で全通り展開して具体値を直接与える
         cases p <;> cases c <;> exact ⟨_, _, rfl, rfl⟩
 

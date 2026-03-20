@@ -4,76 +4,88 @@
 -- Layer のユニットテスト
 import S2IL.Shape.Layer
 
--- toNotation: 全象限が同じパーツ・色のレイヤ
+-- toString: 全象限が同じパーツ・色のレイヤ
 #guard (Layer.mk (.colored .rectangle .green) (.colored .rectangle .green)
-                 (.colored .rectangle .green) (.colored .rectangle .green)).toNotation
+                 (.colored .rectangle .green) (.colored .rectangle .green)).toString
     == "RgRgRgRg"
 
--- toNotation: 各象限が異なるレイヤ
+-- toString: 各象限が異なるレイヤ
 #guard (Layer.mk (.colored .circle .red) (.colored .star .blue)
-                 (.colored .windmill .yellow) (.colored .rectangle .green)).toNotation
+                 (.colored .windmill .yellow) (.colored .rectangle .green)).toString
     == "CrSbWyRg"
 
--- toNotation: 空の象限を含むレイヤ
-#guard (Layer.mk (.colored .circle .red) .empty .empty (.colored .circle .red)).toNotation
+-- toString: 空の象限を含むレイヤ
+#guard (Layer.mk (.colored .circle .red) .empty .empty (.colored .circle .red)).toString
     == "Cr----Cr"
 
--- toNotation: ピンを含むレイヤ
-#guard (Layer.mk .pin .pin .pin .pin).toNotation == "P-P-P-P-"
+-- toString: ピンを含むレイヤ
+#guard (Layer.mk .pin .pin .pin .pin).toString == "P-P-P-P-"
 
--- toNotation: 全て空のレイヤ
-#guard (Layer.mk .empty .empty .empty .empty).toNotation == "--------"
+-- toString: 全て空のレイヤ
+#guard (Layer.mk .empty .empty .empty .empty).toString == "--------"
 
--- fromNotation?: 有効な入力
-#guard Layer.fromNotation? "RgRgRgRg" == some (Layer.mk
+-- toString: クリスタルを含むレイヤ
+#guard (Layer.mk (.crystal .red) (.crystal .green) (.crystal .blue) (.crystal .white)).toString
+    == "crcgcbcw"
+
+-- ofString?: 有効な入力
+#guard Layer.ofString? "RgRgRgRg" == some (Layer.mk
     (.colored .rectangle .green) (.colored .rectangle .green)
     (.colored .rectangle .green) (.colored .rectangle .green))
 
-#guard Layer.fromNotation? "CrSbWyRg" == some (Layer.mk
+#guard Layer.ofString? "CrSbWyRg" == some (Layer.mk
     (.colored .circle .red) (.colored .star .blue)
     (.colored .windmill .yellow) (.colored .rectangle .green))
 
-#guard Layer.fromNotation? "Cr----Cr" == some (Layer.mk
+#guard Layer.ofString? "Cr----Cr" == some (Layer.mk
     (.colored .circle .red) .empty .empty (.colored .circle .red))
 
-#guard Layer.fromNotation? "P-P-P-P-" == some (Layer.mk .pin .pin .pin .pin)
+#guard Layer.ofString? "P-P-P-P-" == some (Layer.mk .pin .pin .pin .pin)
 
-#guard Layer.fromNotation? "--------" == some (Layer.mk .empty .empty .empty .empty)
+#guard Layer.ofString? "--------" == some (Layer.mk .empty .empty .empty .empty)
 
--- fromNotation?: クリスタルを含むレイヤ
-#guard Layer.fromNotation? "CuCuCuCu" == some (Layer.mk
+-- ofString?: クリスタルを含むレイヤ
+#guard Layer.ofString? "crcgcbcw" == some (Layer.mk
+    (.crystal .red) (.crystal .green) (.crystal .blue) (.crystal .white))
+
+#guard Layer.ofString? "CuCuCuCu" == some (Layer.mk
     (.colored .circle .uncolored) (.colored .circle .uncolored)
     (.colored .circle .uncolored) (.colored .circle .uncolored))
 
--- fromNotation?: 無効な入力（文字数不足）
-#guard Layer.fromNotation? "" == none
-#guard Layer.fromNotation? "Cr" == none
-#guard Layer.fromNotation? "CrCr" == none
-#guard Layer.fromNotation? "CrCrCr" == none
+-- ofString?: 無効な入力（文字数不足）
+#guard Layer.ofString? "" == none
+#guard Layer.ofString? "Cr" == none
+#guard Layer.ofString? "CrCr" == none
+#guard Layer.ofString? "CrCrCr" == none
 
--- fromNotation?: 無効な入力（文字数過多）
-#guard Layer.fromNotation? "CrCrCrCrCr" == none
+-- ofString?: 無効な入力（文字数過多）
+#guard Layer.ofString? "CrCrCrCrCr" == none
 
--- fromNotation?: 無効な入力（不正な文字）
-#guard Layer.fromNotation? "XXXXXXXX" == none
-#guard Layer.fromNotation? "C-C-C-C-" == none  -- カラーコードなし
-#guard Layer.fromNotation? "PrPrPrPr" == none  -- ピンに色コードは無効
+-- ofString?: 無効な入力（不正な文字）
+#guard Layer.ofString? "XXXXXXXX" == none
+#guard Layer.ofString? "C-C-C-C-" == none  -- カラーコードなし
+#guard Layer.ofString? "PrPrPrPr" == none  -- ピンに色コードは無効
 
--- ラウンドトリップ: fromNotation? (toNotation l) == some l
-#guard Layer.fromNotation? (Layer.mk .empty .empty .empty .empty).toNotation
+-- ラウンドトリップ: ofString? (toString l) == some l
+#guard Layer.ofString? (Layer.mk .empty .empty .empty .empty).toString
     == some (Layer.mk .empty .empty .empty .empty)
-#guard Layer.fromNotation? (Layer.mk .pin .pin .pin .pin).toNotation
+#guard Layer.ofString? (Layer.mk .pin .pin .pin .pin).toString
     == some (Layer.mk .pin .pin .pin .pin)
-#guard Layer.fromNotation? (Layer.mk (.colored .circle .red) (.colored .star .blue)
-                                      (.colored .windmill .yellow) (.colored .rectangle .green)).toNotation
+#guard Layer.ofString? (Layer.mk (.colored .circle .red) (.colored .star .blue)
+                                  (.colored .windmill .yellow) (.colored .rectangle .green)).toString
     == some (Layer.mk (.colored .circle .red) (.colored .star .blue)
                       (.colored .windmill .yellow) (.colored .rectangle .green))
+#guard Layer.ofString? (Layer.mk (.crystal .red) (.crystal .green)
+                                  (.crystal .blue) (.crystal .white)).toString
+    == some (Layer.mk (.crystal .red) (.crystal .green)
+                      (.crystal .blue) (.crystal .white))
 
 -- isEmpty
 #guard (Layer.mk .empty .empty .empty .empty).isEmpty == true
 #guard (Layer.mk (.colored .circle .red) .empty .empty .empty).isEmpty == false
 #guard (Layer.mk .empty .empty .empty .pin).isEmpty == false
 #guard (Layer.mk .pin .pin .pin .pin).isEmpty == false
+#guard (Layer.mk (.crystal .red) .empty .empty .empty).isEmpty == false
 
 -- DecidableEq: 同値性と非同値性
 #guard Layer.mk .empty .empty .empty .empty == Layer.mk .empty .empty .empty .empty
@@ -82,3 +94,5 @@ import S2IL.Shape.Layer
     != Layer.mk .empty .empty .empty .empty
 #guard Layer.mk (.colored .circle .red) .empty .empty .empty
     != Layer.mk (.colored .circle .blue) .empty .empty .empty
+#guard Layer.mk (.crystal .red) .empty .empty .empty
+    != Layer.mk (.crystal .blue) .empty .empty .empty

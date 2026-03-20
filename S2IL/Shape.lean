@@ -70,8 +70,138 @@ theorem layers_length (s : Shape) : s.layers.length = s.layerCount := by
 theorem layers_nonempty (s : Shape) : s.layers ≠ [] := by
     cases s <;> simp [layers]
 
-/-- シェイプをシェイプコード記法に変換する（レイヤを `:` 区切りで下層から上層の順に連結） -/
-def toNotation (s : Shape) : String :=
-    ":".intercalate (s.layers.map Layer.toNotation)
+/-- シェイプを Char のリストに変換する（レイヤを `:` 区切りで下層から上層の順に連結） -/
+def toCharList : Shape → List Char
+    | single l1 => l1.toString.toList
+    | double l1 l2 =>
+        l1.toString.toList ++ ':' :: l2.toString.toList
+    | triple l1 l2 l3 =>
+        l1.toString.toList ++ ':' :: (l2.toString.toList ++ ':' :: l3.toString.toList)
+    | quadruple l1 l2 l3 l4 =>
+        l1.toString.toList ++ ':' :: (l2.toString.toList ++ ':' ::
+        (l3.toString.toList ++ ':' :: l4.toString.toList))
+
+/-- シェイプをシェイプコード文字列に変換する -/
+protected def toString (s : Shape) : String :=
+    String.ofList s.toCharList
+
+instance : ToString Shape where
+    toString := Shape.toString
+
+-- ============================================================
+-- ofString? のための内部ヘルパー
+-- ============================================================
+
+/-- `:` で Char のリストを分割する -/
+private def splitOnColon : List Char → List (List Char)
+    | [] => [[]]
+    | c :: rest =>
+        if c == ':' then
+            [] :: splitOnColon rest
+        else
+            match splitOnColon rest with
+            | [] => [[c]]
+            | hd :: tl => (c :: hd) :: tl
+
+/-- シェイプコード文字列からシェイプをパースする。無効な入力の場合は `none` を返す -/
+def ofString? (s : String) : Option Shape :=
+    match splitOnColon s.toList with
+    | [c1] =>
+        match Layer.ofString? (String.ofList c1) with
+        | some l1 => some (single l1)
+        | none => none
+    | [c1, c2] =>
+        match Layer.ofString? (String.ofList c1),
+              Layer.ofString? (String.ofList c2) with
+        | some l1, some l2 => some (double l1 l2)
+        | _, _ => none
+    | [c1, c2, c3] =>
+        match Layer.ofString? (String.ofList c1),
+              Layer.ofString? (String.ofList c2),
+              Layer.ofString? (String.ofList c3) with
+        | some l1, some l2, some l3 => some (triple l1 l2 l3)
+        | _, _, _ => none
+    | [c1, c2, c3, c4] =>
+        match Layer.ofString? (String.ofList c1),
+              Layer.ofString? (String.ofList c2),
+              Layer.ofString? (String.ofList c3),
+              Layer.ofString? (String.ofList c4) with
+        | some l1, some l2, some l3, some l4 => some (quadruple l1 l2 l3 l4)
+        | _, _, _, _ => none
+    | _ => none
+
+-- ============================================================
+-- ofString_toString の証明に必要な補助定理
+-- ============================================================
+
+/-- Quarter.toString の各文字が `:` でないこと -/
+private theorem Quarter.toString_noColon (q : Quarter) :
+        ':' ∉ q.toString.toList := by
+    cases q with
+    | empty => decide
+    | pin => decide
+    | crystal c => cases c <;> decide
+    | colored p c => cases p <;> cases c <;> decide
+
+/-- Layer.toString が `:` を含まないこと -/
+private theorem Layer.toString_noColon (l : Layer) :
+        ':' ∉ l.toString.toList := by
+    simp only [Layer.toString, String.toList_append, List.mem_append]
+    intro h
+    rcases h with ((h | h) | h) | h
+    · exact Quarter.toString_noColon l.ne h
+    · exact Quarter.toString_noColon l.se h
+    · exact Quarter.toString_noColon l.sw h
+    · exact Quarter.toString_noColon l.nw h
+
+/-- `:` を含まないリストに対する splitOnColon -/
+private theorem splitOnColon_noColon (cs : List Char) (h : ':' ∉ cs) :
+        splitOnColon cs = [cs] := by
+    induction cs with
+    | nil => rfl
+    | cons c rest ih =>
+        have hc : c ≠ ':' := by intro heq; exact h (heq ▸ .head _)
+        have hrest : ':' ∉ rest := by intro hmem; exact h (.tail _ hmem)
+        simp only [splitOnColon, beq_iff_eq, hc, ite_false, ih hrest]
+
+/-- L1 ++ ':' :: L2 に対する splitOnColon -/
+private theorem splitOnColon_append_colon (l1 l2 : List Char) (h1 : ':' ∉ l1) :
+        splitOnColon (l1 ++ ':' :: l2) = l1 :: splitOnColon l2 := by
+    induction l1 with
+    | nil => simp [splitOnColon]
+    | cons c rest ih =>
+        have hc : c ≠ ':' := by intro heq; exact h1 (heq ▸ .head _)
+        have hrest : ':' ∉ rest := by intro hmem; exact h1 (.tail _ hmem)
+        simp only [List.cons_append, splitOnColon, beq_iff_eq, hc, ite_false, ih hrest]
+
+/-- Layer.ofString? (String.ofList l.toString.toList) = some l -/
+private theorem Layer.ofString_ofList_toString (l : Layer) :
+        Layer.ofString? (String.ofList l.toString.toList) = some l := by
+    rw [String.ofList_toList]
+    exact Layer.ofString_toString l
+
+/-- `ofString?` と `toString` のラウンドトリップ: 任意の `Shape` に対して
+    `ofString? (toString s) = some s` が成り立つ -/
+theorem ofString_toString (s : Shape) : ofString? s.toString = some s := by
+    simp only [ofString?, Shape.toString, String.toList_ofList]
+    cases s with
+    | single l1 =>
+        rw [toCharList, splitOnColon_noColon _ (Layer.toString_noColon l1)]
+        simp only [Layer.ofString_ofList_toString]
+    | double l1 l2 =>
+        rw [toCharList, splitOnColon_append_colon _ _ (Layer.toString_noColon l1),
+            splitOnColon_noColon _ (Layer.toString_noColon l2)]
+        simp only [Layer.ofString_ofList_toString]
+    | triple l1 l2 l3 =>
+        rw [toCharList, splitOnColon_append_colon _ _ (Layer.toString_noColon l1),
+            splitOnColon_append_colon _ _ (Layer.toString_noColon l2),
+            splitOnColon_noColon _ (Layer.toString_noColon l3)]
+        simp only [Layer.ofString_ofList_toString]
+    | quadruple l1 l2 l3 l4 =>
+        rw [toCharList, splitOnColon_append_colon _ _ (Layer.toString_noColon l1),
+            splitOnColon_append_colon _ _ (Layer.toString_noColon l2),
+            splitOnColon_append_colon _ _ (Layer.toString_noColon l3),
+            splitOnColon_noColon _ (Layer.toString_noColon l4)]
+        simp only [Layer.ofString_ofList_toString]
 
 end Shape

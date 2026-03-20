@@ -19,6 +19,9 @@ private def mixedLayer : Layer := Layer.mk
     (.colored .circle .red) (.colored .star .blue)
     (.colored .windmill .yellow) (.colored .rectangle .green)
 
+private def crystalLayer : Layer := Layer.mk
+    (.crystal .red) (.crystal .green) (.crystal .blue) (.crystal .white)
+
 -- ============================================================
 -- layerCount
 -- ============================================================
@@ -60,22 +63,75 @@ private def mixedLayer : Layer := Layer.mk
 #guard (Shape.quadruple greenRect redCircle mixedLayer emptyLayer).topLayer == emptyLayer
 
 -- ============================================================
--- toNotation
+-- toString
 -- ============================================================
 
 -- 1 レイヤ
-#guard (Shape.single greenRect).toNotation == "RgRgRgRg"
+#guard (Shape.single greenRect).toString == "RgRgRgRg"
 
 -- 2 レイヤ （`:` 区切り）
-#guard (Shape.double greenRect redCircle).toNotation == "RgRgRgRg:CrCrCrCr"
+#guard (Shape.double greenRect redCircle).toString == "RgRgRgRg:CrCrCrCr"
 
 -- 3 レイヤ
-#guard (Shape.triple greenRect redCircle mixedLayer).toNotation
+#guard (Shape.triple greenRect redCircle mixedLayer).toString
     == "RgRgRgRg:CrCrCrCr:CrSbWyRg"
 
 -- 4 レイヤ
-#guard (Shape.quadruple greenRect redCircle mixedLayer emptyLayer).toNotation
+#guard (Shape.quadruple greenRect redCircle mixedLayer emptyLayer).toString
     == "RgRgRgRg:CrCrCrCr:CrSbWyRg:--------"
+
+-- クリスタルを含むシェイプ
+#guard (Shape.single crystalLayer).toString == "crcgcbcw"
+#guard (Shape.double greenRect crystalLayer).toString == "RgRgRgRg:crcgcbcw"
+
+-- ============================================================
+-- ofString?
+-- ============================================================
+
+-- 有効な入力: 1 レイヤ
+#guard Shape.ofString? "RgRgRgRg" == some (Shape.single greenRect)
+#guard Shape.ofString? "--------" == some (Shape.single emptyLayer)
+
+-- 有効な入力: 2 レイヤ
+#guard Shape.ofString? "RgRgRgRg:CrCrCrCr" == some (Shape.double greenRect redCircle)
+
+-- 有効な入力: 3 レイヤ
+#guard Shape.ofString? "RgRgRgRg:CrCrCrCr:CrSbWyRg"
+    == some (Shape.triple greenRect redCircle mixedLayer)
+
+-- 有効な入力: 4 レイヤ
+#guard Shape.ofString? "RgRgRgRg:CrCrCrCr:CrSbWyRg:--------"
+    == some (Shape.quadruple greenRect redCircle mixedLayer emptyLayer)
+
+-- クリスタルを含むシェイプ
+#guard Shape.ofString? "crcgcbcw" == some (Shape.single crystalLayer)
+
+-- 無効な入力: 空文字列
+#guard Shape.ofString? "" == none
+
+-- 無効な入力: 5 レイヤ以上
+#guard Shape.ofString? "--------:--------:--------:--------:--------" == none
+
+-- 無効な入力: 不正なレイヤ記法
+#guard Shape.ofString? "XXXX" == none
+#guard Shape.ofString? "invalid" == none
+
+-- ============================================================
+-- ラウンドトリップ: ofString? (toString s) == some s
+-- ============================================================
+
+#guard Shape.ofString? (Shape.single greenRect).toString
+    == some (Shape.single greenRect)
+#guard Shape.ofString? (Shape.double greenRect redCircle).toString
+    == some (Shape.double greenRect redCircle)
+#guard Shape.ofString? (Shape.triple greenRect redCircle mixedLayer).toString
+    == some (Shape.triple greenRect redCircle mixedLayer)
+#guard Shape.ofString? (Shape.quadruple greenRect redCircle mixedLayer emptyLayer).toString
+    == some (Shape.quadruple greenRect redCircle mixedLayer emptyLayer)
+#guard Shape.ofString? (Shape.single crystalLayer).toString
+    == some (Shape.single crystalLayer)
+#guard Shape.ofString? (Shape.single (Layer.mk .pin .pin .pin .pin)).toString
+    == some (Shape.single (Layer.mk .pin .pin .pin .pin))
 
 -- ============================================================
 -- DecidableEq / BEq

@@ -8,12 +8,13 @@ import S2IL.Shape.Color
 # Quarter (象限)
 
 シェイプを4等分した各区画を表す型。
-各象限は以下の3つの状態のいずれかをとる。
+各象限は以下の4つの状態のいずれかをとる。
 
 | コンストラクタ | シェイプコード | 説明 |
 |---|---|---|
 | `empty`              | `--`  | 空の象限（シェイプが存在しない） |
 | `pin`                | `P-`  | ピン（色を持たない支持用パーツ） |
+| `crystal color`      | 例: `cr`, `cg` | クリスタル（脆弱な結晶パーツ、色を持つ） |
 | `colored part color` | 例: `Cr`, `Rg` | 通常パーツコードとカラーコードの組 |
 
 `colored` の `part` は `RegularPartCode` 型（ピンとクリスタルを除く4種）のみ受け付ける。
@@ -23,12 +24,14 @@ import S2IL.Shape.Color
 - **クリスタル** は脆弱 (Fragile) であり、落下・切断で破損するという特殊挙動を持つ
 -/
 
-/-- シェイプの象限を表す型。空 / ピン / 着色通常パーツ の3パターン -/
+/-- シェイプの象限を表す型。空 / ピン / クリスタル / 着色通常パーツ の4パターン -/
 inductive Quarter where
     /-- 空の象限。シェイプコードでは `--` と表記する -/
     | empty
     /-- ピン。色を持たない支持用パーツ。シェイプコードでは `P-` と表記する -/
     | pin
+    /-- クリスタル。脆弱な結晶パーツ。シェイプコードでは `c` + カラーコード（例: `cr`）と表記する -/
+    | crystal (color : Color)
     /-- 着色された通常パーツ。`part` は `RegularPartCode`（ピン・クリスタル除く） -/
     | colored (part : RegularPartCode) (color : Color)
     deriving Repr, DecidableEq, BEq
@@ -44,35 +47,45 @@ def isEmpty : Quarter → Bool
 def partCode? : Quarter → Option PartCode
     | empty         => none
     | pin           => some .pin
+    | crystal _     => some .crystal
     | colored p _   => some p.toPartCode
 
 /-- 象限の色を取得する。空・ピンの場合は `none` -/
 def color? : Quarter → Option Color
     | colored _ c => some c
+    | crystal c   => some c
     | _           => none
 
-/-- 象限を2文字のシェイプコード記法に変換する -/
-def toNotation : Quarter → String
+/-- 象限を2文字のシェイプコード文字列に変換する -/
+protected def toString : Quarter → String
     | empty       => "--"
     | pin         => "P-"
+    | crystal c   => s!"c{c.toChar}"
     | colored p c => s!"{p.toChar}{c.toChar}"
 
-/-- 2文字のシェイプコード記法から象限をパースする。無効な入力の場合は `none` -/
-def fromNotation? (s : String) : Option Quarter :=
+instance : ToString Quarter where
+    toString := Quarter.toString
+
+/-- 2文字のシェイプコード文字列から象限をパースする。無効な入力の場合は `none` -/
+def ofString? (s : String) : Option Quarter :=
     match s.toList with
     | ['-', '-'] => some empty
     | ['P', '-'] => some pin
+    | ['c', c1]  => match Color.fromChar? c1 with
+        | some c => some (crystal c)
+        | none   => none
     | [c0, c1]   => match RegularPartCode.fromChar? c0, Color.fromChar? c1 with
         | some p, some c => some (colored p c)
         | _, _ => none
     | _ => none
 
-/-- `fromNotation?` と `toNotation` のラウンドトリップ: 任意の `Quarter` に対して
-    `fromNotation? (toNotation q) = some q` が成り立つ -/
-theorem fromNotation_toNotation (q : Quarter) : fromNotation? (toNotation q) = some q := by
+/-- `ofString?` と `toString` のラウンドトリップ: 任意の `Quarter` に対して
+    `ofString? (toString q) = some q` が成り立つ -/
+theorem ofString_toString (q : Quarter) : ofString? q.toString = some q := by
     cases q with
     | empty => rfl
     | pin => rfl
+    | crystal c => cases c <;> rfl
     | colored p c => cases p <;> cases c <;> rfl
 
 end Quarter

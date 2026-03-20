@@ -72,4 +72,7 @@ theorem fromChar_toChar (c : Color) : fromChar? (toChar c) = some c := by
 def all : List Color :=
     [red, green, blue, yellow, cyan, magenta, white, uncolored]
 
+instance : ToString Color where
+    toString c := c.toChar.toString
+
 end Color

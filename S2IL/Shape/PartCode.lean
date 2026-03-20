@@ -63,6 +63,9 @@ theorem fromChar_toChar (p : PartCode) : fromChar? (toChar p) = some p := by
 def all : List PartCode :=
     [circle, rectangle, star, windmill, pin, crystal]
 
+instance : ToString PartCode where
+    toString p := p.toChar.toString
+
 end PartCode
 
 /-!
@@ -137,5 +140,8 @@ theorem ofPartCode_toPartCode (p : RegularPartCode) : ofPartCode? (toPartCode p)
 /-- 全ての通常パーツコードのリスト -/
 def all : List RegularPartCode :=
     [circle, rectangle, star, windmill]
+
+instance : ToString RegularPartCode where
+    toString p := p.toChar.toString
 
 end RegularPartCode
