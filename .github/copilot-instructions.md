@@ -5,7 +5,23 @@
 
 ## プロジェクト概要
 - **正式名称**: Shapez2 in Lean（略称: **S2IL**）
-- ゲーム内容に関する用語（シェイプ・建物・操作など）は `docs/GLOSSARY.md` に定義されている。推論時に必要に応じて参照すること。
+
+## 参照ドキュメント一覧
+
+エージェントは推論時に必要に応じて以下を参照すること。
+
+### Shapez2 ゲーム用語
+| ファイル | 内容 |
+|---|---|
+| `docs/shapez2/glossary.md` | ゲーム内用語集（シェイプ・建物・操作など） |
+
+### Lean 4 ・数学
+| ファイル | 内容 |
+|---|---|
+| `docs/lean/lean-reference-guide.md` | Lean 4 言語仕様リファレンスの索引（文法・型・タクティクなど） |
+| `docs/lean/theorem-proving-guide.md` | 定理証明の実践ガイド（タクティク・帰納型・再帰など） |
+| `docs/lean/fp-in-lean-guide.md` | 関数型プログラミング in Lean ガイド |
+| `docs/lean/math-glossary.md` | 数学用語辞書（型理論・論理学・代数構造など） |
 
 ## コーディング規約
 - 文字コード: UTF-8 (BOMなし)。ただしBOMが必要な場合はBOMを付ける
