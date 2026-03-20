@@ -24,6 +24,16 @@
 | `docs/lean/math-glossary.md` | 数学用語辞書（型理論・論理学・代数構造など） |
 | `docs/lean/toolchain-guide.md` | ツールチェインガイド（elan・Lake・Lean 等の役割） |
 
+### プロジェクト固有のナレッジ
+
+証明やコーディングで行き詰まった場合、まず以下を参照すること。
+過去の試行錯誤から得られた実践的なパターンと回避策がまとまっている。
+
+| ファイル | 内容 |
+|---|---|
+| `docs/knowledge/lean-proof-tips.md` | Lean 4 証明の実践 Tips（タクティク使い分け・`List.mapM` 回避など） |
+| `docs/knowledge/string-roundtrip-proof.md` | 文字列ラウンドトリップ定理の証明パターン（`String` 展開不可問題の回避策） |
+
 ## コーディング規約
 - 文字コード: UTF-8 (BOMなし)。ただしBOMが必要な場合はBOMを付ける
 - 改行コード: CRLF
