@@ -31,9 +31,11 @@ if ($Update) {
 if ($Target) {
     Write-Host "==> lake build $Target"
     lake build $Target
+    if ($LASTEXITCODE -ne 0) { throw "lake build $Target がエラーコード $LASTEXITCODE で失敗しました" }
 } else {
     Write-Host "==> lake build"
     lake build
+    if ($LASTEXITCODE -ne 0) { throw "lake build がエラーコード $LASTEXITCODE で失敗しました" }
 }
 
 Write-Host "ビルド完了"

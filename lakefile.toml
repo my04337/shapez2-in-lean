@@ -1,6 +1,6 @@
 name = "shapez2-in-lean"
 version = "0.1.0"
-defaultTargets = ["s2il"]
+defaultTargets = ["s2il", "Test"]
 
 [[lean_lib]]
 name = "S2IL"

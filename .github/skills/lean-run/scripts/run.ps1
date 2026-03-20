@@ -10,13 +10,13 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-# lean-build: ビルド (PATH 解決含む)
+# lean-build: 全デフォルトターゲットをビルド (Test ライブラリの #guard テストも含む)
 $BuildScript = Join-Path $PSScriptRoot "..\..\lean-build\scripts\build.ps1"
 if (Test-Path $BuildScript) {
-    & $BuildScript -Target $Target
+    & $BuildScript
 } else {
-    Write-Host "==> lake build $Target"
-    lake build $Target
+    Write-Host "==> lake build"
+    lake build
 }
 
 # 実行
