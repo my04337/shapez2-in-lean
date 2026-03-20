@@ -24,7 +24,7 @@ Shapez2 in Lean (S2IL) の開発マイルストーンと達成状況を管理す
 | 1-1-1 | **Part Code** の列挙型定義 (`Circle`, `Rectangle`, `Star`, `Windmill`, `Pin`, `Crystal`) | ✅ 完了 |
 | 1-1-2 | **Color** の列挙型定義 (`Red`, `Green`, `Blue`, `Yellow`, `Cyan`, `Magenta`, `White`, `Uncolored`) | ✅ 完了 |
 | 1-1-3 | **Quarter** (象限) の型定義 (Part Code × Color の組、および空の象限) | ✅ 完了 |
-| 1-1-4 | **Layer** (レイヤ) の型定義 (4 象限の組) | ⬜ 未着手 |
+| 1-1-4 | **Layer** (レイヤ) の型定義 (4 象限の組) | ✅ 完了 |
 | 1-1-5 | **Shape** (シェイプ) の型定義 (1〜4 レイヤの積み重ね) | ⬜ 未着手 |
 | 1-1-6 | Shape Code 文字列とのパース・シリアライズ関数の実装 | ⬜ 未着手 |
 | 1-1-7 | Shape Code のパース・シリアライズの正当性検証 (ラウンドトリップ定理) | ⬜ 未着手 |

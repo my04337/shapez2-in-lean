@@ -5,3 +5,4 @@
 import S2IL.Shape.PartCode
 import S2IL.Shape.Color
 import S2IL.Shape.Quarter
+import S2IL.Shape.Layer
