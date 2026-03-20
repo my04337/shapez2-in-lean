@@ -3,3 +3,4 @@
 
 -- Shape 関連の型定義をまとめるモジュール
 import S2IL.Shape.PartCode
+import S2IL.Shape.Color
