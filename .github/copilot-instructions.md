@@ -22,6 +22,7 @@
 | `docs/lean/theorem-proving-guide.md` | 定理証明の実践ガイド（タクティク・帰納型・再帰など） |
 | `docs/lean/fp-in-lean-guide.md` | 関数型プログラミング in Lean ガイド |
 | `docs/lean/math-glossary.md` | 数学用語辞書（型理論・論理学・代数構造など） |
+| `docs/lean/toolchain-guide.md` | ツールチェインガイド（elan・Lake・Lean 等の役割） |
 
 ## コーディング規約
 - 文字コード: UTF-8 (BOMなし)。ただしBOMが必要な場合はBOMを付ける
