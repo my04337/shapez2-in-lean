@@ -14,33 +14,33 @@ import S2IL.Shape.Color
 #guard Color.white.toChar == 'w'
 #guard Color.uncolored.toChar == 'u'
 
--- fromChar?: 有効な文字が正しいバリアントを返すこと
-#guard Color.fromChar? 'r' == some Color.red
-#guard Color.fromChar? 'g' == some Color.green
-#guard Color.fromChar? 'b' == some Color.blue
-#guard Color.fromChar? 'y' == some Color.yellow
-#guard Color.fromChar? 'c' == some Color.cyan
-#guard Color.fromChar? 'm' == some Color.magenta
-#guard Color.fromChar? 'w' == some Color.white
-#guard Color.fromChar? 'u' == some Color.uncolored
+-- ofChar?: 有効な文字が正しいバリアントを返すこと
+#guard Color.ofChar? 'r' == some Color.red
+#guard Color.ofChar? 'g' == some Color.green
+#guard Color.ofChar? 'b' == some Color.blue
+#guard Color.ofChar? 'y' == some Color.yellow
+#guard Color.ofChar? 'c' == some Color.cyan
+#guard Color.ofChar? 'm' == some Color.magenta
+#guard Color.ofChar? 'w' == some Color.white
+#guard Color.ofChar? 'u' == some Color.uncolored
 
--- fromChar?: 無効な文字は none を返すこと
-#guard Color.fromChar? 'X' == none
-#guard Color.fromChar? 'R' == none
-#guard Color.fromChar? ' ' == none
+-- ofChar?: 無効な文字は none を返すこと
+#guard Color.ofChar? 'X' == none
+#guard Color.ofChar? 'R' == none
+#guard Color.ofChar? ' ' == none
 
 -- '-' は色の不在を表し、Color のバリアントではないため none
-#guard Color.fromChar? '-' == none
+#guard Color.ofChar? '-' == none
 
--- ラウンドトリップ: fromChar? (toChar c) == some c
-#guard Color.fromChar? (Color.red.toChar) == some Color.red
-#guard Color.fromChar? (Color.green.toChar) == some Color.green
-#guard Color.fromChar? (Color.blue.toChar) == some Color.blue
-#guard Color.fromChar? (Color.yellow.toChar) == some Color.yellow
-#guard Color.fromChar? (Color.cyan.toChar) == some Color.cyan
-#guard Color.fromChar? (Color.magenta.toChar) == some Color.magenta
-#guard Color.fromChar? (Color.white.toChar) == some Color.white
-#guard Color.fromChar? (Color.uncolored.toChar) == some Color.uncolored
+-- ラウンドトリップ: ofChar? (toChar c) == some c
+#guard Color.ofChar? (Color.red.toChar) == some Color.red
+#guard Color.ofChar? (Color.green.toChar) == some Color.green
+#guard Color.ofChar? (Color.blue.toChar) == some Color.blue
+#guard Color.ofChar? (Color.yellow.toChar) == some Color.yellow
+#guard Color.ofChar? (Color.cyan.toChar) == some Color.cyan
+#guard Color.ofChar? (Color.magenta.toChar) == some Color.magenta
+#guard Color.ofChar? (Color.white.toChar) == some Color.white
+#guard Color.ofChar? (Color.uncolored.toChar) == some Color.uncolored
 
 -- DecidableEq: 同値性と非同値性
 #guard Color.red == Color.red

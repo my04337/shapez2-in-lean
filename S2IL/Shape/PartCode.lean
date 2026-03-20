@@ -45,7 +45,7 @@ def toChar : PartCode → Char
     | crystal   => 'c'
 
 /-- シェイプコード文字をパーツコードに変換する。無効な文字の場合は `none` を返す -/
-def fromChar? : Char → Option PartCode
+def ofChar? : Char → Option PartCode
     | 'C' => some circle
     | 'R' => some rectangle
     | 'S' => some star
@@ -54,9 +54,9 @@ def fromChar? : Char → Option PartCode
     | 'c' => some crystal
     | _   => none
 
-/-- `fromChar?` と `toChar` のラウンドトリップ: 任意の `PartCode` に対して
-    `fromChar? (toChar p) = some p` が成り立つ -/
-theorem fromChar_toChar (p : PartCode) : fromChar? (toChar p) = some p := by
+/-- `ofChar?` と `toChar` のラウンドトリップ: 任意の `PartCode` に対して
+    `ofChar? (toChar p) = some p` が成り立つ -/
+theorem ofChar_toChar (p : PartCode) : ofChar? (toChar p) = some p := by
     cases p <;> rfl
 
 /-- 全てのパーツコードのリスト -/
@@ -105,16 +105,16 @@ def toChar : RegularPartCode → Char
     | windmill  => 'W'
 
 /-- シェイプコード文字を通常パーツコードに変換する。無効な文字の場合は `none` を返す -/
-def fromChar? : Char → Option RegularPartCode
+def ofChar? : Char → Option RegularPartCode
     | 'C' => some circle
     | 'R' => some rectangle
     | 'S' => some star
     | 'W' => some windmill
     | _   => none
 
-/-- `fromChar?` と `toChar` のラウンドトリップ: 任意の `RegularPartCode` に対して
-    `fromChar? (toChar p) = some p` が成り立つ -/
-theorem fromChar_toChar (p : RegularPartCode) : fromChar? (toChar p) = some p := by
+/-- `ofChar?` と `toChar` のラウンドトリップ: 任意の `RegularPartCode` に対して
+    `ofChar? (toChar p) = some p` が成り立つ -/
+theorem ofChar_toChar (p : RegularPartCode) : ofChar? (toChar p) = some p := by
     cases p <;> rfl
 
 /-- 通常パーツコードを `PartCode` に変換する -/

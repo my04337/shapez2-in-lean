@@ -71,10 +71,10 @@ def ofString? (s : String) : Option Quarter :=
     match s.toList with
     | ['-', '-'] => some empty
     | ['P', '-'] => some pin
-    | ['c', c1]  => match Color.fromChar? c1 with
+    | ['c', c1]  => match Color.ofChar? c1 with
         | some c => some (crystal c)
         | none   => none
-    | [c0, c1]   => match RegularPartCode.fromChar? c0, Color.fromChar? c1 with
+    | [c0, c1]   => match RegularPartCode.ofChar? c0, Color.ofChar? c1 with
         | some p, some c => some (colored p c)
         | _, _ => none
     | _ => none

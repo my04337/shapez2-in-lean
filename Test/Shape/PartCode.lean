@@ -12,28 +12,28 @@ import S2IL.Shape.PartCode
 #guard PartCode.pin.toChar == 'P'
 #guard PartCode.crystal.toChar == 'c'
 
--- fromChar?: 有効な文字が正しいバリアントを返すこと
-#guard PartCode.fromChar? 'C' == some PartCode.circle
-#guard PartCode.fromChar? 'R' == some PartCode.rectangle
-#guard PartCode.fromChar? 'S' == some PartCode.star
-#guard PartCode.fromChar? 'W' == some PartCode.windmill
-#guard PartCode.fromChar? 'P' == some PartCode.pin
-#guard PartCode.fromChar? 'c' == some PartCode.crystal
+-- ofChar?: 有効な文字が正しいバリアントを返すこと
+#guard PartCode.ofChar? 'C' == some PartCode.circle
+#guard PartCode.ofChar? 'R' == some PartCode.rectangle
+#guard PartCode.ofChar? 'S' == some PartCode.star
+#guard PartCode.ofChar? 'W' == some PartCode.windmill
+#guard PartCode.ofChar? 'P' == some PartCode.pin
+#guard PartCode.ofChar? 'c' == some PartCode.crystal
 
--- fromChar?: 無効な文字は none を返すこと
-#guard PartCode.fromChar? 'X' == none
-#guard PartCode.fromChar? 'r' == none
-#guard PartCode.fromChar? '-' == none
-#guard PartCode.fromChar? ' ' == none
-#guard PartCode.fromChar? 'C' != none
+-- ofChar?: 無効な文字は none を返すこと
+#guard PartCode.ofChar? 'X' == none
+#guard PartCode.ofChar? 'r' == none
+#guard PartCode.ofChar? '-' == none
+#guard PartCode.ofChar? ' ' == none
+#guard PartCode.ofChar? 'C' != none
 
--- ラウンドトリップ: fromChar? (toChar p) == some p
-#guard PartCode.fromChar? (PartCode.circle.toChar) == some PartCode.circle
-#guard PartCode.fromChar? (PartCode.rectangle.toChar) == some PartCode.rectangle
-#guard PartCode.fromChar? (PartCode.star.toChar) == some PartCode.star
-#guard PartCode.fromChar? (PartCode.windmill.toChar) == some PartCode.windmill
-#guard PartCode.fromChar? (PartCode.pin.toChar) == some PartCode.pin
-#guard PartCode.fromChar? (PartCode.crystal.toChar) == some PartCode.crystal
+-- ラウンドトリップ: ofChar? (toChar p) == some p
+#guard PartCode.ofChar? (PartCode.circle.toChar) == some PartCode.circle
+#guard PartCode.ofChar? (PartCode.rectangle.toChar) == some PartCode.rectangle
+#guard PartCode.ofChar? (PartCode.star.toChar) == some PartCode.star
+#guard PartCode.ofChar? (PartCode.windmill.toChar) == some PartCode.windmill
+#guard PartCode.ofChar? (PartCode.pin.toChar) == some PartCode.pin
+#guard PartCode.ofChar? (PartCode.crystal.toChar) == some PartCode.crystal
 
 -- DecidableEq: 同値性と非同値性
 #guard PartCode.circle == PartCode.circle
@@ -51,23 +51,23 @@ import S2IL.Shape.PartCode
 #guard RegularPartCode.star.toChar == 'S'
 #guard RegularPartCode.windmill.toChar == 'W'
 
--- RegularPartCode: fromChar? 有効文字
-#guard RegularPartCode.fromChar? 'C' == some RegularPartCode.circle
-#guard RegularPartCode.fromChar? 'R' == some RegularPartCode.rectangle
-#guard RegularPartCode.fromChar? 'S' == some RegularPartCode.star
-#guard RegularPartCode.fromChar? 'W' == some RegularPartCode.windmill
+-- RegularPartCode: ofChar? 有効文字
+#guard RegularPartCode.ofChar? 'C' == some RegularPartCode.circle
+#guard RegularPartCode.ofChar? 'R' == some RegularPartCode.rectangle
+#guard RegularPartCode.ofChar? 'S' == some RegularPartCode.star
+#guard RegularPartCode.ofChar? 'W' == some RegularPartCode.windmill
 
--- RegularPartCode: fromChar? はピン・クリスタル・無効文字を除外すること
-#guard RegularPartCode.fromChar? 'P' == none
-#guard RegularPartCode.fromChar? 'c' == none
-#guard RegularPartCode.fromChar? 'X' == none
-#guard RegularPartCode.fromChar? '-' == none
+-- RegularPartCode: ofChar? はピン・クリスタル・無効文字を除外すること
+#guard RegularPartCode.ofChar? 'P' == none
+#guard RegularPartCode.ofChar? 'c' == none
+#guard RegularPartCode.ofChar? 'X' == none
+#guard RegularPartCode.ofChar? '-' == none
 
 -- RegularPartCode: ラウンドトリップ
-#guard RegularPartCode.fromChar? (RegularPartCode.circle.toChar) == some RegularPartCode.circle
-#guard RegularPartCode.fromChar? (RegularPartCode.rectangle.toChar) == some RegularPartCode.rectangle
-#guard RegularPartCode.fromChar? (RegularPartCode.star.toChar) == some RegularPartCode.star
-#guard RegularPartCode.fromChar? (RegularPartCode.windmill.toChar) == some RegularPartCode.windmill
+#guard RegularPartCode.ofChar? (RegularPartCode.circle.toChar) == some RegularPartCode.circle
+#guard RegularPartCode.ofChar? (RegularPartCode.rectangle.toChar) == some RegularPartCode.rectangle
+#guard RegularPartCode.ofChar? (RegularPartCode.star.toChar) == some RegularPartCode.star
+#guard RegularPartCode.ofChar? (RegularPartCode.windmill.toChar) == some RegularPartCode.windmill
 
 -- RegularPartCode: toPartCode が PartCode に対応すること
 #guard RegularPartCode.circle.toPartCode == PartCode.circle

@@ -52,7 +52,7 @@ def toChar : Color → Char
     | uncolored => 'u'
 
 /-- シェイプコード文字をカラーコードに変換する。無効な文字の場合は `none` を返す -/
-def fromChar? : Char → Option Color
+def ofChar? : Char → Option Color
     | 'r' => some red
     | 'g' => some green
     | 'b' => some blue
@@ -63,9 +63,9 @@ def fromChar? : Char → Option Color
     | 'u' => some uncolored
     | _   => none
 
-/-- `fromChar?` と `toChar` のラウンドトリップ: 任意の `Color` に対して
-    `fromChar? (toChar c) = some c` が成り立つ -/
-theorem fromChar_toChar (c : Color) : fromChar? (toChar c) = some c := by
+/-- `ofChar?` と `toChar` のラウンドトリップ: 任意の `Color` に対して
+    `ofChar? (toChar c) = some c` が成り立つ -/
+theorem ofChar_toChar (c : Color) : ofChar? (toChar c) = some c := by
     cases c <;> rfl
 
 /-- 全てのカラーコードのリスト -/
