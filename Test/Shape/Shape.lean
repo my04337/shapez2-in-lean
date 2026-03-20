@@ -2,7 +2,7 @@
 -- SPDX-License-Identifier: MIT
 
 -- Shape のユニットテスト
-import S2IL.Shape
+import S2IL.Shape.Shape
 
 -- 便利なレイヤ定義（テスト用）
 private def greenRect : Layer := Layer.mk
