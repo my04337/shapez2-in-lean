@@ -1,4 +1,4 @@
 import S2IL
 
 def main : IO Unit :=
-  IO.println s!"[{projectName}] ← プレースホルダー"
+  IO.println s!"Shapez2 in Lean"

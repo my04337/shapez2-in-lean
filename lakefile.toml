@@ -8,3 +8,7 @@ name = "S2IL"
 [[lean_exe]]
 name = "s2il"
 root = "Main"
+
+[[lean_lib]]
+name = "Test"
+globs = ["Test.+"]
