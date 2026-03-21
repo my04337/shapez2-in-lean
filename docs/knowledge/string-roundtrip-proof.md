@@ -202,4 +202,4 @@ theorem ofString_toString (s : Shape) : ofString? s.toString = some s := by
 |---|---|
 | `S2IL/Shape/Quarter.lean` | `Quarter.ofString_toString` |
 | `S2IL/Shape/Layer.lean` | `Layer.ofString_toString` |
-| `S2IL/Shape.lean` | `Shape.ofString_toString`（本ドキュメントの主題） |
+| `S2IL/Shape/Shape.lean` | `Shape.ofString_toString`（本ドキュメントの主題） |
