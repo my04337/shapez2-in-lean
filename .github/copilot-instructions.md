@@ -14,6 +14,7 @@
 | ファイル | 内容 |
 |---|---|
 | `docs/shapez2/glossary.md` | ゲーム内用語集（シェイプ・建物・操作など） |
+| `docs/shapez2/crystal-shatter.md` | 結晶の砕け散りに関する仕様と実装方針 |
 
 ### Lean 4 ・数学
 | ファイル | 内容 |
