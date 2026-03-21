@@ -6,3 +6,4 @@ import S2IL.GameConfig
 import S2IL.Processing.Rotate
 import S2IL.Processing.CrystalBond
 import S2IL.Processing.Shatter
+import S2IL.Processing.Gravity

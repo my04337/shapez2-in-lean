@@ -43,6 +43,14 @@ def isEmpty : Quarter → Bool
     | empty => true
     | _     => false
 
+/-- 象限が構造結合を形成できるかを判定する。
+    空とピン以外のシェイプ種別が結合能力を持つ -/
+def canFormBond : Quarter → Bool
+    | empty       => false
+    | pin         => false
+    | crystal _   => true
+    | colored _ _ => true
+
 /-- 象限が脆弱 (Fragile) かどうかを判定する。結晶のみが脆弱である -/
 def isFragile : Quarter → Bool
     | crystal _ => true
