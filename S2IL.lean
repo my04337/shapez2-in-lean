@@ -7,3 +7,4 @@ import S2IL.Processing.Rotate
 import S2IL.Processing.CrystalBond
 import S2IL.Processing.Shatter
 import S2IL.Processing.Gravity
+import S2IL.Processing.Stacker
