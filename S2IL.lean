@@ -11,4 +11,5 @@ import S2IL.Processing.Stacker
 import S2IL.Processing.PinPusher
 import S2IL.Processing.CrystalGenerator
 import S2IL.Processing.Painter
+import S2IL.Processing.Cutter
 import S2IL.Processing.Machine

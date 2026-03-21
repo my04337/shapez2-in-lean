@@ -257,3 +257,100 @@ private def mstackTest (bottomCode topCode expected : String) : Bool :=
 
 -- 補完的に重なる → 1レイヤに統合
 #guard mstackTest "Cr--Cr--" "--Rg--Rg" "CrRgCrRg"
+
+-- ############################################################
+-- 切断処理機 (Half-Destroyer): 入力欠落
+-- ############################################################
+
+#guard (Machine.halfDestroy none).isNone
+
+-- ############################################################
+-- 切断機 (Cutter): 入力欠落
+-- ############################################################
+
+#guard Machine.cut none == (none, none)
+
+-- ############################################################
+-- スワップ機 (Swapper): 入力欠落
+-- ############################################################
+
+-- 片方 none
+#guard Machine.swap none (s "CrCrCrCr") == (none, none)
+#guard Machine.swap (s "CrCrCrCr") none == (none, none)
+-- 両方 none
+#guard Machine.swap none none == (none, none)
+
+-- ############################################################
+-- 切断処理機: 有効入力
+-- ############################################################
+
+/-- Machine.halfDestroy の結果を文字列比較するヘルパー -/
+private def mhalfDestroyTest (shapeCode expected : String) : Bool :=
+    match Machine.halfDestroy (s shapeCode) with
+    | some result => result.toString == expected
+    | none => false
+
+-- 基本: 東側だけ残る (NE, SE 保持)
+#guard mhalfDestroyTest "CrCrCrCr" "CrCr----"
+
+-- コア関数との等価性
+#guard Machine.halfDestroy (s "CrCrCrCr") ==
+    (s "CrCrCrCr").bind (fun sh => sh.halfDestroy)
+
+-- 西側のみ → 結果なし (SW, NW のみ → 東側は空)
+#guard (Machine.halfDestroy (s "----CrCr")).isNone
+
+-- ############################################################
+-- 切断機: 有効入力
+-- ############################################################
+
+/-- Machine.cut の結果を文字列ペアで比較するヘルパー -/
+private def mcutTest (shapeCode : String) (expectedEast expectedWest : Option String) : Bool :=
+    let (e, w) := Machine.cut (s shapeCode)
+    let eOk := match e, expectedEast with
+        | some r, some exp => r.toString == exp
+        | none, none => true
+        | _, _ => false
+    let wOk := match w, expectedWest with
+        | some r, some exp => r.toString == exp
+        | none, none => true
+        | _, _ => false
+    eOk && wOk
+
+-- 基本切断: 両半分が残る (東=NE+SE, 西=SW+NW)
+#guard mcutTest "CrCrCrCr" (some "CrCr----") (some "----CrCr")
+
+-- コア関数との等価性
+#guard Machine.cut (s "CrCrCrCr") ==
+    match s "CrCrCrCr" with
+    | some sh => sh.cut
+    | none => (none, none)
+
+-- 東側のみのシェイプ → 西半分は none
+#guard mcutTest "CrCr----" (some "CrCr----") none
+
+-- ############################################################
+-- スワップ機: 有効入力
+-- ############################################################
+
+/-- Machine.swap の結果を文字列ペアで比較するヘルパー -/
+private def mswapTest (code1 code2 : String) (expected1 expected2 : Option String) : Bool :=
+    let (r1, r2) := Machine.swap (s code1) (s code2)
+    let ok1 := match r1, expected1 with
+        | some r, some exp => r.toString == exp
+        | none, none => true
+        | _, _ => false
+    let ok2 := match r2, expected2 with
+        | some r, some exp => r.toString == exp
+        | none, none => true
+        | _, _ => false
+    ok1 && ok2
+
+-- 基本スワップ: 西半分 (SW, NW) を交換
+#guard mswapTest "CrCrCrCr" "RgRgRgRg" (some "CrCrRgRg") (some "RgRgCrCr")
+
+-- コア関数との等価性
+#guard Machine.swap (s "CrCrCrCr") (s "RgRgRgRg") ==
+    match s "CrCrCrCr", s "RgRgRgRg" with
+    | some s1, some s2 => s1.swap s2
+    | _, _ => (none, none)

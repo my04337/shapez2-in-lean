@@ -6,6 +6,7 @@ import S2IL.Processing.CrystalGenerator
 import S2IL.Processing.Rotate
 import S2IL.Processing.PinPusher
 import S2IL.Processing.Stacker
+import S2IL.Processing.Cutter
 
 /-!
 # Machine (加工装置)
@@ -84,5 +85,37 @@ def stack (bottom top : Option Shape) (config : GameConfig := inferInstance)
     match bottom, top with
     | some b, some t => b.stack t config
     | _, _ => none
+
+-- ============================================================
+-- 切断処理機 (Half-Destroyer)
+-- ============================================================
+
+/-- 切断処理機を適用する。シェイプが存在する場合のみ出力を生成する -/
+def halfDestroy (shape : Option Shape) : Option Shape :=
+    match shape with
+    | some s => s.halfDestroy
+    | none => none
+
+-- ============================================================
+-- 切断機 (Cutter)
+-- ============================================================
+
+/-- 切断機を適用する。シェイプが存在する場合のみ出力を生成する。
+    戻り値: (東側の半分, 西側の半分) -/
+def cut (shape : Option Shape) : Option Shape × Option Shape :=
+    match shape with
+    | some s => s.cut
+    | none => (none, none)
+
+-- ============================================================
+-- スワップ機 (Swapper)
+-- ============================================================
+
+/-- スワップ機を適用する。2つのシェイプが存在する場合のみ出力を生成する。
+    戻り値: (入れ替え後のシェイプ1, 入れ替え後のシェイプ2) -/
+def swap (shape1 shape2 : Option Shape) : Option Shape × Option Shape :=
+    match shape1, shape2 with
+    | some s1, some s2 => s1.swap s2
+    | _, _ => (none, none)
 
 end Machine
