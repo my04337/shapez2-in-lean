@@ -7,7 +7,7 @@ import S2IL.Shape.Shape
 # QuarterPos (象限位置)
 
 シェイプ内の象限の絶対位置を表す型。
-レイヤインデックスと方角の組で構成される。
+レイヤインデックス（0-indexed の `Nat`）と方角の組で構成される。
 
 ## Direction (方角)
 
@@ -39,14 +39,15 @@ import S2IL.Shape.Shape
 | East Half (東側の半分) | `ne`, `se` |
 | West Half (西側の半分) | `sw`, `nw` |
 
-## LayerIndex (レイヤインデックス)
+## レイヤインデックス
 
-シェイプ内のレイヤ位置。`l1` が最下層、`l4` が最上層。
+シェイプ内のレイヤ位置は 0-indexed の `Nat` で表す。
+0 が最下層、値が大きいほど上層。
 上下に隣接するレイヤ間で結晶の結合が発生しうる。
 
 ## QuarterPos (象限位置)
 
-`LayerIndex` と `Direction` の組でシェイプ内の象限の絶対位置を表す。
+レイヤインデックス (`Nat`) と `Direction` の組でシェイプ内の象限の絶対位置を表す。
 -/
 
 -- ============================================================
@@ -124,39 +125,28 @@ theorem adjacent_rotate180 (d1 d2 : Direction) :
 end Direction
 
 -- ============================================================
--- LayerIndex (レイヤインデックス)
+-- レイヤインデックスのユーティリティ関数（Nat ベース）
 -- ============================================================
-
-/-- シェイプ内のレイヤの位置を表すインデックス。l1 が最下層、l4 が最上層 -/
-inductive LayerIndex where
-    | l1 | l2 | l3 | l4
-    deriving Repr, DecidableEq, BEq
 
 namespace LayerIndex
 
-/-- 上下レイヤが垂直に隣接しているかを判定する -/
-def verticallyAdjacent : LayerIndex → LayerIndex → Bool
-    | l1, l2 | l2, l1 => true
-    | l2, l3 | l3, l2 => true
-    | l3, l4 | l4, l3 => true
-    | _, _             => false
-
-/-- 全てのレイヤインデックスのリスト -/
-def all : List LayerIndex := [l1, l2, l3, l4]
+/-- 上下レイヤが垂直に隣接しているかを判定する（0-indexed） -/
+def verticallyAdjacent (i j : Nat) : Bool :=
+    i + 1 == j || j + 1 == i
 
 -- ============================================================
--- LayerIndex の定理
+-- レイヤインデックスの定理
 -- ============================================================
 
 /-- 垂直隣接関係は対称的である -/
-theorem verticallyAdjacent_symm (i j : LayerIndex) :
-        i.verticallyAdjacent j = j.verticallyAdjacent i := by
-    cases i <;> cases j <;> rfl
+theorem verticallyAdjacent_symm (i j : Nat) :
+        verticallyAdjacent i j = verticallyAdjacent j i := by
+    simp [verticallyAdjacent, Bool.or_comm]
 
 /-- 垂直隣接関係は反射的でない -/
-theorem not_verticallyAdjacent_self (i : LayerIndex) :
-        i.verticallyAdjacent i = false := by
-    cases i <;> rfl
+theorem not_verticallyAdjacent_self (i : Nat) :
+        verticallyAdjacent i i = false := by
+    simp [verticallyAdjacent]
 
 end LayerIndex
 
@@ -164,10 +154,10 @@ end LayerIndex
 -- QuarterPos (象限位置)
 -- ============================================================
 
-/-- シェイプ内の象限の絶対位置。レイヤインデックスと方角の組 -/
+/-- シェイプ内の象限の絶対位置。レイヤインデックス (0-indexed Nat) と方角の組 -/
 structure QuarterPos where
-    /-- レイヤの位置 -/
-    layer : LayerIndex
+    /-- レイヤの位置 (0-indexed、0 が最下層) -/
+    layer : Nat
     /-- レイヤ内の方角 -/
     dir : Direction
     deriving Repr, DecidableEq, BEq
@@ -183,18 +173,9 @@ def getDir (l : Layer) : Direction → Quarter
 
 /-- シェイプから指定位置の象限を取得する。レイヤ数を超えた位置の場合は `none` -/
 def getQuarter (s : Shape) (pos : QuarterPos) : Option Quarter :=
-    match s, pos.layer with
-    | Shape.single l1,           .l1 => some (getDir l1 pos.dir)
-    | Shape.double l1 _,         .l1 => some (getDir l1 pos.dir)
-    | Shape.double _ l2,         .l2 => some (getDir l2 pos.dir)
-    | Shape.triple l1 _ _,       .l1 => some (getDir l1 pos.dir)
-    | Shape.triple _ l2 _,       .l2 => some (getDir l2 pos.dir)
-    | Shape.triple _ _ l3,       .l3 => some (getDir l3 pos.dir)
-    | Shape.quadruple l1 _ _ _,  .l1 => some (getDir l1 pos.dir)
-    | Shape.quadruple _ l2 _ _,  .l2 => some (getDir l2 pos.dir)
-    | Shape.quadruple _ _ l3 _,  .l3 => some (getDir l3 pos.dir)
-    | Shape.quadruple _ _ _ l4,  .l4 => some (getDir l4 pos.dir)
-    | _, _ => none
+    match s.layers[pos.layer]? with
+    | some l => some (getDir l pos.dir)
+    | none   => none
 
 /-- レイヤの方角に対応する象限を置き換える -/
 def setDir (l : Layer) (d : Direction) (q : Quarter) : Layer :=
@@ -206,36 +187,24 @@ def setDir (l : Layer) (d : Direction) (q : Quarter) : Layer :=
 
 /-- シェイプの指定位置の象限を置き換える。レイヤ数を超えた位置の場合は元のシェイプを返す -/
 def setQuarter (s : Shape) (pos : QuarterPos) (q : Quarter) : Shape :=
-    match s, pos.layer with
-    | Shape.single l1,              .l1 => Shape.single (setDir l1 pos.dir q)
-    | Shape.double l1 l2,           .l1 => Shape.double (setDir l1 pos.dir q) l2
-    | Shape.double l1 l2,           .l2 => Shape.double l1 (setDir l2 pos.dir q)
-    | Shape.triple l1 l2 l3,        .l1 => Shape.triple (setDir l1 pos.dir q) l2 l3
-    | Shape.triple l1 l2 l3,        .l2 => Shape.triple l1 (setDir l2 pos.dir q) l3
-    | Shape.triple l1 l2 l3,        .l3 => Shape.triple l1 l2 (setDir l3 pos.dir q)
-    | Shape.quadruple l1 l2 l3 l4,  .l1 => Shape.quadruple (setDir l1 pos.dir q) l2 l3 l4
-    | Shape.quadruple l1 l2 l3 l4,  .l2 => Shape.quadruple l1 (setDir l2 pos.dir q) l3 l4
-    | Shape.quadruple l1 l2 l3 l4,  .l3 => Shape.quadruple l1 l2 (setDir l3 pos.dir q) l4
-    | Shape.quadruple l1 l2 l3 l4,  .l4 => Shape.quadruple l1 l2 l3 (setDir l4 pos.dir q)
-    | s, _ => s
+    let layers := s.layers
+    match layers[pos.layer]? with
+    | none   => s
+    | some l =>
+        let newLayer := setDir l pos.dir q
+        let newLayers := layers.set pos.layer newLayer
+        match newLayers with
+        | []      => s  -- ありえないが安全策
+        | b :: us => ⟨b, us⟩
 
 /-- シェイプ内で有効な位置（レイヤ数の範囲内）かを判定する -/
 def isValid (s : Shape) (pos : QuarterPos) : Bool :=
-    match s, pos.layer with
-    | Shape.single _,      .l1 => true
-    | Shape.double _ _,    .l1 | Shape.double _ _,    .l2 => true
-    | Shape.triple _ _ _,  .l1 | Shape.triple _ _ _,  .l2 | Shape.triple _ _ _,  .l3 => true
-    | Shape.quadruple ..,  _   => true
-    | _, _ => false
+    pos.layer < s.layerCount
 
 /-- シェイプで有効な全位置のリストを返す -/
 def allValid (s : Shape) : List QuarterPos :=
-    let layers : List LayerIndex := match s with
-        | Shape.single _      => [LayerIndex.l1]
-        | Shape.double _ _    => [.l1, .l2]
-        | Shape.triple _ _ _  => [.l1, .l2, .l3]
-        | Shape.quadruple ..  => [.l1, .l2, .l3, .l4]
-    layers.flatMap fun li => Direction.all.map fun d => ⟨li, d⟩
+    let layerIndices := List.range s.layerCount
+    layerIndices.flatMap fun li => Direction.all.map fun d => ⟨li, d⟩
 
 /-- 象限位置を 180° 回転させる（方角のみ回転、レイヤは変わらない） -/
 def rotate180 (p : QuarterPos) : QuarterPos :=

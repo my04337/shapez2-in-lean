@@ -129,9 +129,13 @@ private def crystalLayer : Layer := Layer.mk
 #guard Shape.ofString? "--------:--------:--------" == none
 #guard Shape.ofString? "--------:--------:--------:--------" == none
 
--- 無効な入力: 5 セグメント以上（構文エラー）
+-- 無効な入力: 5 セグメント以上（全レイヤ空は無効）
 #guard Shape.ofString? "--------:--------:--------:--------:--------" == none
-#guard Shape.ofString? "CrCrCrCr:CrCrCrCr:CrCrCrCr:CrCrCrCr:CrCrCrCr" == none
+
+-- 有効な入力: 5 レイヤ（レイヤ数制限なし）
+#guard Shape.ofString? "CrCrCrCr:CrCrCrCr:CrCrCrCr:CrCrCrCr:CrCrCrCr"
+    == some (Shape.mk redCircle [redCircle, redCircle, redCircle, redCircle])
+#guard (Shape.mk redCircle [redCircle, redCircle, redCircle, redCircle]).layerCount == 5
 
 -- 無効な入力: 不正なレイヤ記法
 #guard Shape.ofString? "XXXX" == none

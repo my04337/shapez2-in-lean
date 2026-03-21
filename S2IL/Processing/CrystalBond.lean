@@ -25,8 +25,8 @@ import S2IL.Shape.QuarterPos
 ## 結合クラスタ
 
 結合は推移的であり、結合関係で到達可能な結晶の集合が1つのクラスタを形成する。
-クラスタの算出はシェイプ内の最大16頂点（4レイヤ × 4方角）のグラフ上での
-到達可能性探索（BFS）で行う。
+クラスタの算出はシェイプ内のグラフ上での到達可能性探索（BFS）で行う。
+頂点数はレイヤ数 × 4 方角。
 -/
 
 namespace CrystalBond
@@ -47,7 +47,7 @@ def isBondedInLayer (s : Shape) (p1 p2 : QuarterPos) : Bool :=
 /-- 上下レイヤ間で2つの象限位置が結合しているかを判定する。
     上下レイヤ間では同方角の結晶同士が色を問わず結合する -/
 def isBondedCrossLayer (s : Shape) (p1 p2 : QuarterPos) : Bool :=
-    p1.layer.verticallyAdjacent p2.layer &&
+    LayerIndex.verticallyAdjacent p1.layer p2.layer &&
     p1.dir == p2.dir &&
     match p1.getQuarter s, p2.getQuarter s with
     | some (.crystal _), some (.crystal _) => true
@@ -82,8 +82,9 @@ private def bfs (s : Shape) (allPos : List QuarterPos) (visited queue : List Qua
 /-- 指定位置から到達可能な結合クラスタを返す -/
 def crystalCluster (s : Shape) (pos : QuarterPos) : List QuarterPos :=
     let allPos := QuarterPos.allValid s
-    -- fuel は最大頂点数の2乗で十分（最大 16 * 16 = 256）
-    bfs s allPos [] [pos] 256
+    -- fuel は最大頂点数の2乗で十分
+    let n := s.layerCount * 4
+    bfs s allPos [] [pos] (n * n)
 
 /-- シェイプ内の全結合クラスタを返す。各クラスタは `QuarterPos` のリスト -/
 def allCrystalClusters (s : Shape) : List (List QuarterPos) :=

@@ -68,20 +68,20 @@ private def emptyLayer : Layer := Layer.mk .empty .empty .empty .empty
 -- LayerIndex.verticallyAdjacent
 -- ============================================================
 
-#guard LayerIndex.l1.verticallyAdjacent .l2 == true
-#guard LayerIndex.l2.verticallyAdjacent .l1 == true
-#guard LayerIndex.l2.verticallyAdjacent .l3 == true
-#guard LayerIndex.l3.verticallyAdjacent .l2 == true
-#guard LayerIndex.l3.verticallyAdjacent .l4 == true
-#guard LayerIndex.l4.verticallyAdjacent .l3 == true
+#guard LayerIndex.verticallyAdjacent 0 1 == true
+#guard LayerIndex.verticallyAdjacent 1 0 == true
+#guard LayerIndex.verticallyAdjacent 1 2 == true
+#guard LayerIndex.verticallyAdjacent 2 1 == true
+#guard LayerIndex.verticallyAdjacent 2 3 == true
+#guard LayerIndex.verticallyAdjacent 3 2 == true
 
 -- 離れたレイヤは垂直に隣接しない
-#guard LayerIndex.l1.verticallyAdjacent .l3 == false
-#guard LayerIndex.l1.verticallyAdjacent .l4 == false
-#guard LayerIndex.l2.verticallyAdjacent .l4 == false
+#guard LayerIndex.verticallyAdjacent 0 2 == false
+#guard LayerIndex.verticallyAdjacent 0 3 == false
+#guard LayerIndex.verticallyAdjacent 1 3 == false
 
 -- 自身は隣接しない
-#guard LayerIndex.l1.verticallyAdjacent .l1 == false
+#guard LayerIndex.verticallyAdjacent 0 0 == false
 
 -- ============================================================
 -- QuarterPos.getQuarter / setQuarter
@@ -91,14 +91,14 @@ private def testLayer1 : Layer := Layer.mk
     (.crystal .red) (.crystal .red) .empty .empty
 
 -- getQuarter: 有効な位置
-#guard (QuarterPos.getQuarter (.single testLayer1) ⟨.l1, .ne⟩) == some (.crystal .red)
-#guard (QuarterPos.getQuarter (.single testLayer1) ⟨.l1, .sw⟩) == some .empty
+#guard (QuarterPos.getQuarter (.single testLayer1) ⟨0, .ne⟩) == some (.crystal .red)
+#guard (QuarterPos.getQuarter (.single testLayer1) ⟨0, .sw⟩) == some .empty
 
 -- getQuarter: 無効な位置 (レイヤ外)
-#guard (QuarterPos.getQuarter (.single testLayer1) ⟨.l2, .ne⟩) == none
+#guard (QuarterPos.getQuarter (.single testLayer1) ⟨1, .ne⟩) == none
 
 -- setQuarter: 象限の置き換え
-#guard (QuarterPos.setQuarter (.single testLayer1) ⟨.l1, .ne⟩ .empty) ==
+#guard (QuarterPos.setQuarter (.single testLayer1) ⟨0, .ne⟩ .empty) ==
     Shape.single (Layer.mk .empty (.crystal .red) .empty .empty)
 
 -- ============================================================
@@ -179,24 +179,24 @@ private def testLayer1 : Layer := Layer.mk
 -- 非脆弱象限がある場合 → 結晶のみ砕ける
 -- "crCr----" 全落下 → "--Cr----"
 #guard (Shape.single (Layer.mk (.crystal .red) (.colored .circle .red) .empty .empty)).shatterOnFall
-    [⟨.l1, .ne⟩, ⟨.l1, .se⟩, ⟨.l1, .sw⟩, ⟨.l1, .nw⟩] ==
+    [⟨0, .ne⟩, ⟨0, .se⟩, ⟨0, .sw⟩, ⟨0, .nw⟩] ==
     Shape.single (Layer.mk .empty (.colored .circle .red) .empty .empty)
 
 -- 部分的な落下: NE のみ落下対象、NE(cr)-SE(cr) が結合 → クラスタ全体砕け
 #guard (Shape.single (Layer.mk (.crystal .red) (.crystal .red) .empty .empty)).shatterOnFall
-    [⟨.l1, .ne⟩] ==
+    [⟨0, .ne⟩] ==
     Shape.single emptyLayer
 
 -- 落下対象でも非脆弱なら砕けない
 #guard (Shape.single (Layer.mk (.colored .circle .red) .empty .empty .empty)).shatterOnFall
-    [⟨.l1, .ne⟩] ==
+    [⟨0, .ne⟩] ==
     Shape.single (Layer.mk (.colored .circle .red) .empty .empty .empty)
 
 -- 上下レイヤの結合伝播: L1:NE(cr) 落下 → L2:NE(cg) も砕ける
 #guard (Shape.double
     (Layer.mk (.crystal .red) .empty .empty .empty)
     (Layer.mk (.crystal .green) .empty .empty .empty)).shatterOnFall
-    [⟨.l1, .ne⟩] ==
+    [⟨0, .ne⟩] ==
     Shape.double
     (Layer.mk .empty .empty .empty .empty)
     (Layer.mk .empty .empty .empty .empty)
@@ -265,22 +265,22 @@ private def testLayer1 : Layer := Layer.mk
 
 -- 全象限が落下対象 (全結晶)
 #guard ((Shape.single (Layer.mk (.crystal .red) (.crystal .red) (.crystal .red) (.crystal .red))).shatterOnFall
-    [⟨.l1, .ne⟩, ⟨.l1, .se⟩, ⟨.l1, .sw⟩, ⟨.l1, .nw⟩]).rotate180
+    [⟨0, .ne⟩, ⟨0, .se⟩, ⟨0, .sw⟩, ⟨0, .nw⟩]).rotate180
     == (Shape.single (Layer.mk (.crystal .red) (.crystal .red) (.crystal .red) (.crystal .red))).rotate180.shatterOnFall
-    ([⟨.l1, .ne⟩, ⟨.l1, .se⟩, ⟨.l1, .sw⟩, ⟨.l1, .nw⟩].map QuarterPos.rotate180)
+    ([⟨0, .ne⟩, ⟨0, .se⟩, ⟨0, .sw⟩, ⟨0, .nw⟩].map QuarterPos.rotate180)
 
 -- NE のみ落下、NE-SE 結合
 #guard ((Shape.single (Layer.mk (.crystal .red) (.crystal .red) .empty .empty)).shatterOnFall
-    [⟨.l1, .ne⟩]).rotate180
+    [⟨0, .ne⟩]).rotate180
     == (Shape.single (Layer.mk (.crystal .red) (.crystal .red) .empty .empty)).rotate180.shatterOnFall
-    ([⟨.l1, .ne⟩].map QuarterPos.rotate180)
+    ([⟨0, .ne⟩].map QuarterPos.rotate180)
 
 -- 上下レイヤ結合伝播: L1:NE(cr) 落下 → L2:NE(cg) も砕ける
 #guard ((Shape.double
     (Layer.mk (.crystal .red) .empty .empty .empty)
     (Layer.mk (.crystal .green) .empty .empty .empty)).shatterOnFall
-    [⟨.l1, .ne⟩]).rotate180
+    [⟨0, .ne⟩]).rotate180
     == (Shape.double
     (Layer.mk (.crystal .red) .empty .empty .empty)
     (Layer.mk (.crystal .green) .empty .empty .empty)).rotate180.shatterOnFall
-    ([⟨.l1, .ne⟩].map QuarterPos.rotate180)
+    ([⟨0, .ne⟩].map QuarterPos.rotate180)

@@ -151,29 +151,20 @@ namespace Shape
 /-- シェイプを時計回りに 90° 回転させる (回転機 / Rotator)
 
 全レイヤに `Layer.rotateCW` を適用する。回転は副作用（落下・破損）を伴わない。 -/
-def rotateCW : Shape → Shape
-    | single l1              => single l1.rotateCW
-    | double l1 l2           => double l1.rotateCW l2.rotateCW
-    | triple l1 l2 l3        => triple l1.rotateCW l2.rotateCW l3.rotateCW
-    | quadruple l1 l2 l3 l4  => quadruple l1.rotateCW l2.rotateCW l3.rotateCW l4.rotateCW
+def rotateCW (s : Shape) : Shape :=
+    ⟨s.bottom.rotateCW, s.upper.map Layer.rotateCW⟩
 
 /-- シェイプを反時計回りに 90° 回転させる (逆回転機 / Reverse Rotator)
 
 全レイヤに `Layer.rotateCCW` を適用する。 -/
-def rotateCCW : Shape → Shape
-    | single l1              => single l1.rotateCCW
-    | double l1 l2           => double l1.rotateCCW l2.rotateCCW
-    | triple l1 l2 l3        => triple l1.rotateCCW l2.rotateCCW l3.rotateCCW
-    | quadruple l1 l2 l3 l4  => quadruple l1.rotateCCW l2.rotateCCW l3.rotateCCW l4.rotateCCW
+def rotateCCW (s : Shape) : Shape :=
+    ⟨s.bottom.rotateCCW, s.upper.map Layer.rotateCCW⟩
 
 /-- シェイプを 180° 回転させる (180 度回転機 / 180° Rotator)
 
 全レイヤに `Layer.rotate180` を適用する。 -/
-def rotate180 : Shape → Shape
-    | single l1              => single l1.rotate180
-    | double l1 l2           => double l1.rotate180 l2.rotate180
-    | triple l1 l2 l3        => triple l1.rotate180 l2.rotate180 l3.rotate180
-    | quadruple l1 l2 l3 l4  => quadruple l1.rotate180 l2.rotate180 l3.rotate180 l4.rotate180
+def rotate180 (s : Shape) : Shape :=
+    ⟨s.bottom.rotate180, s.upper.map Layer.rotate180⟩
 
 -- ============================================================
 -- Shape の回転に関する定理
@@ -182,51 +173,51 @@ def rotate180 : Shape → Shape
 /-- 時計回り 90° 回転を 4 回適用すると元に戻る -/
 @[simp] theorem rotateCW_four (s : Shape) :
         s.rotateCW.rotateCW.rotateCW.rotateCW = s := by
-    cases s <;> simp [rotateCW, Layer.rotateCW_four]
+    ext <;> simp [rotateCW, List.map_map, Layer.rotateCW_four]
 
 /-- 反時計回り回転の後に時計回り回転を適用すると元に戻る -/
 @[simp] theorem rotateCCW_rotateCW (s : Shape) :
         s.rotateCCW.rotateCW = s := by
-    cases s <;> simp [rotateCW, rotateCCW, Layer.rotateCCW_rotateCW]
+    ext <;> simp [rotateCW, rotateCCW, List.map_map, Layer.rotateCCW_rotateCW]
 
 /-- 時計回り回転の後に反時計回り回転を適用すると元に戻る -/
 @[simp] theorem rotateCW_rotateCCW (s : Shape) :
         s.rotateCW.rotateCCW = s := by
-    cases s <;> simp [rotateCW, rotateCCW, Layer.rotateCW_rotateCCW]
+    ext <;> simp [rotateCW, rotateCCW, List.map_map, Layer.rotateCW_rotateCCW]
 
 /-- 180° 回転を 2 回適用すると元に戻る -/
 @[simp] theorem rotate180_rotate180 (s : Shape) :
         s.rotate180.rotate180 = s := by
-    cases s <;> simp [rotate180, Layer.rotate180_rotate180]
+    ext <;> simp [rotate180, List.map_map, Layer.rotate180_rotate180]
 
 /-- 反時計回り 90° 回転を 4 回適用すると元に戻る -/
 @[simp] theorem rotateCCW_four (s : Shape) :
         s.rotateCCW.rotateCCW.rotateCCW.rotateCCW = s := by
-    cases s <;> simp [rotateCCW, Layer.rotateCCW_four]
+    ext <;> simp [rotateCCW, List.map_map, Layer.rotateCCW_four]
 
 /-- 時計回り回転と 180° 回転は可換である -/
 @[simp] theorem rotateCW_rotate180_comm (s : Shape) :
         s.rotateCW.rotate180 = s.rotate180.rotateCW := by
-    cases s <;> simp [rotateCW, rotate180, Layer.rotateCW_rotate180_comm]
+    ext <;> simp [rotateCW, rotate180, List.map_map, Layer.rotateCW_rotate180_comm]
 
 /-- 反時計回り回転と 180° 回転は可換である -/
 @[simp] theorem rotateCCW_rotate180_comm (s : Shape) :
         s.rotateCCW.rotate180 = s.rotate180.rotateCCW := by
-    cases s <;> simp [rotateCCW, rotate180, Layer.rotateCCW_rotate180_comm]
+    ext <;> simp [rotateCCW, rotate180, List.map_map, Layer.rotateCCW_rotate180_comm]
 
 /-- 回転してもレイヤ数は変わらない -/
 @[simp] theorem layerCount_rotateCW (s : Shape) :
         s.rotateCW.layerCount = s.layerCount := by
-    cases s <;> rfl
+    simp [rotateCW, layerCount, List.length_map]
 
 /-- 反時計回り回転してもレイヤ数は変わらない -/
 @[simp] theorem layerCount_rotateCCW (s : Shape) :
         s.rotateCCW.layerCount = s.layerCount := by
-    cases s <;> rfl
+    simp [rotateCCW, layerCount, List.length_map]
 
 /-- 180° 回転してもレイヤ数は変わらない -/
 @[simp] theorem layerCount_rotate180 (s : Shape) :
         s.rotate180.layerCount = s.layerCount := by
-    cases s <;> rfl
+    simp [rotate180, layerCount, List.length_map]
 
 end Shape
