@@ -3,7 +3,7 @@
 
 -- Gravity（落下）のユニットテスト
 -- 仕様: docs/shapez2/falling.md の全例を検証する
-import S2IL.Processing.Gravity
+import S2IL.Behavior.Gravity
 
 -- ============================================================
 -- テストヘルパー

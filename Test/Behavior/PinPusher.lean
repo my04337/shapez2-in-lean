@@ -2,7 +2,7 @@
 -- SPDX-License-Identifier: MIT
 
 -- PinPusher (ピン押し機) のユニットテスト
-import S2IL.Processing.PinPusher
+import S2IL.Behavior.PinPusher
 
 -- ============================================================
 -- テストヘルパー

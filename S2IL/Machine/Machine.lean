@@ -1,12 +1,13 @@
 -- SPDX-FileCopyrightText: 2026 my04337
 -- SPDX-License-Identifier: MIT
 
-import S2IL.Processing.Painter
-import S2IL.Processing.CrystalGenerator
-import S2IL.Processing.Rotate
-import S2IL.Processing.PinPusher
-import S2IL.Processing.Stacker
-import S2IL.Processing.Cutter
+import S2IL.Behavior.Painter
+import S2IL.Behavior.CrystalGenerator
+import S2IL.Behavior.Rotate
+import S2IL.Behavior.PinPusher
+import S2IL.Behavior.Stacker
+import S2IL.Behavior.Cutter
+import S2IL.Behavior.ColorMixer
 
 /-!
 # Machine (加工装置)
@@ -117,5 +118,15 @@ def swap (shape1 shape2 : Option Shape) : Option Shape × Option Shape :=
     match shape1, shape2 with
     | some s1, some s2 => s1.swap s2
     | _, _ => (none, none)
+
+-- ============================================================
+-- 混色機 (Color Mixer)
+-- ============================================================
+
+/-- 混色機を適用する。2つの色が存在する場合のみ出力を生成する -/
+def mixColor (color1 color2 : Option Color) : Option Color :=
+    match color1, color2 with
+    | some c1, some c2 => some (ColorMixer.mix c1 c2)
+    | _, _ => none
 
 end Machine

@@ -1,9 +1,9 @@
 -- SPDX-FileCopyrightText: 2026 my04337
 -- SPDX-License-Identifier: MIT
 
-import S2IL.Processing.Gravity
-import S2IL.Processing.Shatter
-import S2IL.GameConfig
+import S2IL.Behavior.Gravity
+import S2IL.Behavior.Shatter
+import S2IL.Shape.GameConfig
 
 /-!
 # PinPusher (ピン押し機)
@@ -27,16 +27,18 @@ import S2IL.GameConfig
 
 namespace PinPusher
 
-/-- 空レイヤ -/
-private def emptyLayer : Layer := ⟨.empty, .empty, .empty, .empty⟩
-
 -- ============================================================
 -- ステップ 1: レイヤ持ち上げ
 -- ============================================================
 
 /-- 全レイヤを1つ上に持ち上げる（最下層に空レイヤを挿入） -/
 def liftUp (s : Shape) : Shape :=
-    ⟨emptyLayer, s.bottom :: s.upper⟩
+    ⟨Layer.empty :: s.layers, by simp⟩
+
+/-- liftUp 後のレイヤ数は元のレイヤ数 + 1 -/
+theorem liftUp_layerCount (s : Shape) :
+        (liftUp s).layerCount = s.layerCount + 1 := by
+    simp [liftUp, Shape.layerCount]
 
 -- ============================================================
 -- ステップ 2: ピン生成
@@ -49,18 +51,8 @@ def generatePins (lifted : Shape) (originalBottom : Layer) : Shape :=
     let pinSw := if originalBottom.sw.isEmpty then Quarter.empty else Quarter.pin
     let pinNw := if originalBottom.nw.isEmpty then Quarter.empty else Quarter.pin
     let pinLayer : Layer := ⟨pinNe, pinSe, pinSw, pinNw⟩
-    ⟨pinLayer, lifted.upper⟩
+    ⟨pinLayer :: lifted.layers.tail, by simp⟩
 
--- ============================================================
--- ステップ 3: レイヤ上限超過時の処理
--- ============================================================
-
-/-- レイヤ上限超過分の象限を「落下対象」として砕け散り処理を適用する。
-    超過レイヤの脆弱結晶が属する結晶結合クラスタ全体が砕け散る -/
-def shatterOnTruncate (s : Shape) (maxLayers : Nat) : Shape :=
-    let truncatedPositions := (QuarterPos.allValid s).filter fun p =>
-        p.layer ≥ maxLayers
-    s.shatterOnFall truncatedPositions
 
 end PinPusher
 
@@ -84,7 +76,7 @@ def pinPush (s : Shape) (config : GameConfig := inferInstance)
     else
         -- 4. レイヤ上限超過時の処理
         -- 4a. 超過レイヤの結晶クラスタを砕け散らせる
-        let afterShatter := PinPusher.shatterOnTruncate withPins config.maxLayers
+        let afterShatter := withPins.shatterOnTruncate config.maxLayers
         -- 4b. レイヤ数を上限に切り詰める
         let truncated := afterShatter.truncate config
         -- 4c. 落下処理

@@ -21,6 +21,8 @@
         ".github/skills/lean-build/scripts/build.sh --update": true,
         ".github/skills/lean-run/scripts/run.ps1": true,
         ".github/skills/lean-run/scripts/run.sh": true,
-        "lake": true
+        "lean --print-decl": true,
+        "ConvertFrom-Json": true,
+        "ConvertTo-Json": true
     }
 }

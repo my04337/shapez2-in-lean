@@ -2,7 +2,7 @@
 -- SPDX-License-Identifier: MIT
 
 -- Machine (加工装置ラッパー) のユニットテスト
-import S2IL.Processing.Machine
+import S2IL.Machine.Machine
 
 -- ============================================================
 -- テストヘルパー

@@ -134,8 +134,8 @@ private def crystalLayer : Layer := Layer.mk
 
 -- 有効な入力: 5 レイヤ（レイヤ数制限なし）
 #guard Shape.ofString? "CrCrCrCr:CrCrCrCr:CrCrCrCr:CrCrCrCr:CrCrCrCr"
-    == some (Shape.mk redCircle [redCircle, redCircle, redCircle, redCircle])
-#guard (Shape.mk redCircle [redCircle, redCircle, redCircle, redCircle]).layerCount == 5
+    == some ⟨[redCircle, redCircle, redCircle, redCircle, redCircle], by simp⟩
+#guard (⟨[redCircle, redCircle, redCircle, redCircle, redCircle], by simp⟩ : Shape).layerCount == 5
 
 -- 無効な入力: 不正なレイヤ記法
 #guard Shape.ofString? "XXXX" == none

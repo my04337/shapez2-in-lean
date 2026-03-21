@@ -19,15 +19,15 @@ Shapez2 in Lean (S2IL) の開発マイルストーンと達成状況を管理す
 
 ### 1-1. Shape Code Notation の形式化
 
-| # | タスク | 状態 |
-|---|---|---|
-| 1-1-1 | **Part Code** の列挙型定義 (`Circle`, `Rectangle`, `Star`, `Windmill`, `Pin`, `Crystal`) | ✅ 完了 |
-| 1-1-2 | **Color** の列挙型定義 (`Red`, `Green`, `Blue`, `Yellow`, `Cyan`, `Magenta`, `White`, `Uncolored`) | ✅ 完了 |
-| 1-1-3 | **Quarter** (象限) の型定義 (Part Code × Color の組、および空の象限) | ✅ 完了 |
-| 1-1-4 | **Layer** (レイヤ) の型定義 (4 象限の組) | ✅ 完了 |
-| 1-1-5 | **Shape** (シェイプ) の型定義 (1〜4 レイヤの積み重ね) | ✅ 完了 |
-| 1-1-6 | Shape Code 文字列とのパース・シリアライズ関数の実装 | ✅ 完了 |
-| 1-1-7 | Shape Code のパース・シリアライズの正当性検証 (ラウンドトリップ定理) | ✅ 完了 |
+| # | タスク | 状態 | 備考 |
+|---|---|---|---|
+| 1-1-1 | **Part Code** の列挙型定義 (`Circle`, `Rectangle`, `Star`, `Windmill`, `Pin`, `Crystal`) | ✅ 完了 | |
+| 1-1-2 | **Color** の列挙型定義 (`Red`, `Green`, `Blue`, `Yellow`, `Cyan`, `Magenta`, `White`, `Uncolored`) | ✅ 完了 | |
+| 1-1-3 | **Quarter** (象限) の型定義 (Part Code × Color の組、および空の象限) | ✅ 完了 | |
+| 1-1-4 | **Layer** (レイヤ) の型定義 (4 象限の組) | ✅ 完了 | |
+| 1-1-5 | **Shape** (シェイプ) の型定義 (1〜4 レイヤの積み重ね) | ✅ 完了 | 構造体 `{ layers : List Layer, layers_ne }` にリファクタリング済み |
+| 1-1-6 | Shape Code 文字列とのパース・シリアライズ関数の実装 | ✅ 完了 | |
+| 1-1-7 | Shape Code のパース・シリアライズの正当性検証 (ラウンドトリップ定理) | ✅ 完了 | |
 
 ### 1-2. Shape Processing 装置の定義
 
@@ -35,12 +35,12 @@ Shapez2 in Lean (S2IL) の開発マイルストーンと達成状況を管理す
 
 #### 切断 (Cutting)
 
-| # | タスク | 状態 |
-|---|---|---|
-| 1-2-1 | **Half-Destroyer** (切断処理機): West Half を削除する関数 | ✅ 完了 |
-| 1-2-2 | **Cutter** (切断機): West Half と East Half に分割する関数 | ✅ 完了 |
-| 1-2-3 | **Swapper** (スワップ機): 2 つのシェイプの West Half を入れ替える関数 | ✅ 完了 |
-| 1-2-4 | 切断系操作の基本性質の証明 | 🔄 進行中 |
+| # | タスク | 状態 | 備考 |
+|---|---|---|---|
+| 1-2-1 | **Half-Destroyer** (切断処理機): West Half を削除する関数 | ✅ 完了 | |
+| 1-2-2 | **Cutter** (切断機): West Half と East Half に分割する関数 | ✅ 完了 | |
+| 1-2-3 | **Swapper** (スワップ機): 2 つのシェイプの West Half を入れ替える関数 | ✅ 完了 | |
+| 1-2-4 | 切断系操作の基本性質の証明 | 🔄 進行中 | `eastHalf_westHalf_combine` ✅, `swap_self` ✅, `combineHalves_self` ✅, `cut_rotate180_comm` sorry (Gravity 等変性に依存) |
 
 #### 回転 (Rotating)
 
@@ -62,17 +62,17 @@ Shapez2 in Lean (S2IL) の開発マイルストーンと達成状況を管理す
 
 | # | タスク | 状態 |
 |---|---|---|
-| 1-2-11 | **混色** (Color Mixing) 関数の定義 (Mixing Rules に基づく) | ⬜ 未着手 |
+| 1-2-11 | **混色** (Color Mixing) 関数の定義 (Mixing Rules に基づく) | ✅ 完了 |
 | 1-2-12 | **Painter** (着色機): 最上位レイヤを着色する関数 | ✅ 完了 |
-| 1-2-13 | 混色の可換性・結合性などの代数的性質の証明 | ⬜ 未着手 |
+| 1-2-13 | 混色の可換性・冪等性・恒等元・非結合性の証明 | ✅ 完了 |
 
 #### ピン押し・結晶 (Pin Pushing / Crystals)
 
-| # | タスク | 状態 |
-|---|---|---|
-| 1-2-14 | **Pin Pusher** (ピン押し機): 第 1 レイヤの非空象限の下にピンを追加する関数 | ✅ 完了 |
-| 1-2-15 | **Crystal Generator** (結晶製造機): 液剤でギャップ・ピンを結晶に充填する関数 | ✅ 完了 |
-| 1-2-16 | 結晶の **Fragile** 性 (落下・切断による Shatter) の形式化 | ✅ 完了 |
+| # | タスク | 状態 | 備考 |
+|---|---|---|---|
+| 1-2-14 | **Pin Pusher** (ピン押し機): 第 1 レイヤの非空象限の下にピンを追加する関数 | ✅ 完了 | |
+| 1-2-15 | **Crystal Generator** (結晶製造機): 液剤でギャップ・ピンを結晶に充填する関数 | ✅ 完了 | |
+| 1-2-16 | 結晶の **Fragile** 性 (落下・切断による Shatter) の形式化 | ✅ 完了 | `isFragile`, `QuarterPos`, `CrystalBond`, `Shatter` 全実装済み。回転等変性の証明完了（BFS 完全性をポテンシャル関数で証明、sorry 0件） |
 
 ### 1-3. Wires and Logic 装置の定義
 

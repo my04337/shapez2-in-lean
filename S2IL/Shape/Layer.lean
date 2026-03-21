@@ -46,6 +46,9 @@ namespace Layer
 def isEmpty (l : Layer) : Bool :=
     l.ne.isEmpty && l.se.isEmpty && l.sw.isEmpty && l.nw.isEmpty
 
+/-- 全象限が空のレイヤ -/
+def empty : Layer := ⟨.empty, .empty, .empty, .empty⟩
+
 /-- レイヤをシェイプコード文字列に変換する（右上起点で時計回り） -/
 protected def toString (l : Layer) : String :=
     l.ne.toString ++ l.se.toString ++ l.sw.toString ++ l.nw.toString

@@ -1,9 +1,9 @@
 -- SPDX-FileCopyrightText: 2026 my04337
 -- SPDX-License-Identifier: MIT
 
-import S2IL.Processing.Gravity
-import S2IL.Processing.Shatter
-import S2IL.GameConfig
+import S2IL.Behavior.Gravity
+import S2IL.Behavior.Shatter
+import S2IL.Shape.GameConfig
 
 /-!
 # Stacker (積層機)
@@ -41,7 +41,12 @@ namespace Stacker
 /-- 上側シェイプを下側シェイプの直上に単純配置する。
     結果のレイヤは `bottom.layers ++ top.layers` -/
 def placeAbove (bottom top : Shape) : Shape :=
-    ⟨bottom.bottom, bottom.upper ++ top.layers⟩
+    ⟨bottom.layers ++ top.layers, by simp [bottom.layers_ne]⟩
+
+/-- placeAbove 後のレイヤ数は下側と上側のレイヤ数の和 -/
+theorem placeAbove_layerCount (bottom top : Shape) :
+        (placeAbove bottom top).layerCount = bottom.layerCount + top.layerCount := by
+    simp [placeAbove, Shape.layerCount, List.length_append]
 
 -- ============================================================
 -- ステップ 2: 上側結晶の砕け散り
@@ -57,16 +62,6 @@ def shatterTopCrystals (s : Shape) (fromLayer : Nat) : Shape :=
         | none   => false
     s.clearPositions targets
 
--- ============================================================
--- ステップ 5a: truncate 前の砕け散り
--- ============================================================
-
-/-- レイヤ上限超過分の象限を「落下対象」として砕け散り処理を適用する。
-    超過レイヤの脆弱結晶が属する結晶結合クラスタ全体が砕け散る -/
-def shatterOnTruncate (s : Shape) (maxLayers : Nat) : Shape :=
-    let truncatedPositions := (QuarterPos.allValid s).filter fun p =>
-        p.layer ≥ maxLayers
-    s.shatterOnFall truncatedPositions
 
 end Stacker
 
@@ -93,7 +88,7 @@ def stack (bottom top : Shape) (config : GameConfig := inferInstance)
     else
         -- 5. レイヤ上限超過時の処理
         -- 5a. 超過レイヤの結晶クラスタを砕け散らせる
-        let afterTruncShatter := Stacker.shatterOnTruncate afterGravity config.maxLayers
+        let afterTruncShatter := afterGravity.shatterOnTruncate config.maxLayers
         -- 5b. レイヤ数を上限に切り詰める
         let truncated := afterTruncShatter.truncate config
         -- 5c. 再落下

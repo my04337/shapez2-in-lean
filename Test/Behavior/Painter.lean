@@ -2,7 +2,7 @@
 -- SPDX-License-Identifier: MIT
 
 -- Painter (着色機) のユニットテスト
-import S2IL.Processing.Painter
+import S2IL.Behavior.Painter
 
 -- ============================================================
 -- テストヘルパー

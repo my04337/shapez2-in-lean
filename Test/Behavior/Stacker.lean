@@ -2,7 +2,7 @@
 -- SPDX-License-Identifier: MIT
 
 -- Stacker (積層機) のユニットテスト
-import S2IL.Processing.Stacker
+import S2IL.Behavior.Stacker
 
 -- ============================================================
 -- テストヘルパー

@@ -263,36 +263,23 @@ Shapez2 での色の分類は以下の通り。
 
 #### 混色のルール (Mixing Rules)
 混色の基本的なルールは以下の通り。
-両者に共通の原色が無い場合、混色の結果は両方の色を含む色になる。例えば、RedとGreenを混ぜるとYellowになる。
-両者に共通の原色がある場合、混色の結果は両方の色から共通の原色を除いた色になる。例えば、Cyan と Magenta を混ぜると Blue になる。
+各色を RGB 原色成分の重み付き表現で解釈し、等体積混合後の各原色成分の比率が閾値以上であれば当該原色を含む色として判定する。
+両者に共通の原色が無い場合、混色の結果は両方の原色を合わせた色になる。例えば、Red と Green を混ぜると Yellow になる。
+両者に共通の原色がある場合、混色の結果は共通部分の原色が結果に残る。例えば、Cyan (G+B) と Magenta (R+B) を混ぜると共通の Blue が結果になる。
 
-| 色1 | 色2 | 結果の色 |
-|---|---|---|
-| Red | Red | Red |
-| Red | Green | Yellow |
-| Red | Blue | Magenta |
-| Green | Red | Yellow |
-| Green | Green | Green |
-| Green | Blue | Cyan |
-| Blue | Red | Magenta |
-| Blue | Green | Cyan |
-| Blue | Blue | Blue |
-| Yellow | Red | Red |
-| Yellow | Green | Green |
-| Yellow | Blue | Blue |
-| Cyan | Red | Red |
-| Cyan | Green | Green |
-| Cyan | Blue | Blue |
-| Magenta | Red | Red |
-| Magenta | Green | Green |
-| Magenta | Blue | Blue |
-| White | Red | Red |
-| White | Green | Green |
-| White | Blue | Blue |
-| White | Yellow | Yellow |
-| White | Cyan | Cyan |
-| White | Magenta | Magenta |
-| White | White | White |
+> **注記**: Uncolored の液剤はゲーム上存在しないため、Uncolored を含む混色はゲーム上未定義である。
+> 以下のテーブルでは数学的な拡張として重み付きモデルに基づく値を記載している。
+
+| 色1 \ 色2 | Red | Green | Blue | Yellow | Cyan | Magenta | White | Uncolored |
+|---|---|---|---|---|---|---|---|---|
+| **Red** | Red | Yellow | Magenta | Red | Red | Red | Red | Red |
+| **Green** | Yellow | Green | Cyan | Green | Green | Green | Green | Green |
+| **Blue** | Magenta | Cyan | Blue | Blue | Blue | Blue | Blue | Blue |
+| **Yellow** | Red | Green | Blue | Yellow | Green | Red | Yellow | Uncolored |
+| **Cyan** | Red | Green | Blue | Green | Cyan | Blue | Cyan | Uncolored |
+| **Magenta** | Red | Green | Blue | Red | Blue | Magenta | Magenta | Uncolored |
+| **White** | Red | Green | Blue | Yellow | Cyan | Magenta | White | Uncolored |
+| **Uncolored** | Red | Green | Blue | Uncolored | Uncolored | Uncolored | Uncolored | Uncolored |
 
 ### ピン押し (Pin Pushing)
 シェイプを支持するためのピンを押し込む操作。

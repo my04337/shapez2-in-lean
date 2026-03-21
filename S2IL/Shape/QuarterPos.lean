@@ -122,6 +122,10 @@ theorem adjacent_rotate180 (d1 d2 : Direction) :
         d1.rotate180.adjacent d2.rotate180 = d1.adjacent d2 := by
     cases d1 <;> cases d2 <;> rfl
 
+instance : LawfulBEq Direction where
+    eq_of_beq {a b} h := by cases a <;> cases b <;> first | rfl | contradiction
+    rfl {a} := by cases a <;> rfl
+
 end Direction
 
 -- ============================================================
@@ -193,9 +197,9 @@ def setQuarter (s : Shape) (pos : QuarterPos) (q : Quarter) : Shape :=
     | some l =>
         let newLayer := setDir l pos.dir q
         let newLayers := layers.set pos.layer newLayer
-        match newLayers with
+        match h : newLayers with
         | []      => s  -- ありえないが安全策
-        | b :: us => ⟨b, us⟩
+        | _ :: _  => ⟨newLayers, by simp [h]⟩
 
 /-- シェイプ内で有効な位置（レイヤ数の範囲内）かを判定する -/
 def isValid (s : Shape) (pos : QuarterPos) : Bool :=
@@ -210,4 +214,260 @@ def allValid (s : Shape) : List QuarterPos :=
 def rotate180 (p : QuarterPos) : QuarterPos :=
     { layer := p.layer, dir := p.dir.rotate180 }
 
+/-- 180° 回転を 2 回適用すると元に戻る -/
+@[simp] theorem rotate180_rotate180 (p : QuarterPos) : p.rotate180.rotate180 = p := by
+    simp [rotate180, Direction.rotate180_rotate180]
+
+instance : LawfulBEq QuarterPos where
+    eq_of_beq {a b} h := by
+        cases a with | mk la da =>
+        cases b with | mk lb db =>
+        change (la == lb && da == db) = true at h
+        rw [Bool.and_eq_true] at h
+        congr
+        · exact eq_of_beq h.1
+        · exact eq_of_beq h.2
+    rfl {a} := by
+        cases a with | mk l d =>
+        change (l == l && d == d) = true
+        simp
+
 end QuarterPos
+
+namespace Shape
+
+/-- 指定された位置のリストに含まれる全象限を `Quarter.empty` に置き換える -/
+def clearPositions (s : Shape) (positions : List QuarterPos) : Shape :=
+    positions.foldl (fun acc pos => pos.setQuarter acc .empty) s
+
+end Shape
+
+-- ============================================================
+-- setDir / setQuarter の等式的性質
+-- ============================================================
+
+namespace QuarterPos
+
+/-- Layer.empty の任意方角に .empty を設定しても変わらない -/
+private theorem setDir_empty_empty (d : Direction) :
+        setDir Layer.empty d .empty = Layer.empty := by
+    cases d <;> rfl
+
+/-- setDir (.empty) は方角の順序によらず可換 -/
+theorem setDir_empty_comm (l : Layer) (d1 d2 : Direction) :
+        setDir (setDir l d1 .empty) d2 .empty =
+        setDir (setDir l d2 .empty) d1 .empty := by
+    cases d1 <;> cases d2 <;> rfl
+
+/-- setQuarter (.empty) の結果の .layers は List.set で表現できる。
+    範囲外でも成り立つ（List.set と getD の範囲外動作による） -/
+theorem setQuarter_empty_layers (s : Shape) (pos : QuarterPos) :
+        (setQuarter s pos .empty).layers =
+        s.layers.set pos.layer
+            (setDir (s.layers.getD pos.layer Layer.empty) pos.dir .empty) := by
+    unfold setQuarter
+    cases hl : s.layers[pos.layer]? with
+    | none =>
+        have h_ge : s.layers.length ≤ pos.layer :=
+            List.getElem?_eq_none_iff.mp hl
+        simp only [hl]
+        rw [List.set_eq_of_length_le h_ge]
+    | some l =>
+        have hgetD : s.layers.getD pos.layer Layer.empty = l := by
+            simp [List.getD_eq_getElem?_getD, hl]
+        rw [hgetD]
+        simp only [hl]
+        split
+        · exfalso
+          rename_i h_nil
+          have h_len := congrArg List.length h_nil
+          simp at h_len
+          exact s.layers_ne h_len
+        · rfl
+
+/-- setQuarter .empty は layerCount を保存する -/
+theorem layerCount_setQuarter_empty (s : Shape) (pos : QuarterPos) :
+        (setQuarter s pos .empty).layerCount = s.layerCount := by
+    show (setQuarter s pos .empty).layers.length = s.layers.length
+    rw [setQuarter_empty_layers, List.length_set]
+
+/-- setQuarter (.empty) は位置の順序によらず可換 -/
+theorem setQuarter_empty_comm (s : Shape) (p q : QuarterPos) :
+        setQuarter (setQuarter s q .empty) p .empty =
+        setQuarter (setQuarter s p .empty) q .empty := by
+    apply Shape.ext
+    show (setQuarter (setQuarter s q .empty) p .empty).layers =
+         (setQuarter (setQuarter s p .empty) q .empty).layers
+    rw [setQuarter_empty_layers, setQuarter_empty_layers,
+        setQuarter_empty_layers, setQuarter_empty_layers]
+    have getD_set (l : List Layer) (i j : Nat) (a : Layer) :
+            (l.set i a).getD j Layer.empty =
+            if i = j ∧ i < l.length then a else l.getD j Layer.empty := by
+        simp only [List.getD_eq_getElem?_getD, List.getElem?_set]
+        split <;> split <;> simp_all <;> omega
+    simp only [getD_set]
+    by_cases h_layer : p.layer = q.layer
+    · rw [h_layer]
+      by_cases h_lt : q.layer < s.layers.length
+      · simp [h_lt, List.set_set, setDir_empty_comm]
+      · simp [h_lt, setDir_empty_empty]
+    · have h_ne' : q.layer ≠ p.layer := fun h => h_layer h.symm
+      simp [h_layer, h_ne']
+      exact List.set_comm _ _ h_ne'
+
+/-- setQuarter (.empty) は同位置で冪等 -/
+theorem setQuarter_empty_idem (s : Shape) (pos : QuarterPos) :
+        setQuarter (setQuarter s pos .empty) pos .empty =
+        setQuarter s pos .empty := by
+    apply Shape.ext
+    rw [setQuarter_empty_layers, setQuarter_empty_layers]
+    by_cases h_lt : pos.layer < s.layers.length
+    · simp [List.getD_eq_getElem?_getD, h_lt, List.set_set]
+      cases pos.dir <;> rfl
+    · have h_ge : s.layers.length ≤ pos.layer := by omega
+      simp [List.set_eq_of_length_le h_ge]
+
+/-- getDir と setDir の関係（同方角） -/
+theorem getDir_setDir_same (l : Layer) (d : Direction) (q : Quarter) :
+        getDir (setDir l d q) d = q := by
+    cases d <;> rfl
+
+/-- getDir と setDir の関係（異方角） -/
+theorem getDir_setDir_ne (l : Layer) (d1 d2 : Direction) (q : Quarter)
+        (h : d1 ≠ d2) :
+        getDir (setDir l d1 q) d2 = getDir l d2 := by
+    cases d1 <;> cases d2 <;> first | exact absurd rfl h | rfl
+
+/-- getQuarter と setQuarter (.empty) の関係（同位置・範囲内） -/
+theorem getQuarter_setQuarter_empty_eq (s : Shape) (pos : QuarterPos)
+        (h_lt : pos.layer < s.layerCount) :
+        getQuarter (setQuarter s pos .empty) pos = some .empty := by
+    simp only [getQuarter, setQuarter_empty_layers]
+    have h_lt' : pos.layer < s.layers.length := h_lt
+    rw [List.getElem?_set, if_pos h_lt']
+    simp [getDir_setDir_same]
+
+/-- getQuarter と setQuarter (.empty) の関係（異位置） -/
+theorem getQuarter_setQuarter_empty_ne (s : Shape) (pos1 pos2 : QuarterPos)
+        (h : ¬((pos1 == pos2) = true)) :
+        getQuarter (setQuarter s pos1 .empty) pos2 = getQuarter s pos2 := by
+    have h_ne : pos1 ≠ pos2 := fun heq => h (heq ▸ beq_self_eq_true pos2)
+    simp only [getQuarter, setQuarter_empty_layers]
+    by_cases h_layer : pos1.layer = pos2.layer
+    · -- 同レイヤ・異方角
+      have h_dir : pos1.dir ≠ pos2.dir := by
+          intro h_d; apply h_ne; cases pos1; cases pos2; simp_all
+      by_cases h_lt : pos1.layer < s.layers.length
+      · -- 範囲内
+        rw [List.getElem?_set, if_pos h_layer, if_pos h_lt]
+        rw [h_layer] at h_lt
+        cases hl : s.layers[pos2.layer]? with
+        | none => exact absurd (List.getElem?_eq_none_iff.mp hl) (by omega)
+        | some l =>
+          -- match some l の iota reduction
+          show some _ = some (getDir l pos2.dir)
+          congr 1
+          have h_getD : s.layers.getD pos1.layer Layer.empty = l := by
+              simp [List.getD_eq_getElem?_getD, h_layer, hl]
+          rw [h_getD]
+          exact getDir_setDir_ne l pos1.dir pos2.dir .empty h_dir
+      · -- 範囲外
+        rw [List.getElem?_set, if_pos h_layer, if_neg h_lt]
+        rw [h_layer] at h_lt
+        rw [List.getElem?_eq_none_iff.mpr (by omega)]
+    · -- 異レイヤ
+      rw [List.getElem?_set_ne h_layer]
+
+/-- clearPositions の getQuarter 特徴づけ（範囲内の位置） -/
+theorem getQuarter_clearPositions (s : Shape) (ps : List QuarterPos)
+        (pos : QuarterPos) (h_lt : pos.layer < s.layerCount) :
+        getQuarter (s.clearPositions ps) pos =
+        if ps.any (· == pos) then some .empty
+        else getQuarter s pos := by
+    induction ps generalizing s with
+    | nil => simp [Shape.clearPositions, List.any]
+    | cons p rest ih =>
+        have h_lt' : pos.layer < (setQuarter s p .empty).layerCount := by
+            rw [layerCount_setQuarter_empty]; exact h_lt
+        -- clearPositions s (p :: rest) = clearPositions (setQuarter s p .empty) rest
+        show getQuarter ((p.setQuarter s .empty).clearPositions rest) pos =
+             if ((p :: rest).any (· == pos)) then some .empty
+             else getQuarter s pos
+        rw [ih (p.setQuarter s .empty) h_lt']
+        simp only [List.any]
+        by_cases h_eq : (p == pos) = true
+        · -- p == pos: setQuarter で pos が empty 化済み
+          simp only [h_eq, Bool.true_or, ↓reduceIte]
+          rw [show p = pos from eq_of_beq h_eq]
+          simp [getQuarter_setQuarter_empty_eq s pos h_lt]
+        · -- p ≠ pos: setQuarter は pos に影響しない
+          simp only [h_eq, Bool.false_or]
+          rw [getQuarter_setQuarter_empty_ne s p pos h_eq]
+
+end QuarterPos
+
+-- ============================================================
+-- clearPositions の順序不変性
+-- ============================================================
+
+namespace Shape
+
+/-- clearPositions は layerCount を保存する -/
+theorem layerCount_clearPositions (s : Shape) (ps : List QuarterPos) :
+        (clearPositions s ps).layerCount = s.layerCount := by
+    induction ps generalizing s with
+    | nil => rfl
+    | cons p rest ih =>
+        exact (ih (p.setQuarter s .empty)).trans
+            (QuarterPos.layerCount_setQuarter_empty s p)
+
+/-- clearPositions で隣接する2要素を入れ替えても結果は同じ -/
+theorem clearPositions_swap (s : Shape) (p q : QuarterPos)
+        (ps : List QuarterPos) :
+        clearPositions s (p :: q :: ps) = clearPositions s (q :: p :: ps) := by
+    show ps.foldl (fun acc pos => pos.setQuarter acc .empty)
+            (q.setQuarter (p.setQuarter s .empty) .empty) =
+         ps.foldl (fun acc pos => pos.setQuarter acc .empty)
+            (p.setQuarter (q.setQuarter s .empty) .empty)
+    rw [QuarterPos.setQuarter_empty_comm]
+
+/-- clearPositions は同じ位置集合（any 判定で同値）なら同結果 -/
+theorem clearPositions_ext (s : Shape) (ps1 ps2 : List QuarterPos)
+        (h : ∀ p, ps1.any (· == p) = ps2.any (· == p)) :
+        clearPositions s ps1 = clearPositions s ps2 := by
+    apply Shape.ext
+    have h_len : (clearPositions s ps1).layers.length =
+                 (clearPositions s ps2).layers.length := by
+        rw [show (clearPositions s ps1).layers.length = s.layers.length from
+                layerCount_clearPositions s ps1,
+            show (clearPositions s ps2).layers.length = s.layers.length from
+                layerCount_clearPositions s ps2]
+    apply List.ext_getElem h_len
+    intro i h1 h2
+    have h_lt : i < s.layerCount := by
+        rw [← layerCount_clearPositions s ps1]; exact h1
+    -- 自然数 i と全方角 d について、getQuarter の結果が一致することを示す
+    have dir_eq : ∀ d : Direction,
+        QuarterPos.getDir (clearPositions s ps1).layers[i] d =
+        QuarterPos.getDir (clearPositions s ps2).layers[i] d := by
+      intro d
+      have gq1 := QuarterPos.getQuarter_clearPositions s ps1 ⟨i, d⟩ h_lt
+      have gq2 := QuarterPos.getQuarter_clearPositions s ps2 ⟨i, d⟩ h_lt
+      rw [h ⟨i, d⟩] at gq1
+      -- gq1 と gq2 は同じ RHS を持つ
+      simp only [QuarterPos.getQuarter,
+                 List.getElem?_eq_getElem h1,
+                 List.getElem?_eq_getElem h2,
+                 List.getElem?_eq_getElem h_lt] at gq1 gq2
+      -- some (getDir l1 d) = rhs かつ some (getDir l2 d) = rhs
+      exact Option.some.inj (gq1.trans gq2.symm)
+    -- Layer の等価性: getDir 全方角の一致から導出
+    suffices ∀ (l1 l2 : Layer),
+        (∀ d, QuarterPos.getDir l1 d = QuarterPos.getDir l2 d) → l1 = l2 from
+      this _ _ dir_eq
+    intro ⟨_, _, _, _⟩ ⟨_, _, _, _⟩ hd
+    have := hd .ne; have := hd .se; have := hd .sw; have := hd .nw
+    simp only [QuarterPos.getDir] at *
+    subst_vars; rfl
+
+end Shape

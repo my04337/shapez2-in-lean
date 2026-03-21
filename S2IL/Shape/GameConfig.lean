@@ -52,31 +52,37 @@ end GameConfig
 
 namespace Shape
 
+/-- `take` が非空リスト・正の長さで非空を保つ補助定理 -/
+private theorem take_ne_nil_of_ne_nil_pos (l : List α) (n : Nat)
+        (hl : l ≠ []) (hn : 0 < n) : l.take n ≠ [] := by
+    cases l with
+    | nil => exact absurd rfl hl
+    | cons a as => cases n with
+        | zero => exact absurd hn (by omega)
+        | succ n => simp [List.take]
+
 /-- シェイプのレイヤ数を `maxLayers` 以下に切り詰める。
     上限を超えた上位レイヤは除去される -/
-def truncate (s : Shape) (config : GameConfig) : Shape :=
-    let kept := s.upper.take (config.maxLayers - 1)
-    ⟨s.bottom, kept⟩
+def truncate (s : Shape) (config : GameConfig) : Shape where
+    layers := s.layers.take config.maxLayers
+    layers_ne := take_ne_nil_of_ne_nil_pos s.layers config.maxLayers s.layers_ne config.maxLayers_pos
 
 /-- truncate 後のレイヤ数は maxLayers 以下 -/
 theorem truncate_layerCount_le (s : Shape) (config : GameConfig) :
         (s.truncate config).layerCount ≤ config.maxLayers := by
-    simp [truncate, layerCount]
-    have h := config.maxLayers_pos
+    simp only [truncate, layerCount, List.length_take]
     omega
 
 /-- レイヤ数が上限以下のシェイプに truncate を適用しても変わらない -/
 theorem truncate_of_le (s : Shape) (config : GameConfig)
         (h : s.layerCount ≤ config.maxLayers) :
         s.truncate config = s := by
-    simp [truncate, layerCount] at *
-    rw [List.take_of_length_le]
-    omega
+    ext1
+    exact List.take_of_length_le h
 
 /-- truncate は冪等である -/
 theorem truncate_idempotent (s : Shape) (config : GameConfig) :
         (s.truncate config).truncate config = s.truncate config := by
-    apply truncate_of_le
-    exact truncate_layerCount_le s config
+    ext1; simp [truncate, List.take_take]
 
 end Shape
