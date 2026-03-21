@@ -62,6 +62,43 @@ def topLayer : Shape → Layer
     | triple _ _ l3        => l3
     | quadruple _ _ _ l4   => l4
 
+/-- シェイプが正規化されている（最上位レイヤが空でない）ことを表す述語 -/
+def isNormalized : Shape → Prop
+    | single l1            => l1.isEmpty = false
+    | double _ l2          => l2.isEmpty = false
+    | triple _ _ l3        => l3.isEmpty = false
+    | quadruple _ _ _ l4   => l4.isEmpty = false
+
+instance : DecidablePred isNormalized := fun s =>
+    match s with
+    | single l1            => inferInstanceAs (Decidable (l1.isEmpty = false))
+    | double _ l2          => inferInstanceAs (Decidable (l2.isEmpty = false))
+    | triple _ _ l3        => inferInstanceAs (Decidable (l3.isEmpty = false))
+    | quadruple _ _ _ l4   => inferInstanceAs (Decidable (l4.isEmpty = false))
+
+/-- 末尾の空レイヤをストリップして正規化する。全レイヤが空なら `none` を返す -/
+def normalize : Shape → Option Shape
+    | single l1 =>
+        if l1.isEmpty then none else some (single l1)
+    | double l1 l2 =>
+        if l2.isEmpty then
+            if l1.isEmpty then none else some (single l1)
+        else some (double l1 l2)
+    | triple l1 l2 l3 =>
+        if l3.isEmpty then
+            if l2.isEmpty then
+                if l1.isEmpty then none else some (single l1)
+            else some (double l1 l2)
+        else some (triple l1 l2 l3)
+    | quadruple l1 l2 l3 l4 =>
+        if l4.isEmpty then
+            if l3.isEmpty then
+                if l2.isEmpty then
+                    if l1.isEmpty then none else some (single l1)
+                else some (double l1 l2)
+            else some (triple l1 l2 l3)
+        else some (quadruple l1 l2 l3 l4)
+
 /-- `layers` の長さは `layerCount` と等しい -/
 theorem layers_length (s : Shape) : s.layers.length = s.layerCount := by
     cases s <;> rfl
@@ -103,30 +140,31 @@ private def splitOnColon : List Char → List (List Char)
             | [] => [[c]]
             | hd :: tl => (c :: hd) :: tl
 
-/-- シェイプコード文字列からシェイプをパースする。無効な入力の場合は `none` を返す -/
+/-- シェイプコード文字列からシェイプをパースする。
+    末尾の空レイヤはストリップされ、全レイヤが空なら `none` を返す -/
 def ofString? (s : String) : Option Shape :=
     match splitOnColon s.toList with
     | [c1] =>
         match Layer.ofString? (String.ofList c1) with
-        | some l1 => some (single l1)
+        | some l1 => (single l1).normalize
         | none => none
     | [c1, c2] =>
         match Layer.ofString? (String.ofList c1),
               Layer.ofString? (String.ofList c2) with
-        | some l1, some l2 => some (double l1 l2)
+        | some l1, some l2 => (double l1 l2).normalize
         | _, _ => none
     | [c1, c2, c3] =>
         match Layer.ofString? (String.ofList c1),
               Layer.ofString? (String.ofList c2),
               Layer.ofString? (String.ofList c3) with
-        | some l1, some l2, some l3 => some (triple l1 l2 l3)
+        | some l1, some l2, some l3 => (triple l1 l2 l3).normalize
         | _, _, _ => none
     | [c1, c2, c3, c4] =>
         match Layer.ofString? (String.ofList c1),
               Layer.ofString? (String.ofList c2),
               Layer.ofString? (String.ofList c3),
               Layer.ofString? (String.ofList c4) with
-        | some l1, some l2, some l3, some l4 => some (quadruple l1 l2 l3 l4)
+        | some l1, some l2, some l3, some l4 => (quadruple l1 l2 l3 l4).normalize
         | _, _, _, _ => none
     | _ => none
 
@@ -180,9 +218,27 @@ private theorem Layer.ofString_ofList_toString (l : Layer) :
     rw [String.ofList_toList]
     exact Layer.ofString_toString l
 
-/-- `ofString?` と `toString` のラウンドトリップ: 任意の `Shape` に対して
-    `ofString? (toString s) = some s` が成り立つ -/
-theorem ofString_toString (s : Shape) : ofString? s.toString = some s := by
+/-- 正規化済みのシェイプに `normalize` を適用すると自身を返す -/
+theorem normalize_of_isNormalized (s : Shape) (h : s.isNormalized) :
+        s.normalize = some s := by
+    cases s with
+    | single l1 =>
+        simp only [isNormalized] at h
+        simp [normalize, h]
+    | double _ l2 =>
+        simp only [isNormalized] at h
+        simp [normalize, h]
+    | triple _ _ l3 =>
+        simp only [isNormalized] at h
+        simp [normalize, h]
+    | quadruple _ _ _ l4 =>
+        simp only [isNormalized] at h
+        simp [normalize, h]
+
+/-- `ofString?` と `toString` の一般版ラウンドトリップ:
+    `ofString? (toString s) = s.normalize` -/
+theorem ofString_toString_normalize (s : Shape) :
+        ofString? s.toString = s.normalize := by
     simp only [ofString?, Shape.toString, String.toList_ofList]
     cases s with
     | single l1 =>
@@ -203,5 +259,12 @@ theorem ofString_toString (s : Shape) : ofString? s.toString = some s := by
             splitOnColon_append_colon _ _ (Layer.toString_noColon l3),
             splitOnColon_noColon _ (Layer.toString_noColon l4)]
         simp only [Layer.ofString_ofList_toString]
+
+/-- `ofString?` と `toString` のラウンドトリップ: 正規化済みのシェイプに対して
+    `ofString? (toString s) = some s` が成り立つ -/
+theorem ofString_toString (s : Shape) (h : s.isNormalized) :
+        ofString? s.toString = some s := by
+    rw [ofString_toString_normalize]
+    exact normalize_of_isNormalized s h
 
 end Shape

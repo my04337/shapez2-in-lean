@@ -90,7 +90,6 @@ private def crystalLayer : Layer := Layer.mk
 
 -- 有効な入力: 1 レイヤ
 #guard Shape.ofString? "RgRgRgRg" == some (Shape.single greenRect)
-#guard Shape.ofString? "--------" == some (Shape.single emptyLayer)
 
 -- 有効な入力: 2 レイヤ
 #guard Shape.ofString? "RgRgRgRg:CrCrCrCr" == some (Shape.double greenRect redCircle)
@@ -99,25 +98,47 @@ private def crystalLayer : Layer := Layer.mk
 #guard Shape.ofString? "RgRgRgRg:CrCrCrCr:CrSbWyRg"
     == some (Shape.triple greenRect redCircle mixedLayer)
 
+-- 有効な入力: 中間に空レイヤを含む 3 レイヤ
+#guard Shape.ofString? "CrCrCrCr:--------:CrSbWyRg"
+    == some (Shape.triple redCircle emptyLayer mixedLayer)
+
 -- 有効な入力: 4 レイヤ
-#guard Shape.ofString? "RgRgRgRg:CrCrCrCr:CrSbWyRg:--------"
-    == some (Shape.quadruple greenRect redCircle mixedLayer emptyLayer)
+#guard Shape.ofString? "RgRgRgRg:CrCrCrCr:CrSbWyRg:crcgcbcw"
+    == some (Shape.quadruple greenRect redCircle mixedLayer crystalLayer)
 
 -- クリスタルを含むシェイプ
 #guard Shape.ofString? "crcgcbcw" == some (Shape.single crystalLayer)
 
+-- 末尾空レイヤの正規化: 末尾の空レイヤはストリップされる
+#guard Shape.ofString? "CrCrCrCr:--------" == some (Shape.single redCircle)
+#guard Shape.ofString? "RgRgRgRg:CrCrCrCr:CrSbWyRg:--------"
+    == some (Shape.triple greenRect redCircle mixedLayer)
+#guard Shape.ofString? "RgRgRgRg:--------:--------"
+    == some (Shape.single greenRect)
+#guard Shape.ofString? "RgRgRgRg:--------:--------:--------"
+    == some (Shape.single greenRect)
+#guard Shape.ofString? "CrCrCrCr:--------:CrSbWyRg:--------"
+    == some (Shape.triple redCircle emptyLayer mixedLayer)
+
 -- 無効な入力: 空文字列
 #guard Shape.ofString? "" == none
 
--- 無効な入力: 5 レイヤ以上
+-- 無効な入力: 全レイヤが空（シェイプとして無効）
+#guard Shape.ofString? "--------" == none
+#guard Shape.ofString? "--------:--------" == none
+#guard Shape.ofString? "--------:--------:--------" == none
+#guard Shape.ofString? "--------:--------:--------:--------" == none
+
+-- 無効な入力: 5 セグメント以上（構文エラー）
 #guard Shape.ofString? "--------:--------:--------:--------:--------" == none
+#guard Shape.ofString? "CrCrCrCr:CrCrCrCr:CrCrCrCr:CrCrCrCr:CrCrCrCr" == none
 
 -- 無効な入力: 不正なレイヤ記法
 #guard Shape.ofString? "XXXX" == none
 #guard Shape.ofString? "invalid" == none
 
 -- ============================================================
--- ラウンドトリップ: ofString? (toString s) == some s
+-- ラウンドトリップ: 正規化済みシェイプに対して ofString? (toString s) == some s
 -- ============================================================
 
 #guard Shape.ofString? (Shape.single greenRect).toString
@@ -126,12 +147,20 @@ private def crystalLayer : Layer := Layer.mk
     == some (Shape.double greenRect redCircle)
 #guard Shape.ofString? (Shape.triple greenRect redCircle mixedLayer).toString
     == some (Shape.triple greenRect redCircle mixedLayer)
-#guard Shape.ofString? (Shape.quadruple greenRect redCircle mixedLayer emptyLayer).toString
-    == some (Shape.quadruple greenRect redCircle mixedLayer emptyLayer)
+#guard Shape.ofString? (Shape.quadruple greenRect redCircle mixedLayer crystalLayer).toString
+    == some (Shape.quadruple greenRect redCircle mixedLayer crystalLayer)
 #guard Shape.ofString? (Shape.single crystalLayer).toString
     == some (Shape.single crystalLayer)
 #guard Shape.ofString? (Shape.single (Layer.mk .pin .pin .pin .pin)).toString
     == some (Shape.single (Layer.mk .pin .pin .pin .pin))
+
+-- 非正規化シェイプの toString → ofString? は正規化された結果を返す
+#guard Shape.ofString? (Shape.quadruple greenRect redCircle mixedLayer emptyLayer).toString
+    == some (Shape.triple greenRect redCircle mixedLayer)
+#guard Shape.ofString? (Shape.double greenRect emptyLayer).toString
+    == some (Shape.single greenRect)
+#guard Shape.ofString? (Shape.single emptyLayer).toString
+    == none
 
 -- ============================================================
 -- DecidableEq / BEq
