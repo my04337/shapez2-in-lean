@@ -1,0 +1,2 @@
+# シェルスクリプトは LF 改行を強制（shebang による直接実行を保証）
+*.sh text eol=lf

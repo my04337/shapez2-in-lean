@@ -26,10 +26,11 @@ lean-setup → lean-build → lean-run
 
 ### 1. 実行スクリプトの実行
 
-ビルド → 実行 → (任意) 出力検証をまとめて行う:
+ビルド → 実行 → (任意) 出力検証をまとめて行う。
+シェル名を前置せず、スクリプトを直接実行すること。
 
-- **Windows (PowerShell 7)**: [run.ps1](./scripts/run.ps1)
-- **macOS / Linux (bash/zsh)**: [run.sh](./scripts/run.sh)
+- **Windows**: `.github/skills/lean-run/scripts/run.ps1`
+- **macOS / Linux**: `.github/skills/lean-run/scripts/run.sh`
 
 オプション:
 
@@ -56,9 +57,21 @@ lake exe s2il
 
 `lake exe` は必要に応じて自動でビルドも行うため、単独での実行も可能。
 
+## 構造化出力
+
+スクリプトはビルド診断サマリーに加え、実行結果を以下の形式で出力する:
+
+- **ビルド診断**: `=== BUILD DIAGNOSTICS ===` 〜 `=== END DIAGNOSTICS ===`
+- **実行結果**: `=== RUN RESULT ===` 〜 `=== END RUN ===`
+- **実行ログ**: `.lake/run-log.txt`
+
+ビルド失敗時は実行がスキップされ、`status: skipped` が報告される。
+
+診断の詳細な分析・トリアージは **lean-diagnostics** スキルを参照。
+
 ## トラブルシューティング
 
 - 実行ファイルが見つからない → `lakefile.toml` の `[[lean_exe]]` 定義を確認
-- 実行時エラー → `Main.lean` の `main` 関数を確認
+- 実行時エラー → `.lake/run-log.txt` で詳細を確認
 - `lake` が見つからない → **lean-setup** スキルを参照
-- ビルドエラー → **lean-build** スキルを参照
+- ビルドエラー → サマリーの `[error]` 行を確認、**lean-build** スキルを参照

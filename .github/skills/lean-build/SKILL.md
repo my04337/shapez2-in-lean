@@ -17,10 +17,11 @@ Lake を使用して Lean 4 プロジェクトをビルドする。
 
 ### 1. ビルドスクリプトの実行
 
-PATH 解決 → ビルドをまとめて行う:
+PATH 解決 → ビルドをまとめて行う。
+シェル名を前置せず、スクリプトを直接実行すること。
 
-- **Windows (PowerShell 7)**: [build.ps1](./scripts/build.ps1)
-- **macOS / Linux (bash/zsh)**: [build.sh](./scripts/build.sh)
+- **Windows**: `.github/skills/lean-build/scripts/build.ps1`
+- **macOS / Linux**: `.github/skills/lean-build/scripts/build.sh`
 
 オプション:
 
@@ -49,9 +50,22 @@ root = "Main"
 
 Ctrl+Shift+B で `lake build` タスクが実行される (`.vscode/tasks.json` で設定済み)。
 
+## 構造化出力
+
+スクリプトはビルド結果を以下の形式で出力する:
+
+- **マーカー区切りサマリー** (stdout): `=== BUILD DIAGNOSTICS ===` 〜 `=== END DIAGNOSTICS ===`
+- **全ログ**: `.lake/build-log.txt`
+- **診断 JSONL**: `.lake/build-diagnostics.jsonl`（1行1JSON）
+
+サマリーにはエラー・sorry・警告の件数と、優先度順の診断メッセージ（最大20件）が含まれる。
+
+診断の詳細な分析・トリアージは **lean-diagnostics** スキルを参照。
+
 ## トラブルシューティング
 
 - `lake` が見つからない → **lean-setup** スキルを参照
-- ビルドエラー → エラーメッセージの行番号・ファイルを確認し修正
+- ビルドエラー → サマリーの `[error]` 行を確認、詳細は `.lake/build-log.txt` を参照
+- sorry 検出 → サマリーの `[sorry]` 行で未証明箇所を特定
 - 依存解決エラー → `--update` オプションで再ビルド
 - toolchain バージョン不一致 → `lean-toolchain` の内容を確認

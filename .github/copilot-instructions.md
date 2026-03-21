@@ -148,6 +148,34 @@ theorem map_natCast : ...
 | `s`, `t` | リスト・集合 |
 | `f`, `g` | 関数 |
 
+## 動作環境・シェル
+
+### 各プラットフォームで想定するシェル
+
+| OS | シェル | 備考 |
+|---|---|---|
+| Windows | PowerShell 7 | 最低でもプリインストールの PowerShell 5 以上 |
+| macOS | zsh | 一般的なモダンシェルで動作可能 |
+| Linux | bash | 一般的なモダンシェルで動作可能 |
+
+### スクリプト実行規則
+
+`.github/skills/` 配下のスクリプトを実行する際は、**シェル名を前置せず直接実行すること**。
+
+```
+# ✅ 正しい実行方法（直接実行）
+.github/skills/lean-build/scripts/build.ps1
+.github/skills/lean-build/scripts/build.sh
+
+# ❌ 避けるべき実行方法（シェル明示）
+pwsh.exe -File .github/skills/lean-build/scripts/build.ps1
+bash .github/skills/lean-build/scripts/build.sh
+```
+
+- Windows: `.ps1` ファイルは PowerShell で自動的に実行される
+- macOS / Linux: `.sh` ファイルは shebang (`#!/usr/bin/env bash`) により適切なシェルで実行される
+  - 初回実行時に `chmod +x` が必要な場合がある
+
 ## 外部ライブラリのライセンス方針
 - **利用可**: パブリックドメイン、MIT-0 等（義務なし）
 - **要確認**: MIT, BSD-2, BSD-3, MPL 2.0 等（著作権・許諾表示が必要）

@@ -11,16 +11,16 @@
     },
     "chat.tools.terminal.enableAutoApprove": true,
     "chat.tools.terminal.autoApprove": {
-        "pwsh.exe -File .github/skills/lean-setup/scripts/setup.ps1": true,
-        "bash .github/skills/lean-setup/scripts/setup.sh": true,
-        "pwsh.exe -File .github/skills/lean-build/scripts/build.ps1": true,
-        "pwsh.exe -File .github/skills/lean-build/scripts/build.ps1 -Clean": true,
-        "pwsh.exe -File .github/skills/lean-build/scripts/build.ps1 -Update": true,
-        "bash .github/skills/lean-build/scripts/build.sh": true,
-        "bash .github/skills/lean-build/scripts/build.sh --clean": true,
-        "bash .github/skills/lean-build/scripts/build.sh --update": true,
-        "pwsh.exe -File .github/skills/lean-run/scripts/run.ps1": true,
-        "bash .github/skills/lean-run/scripts/run.sh": true,
+        ".github/skills/lean-setup/scripts/setup.ps1": true,
+        ".github/skills/lean-setup/scripts/setup.sh": true,
+        ".github/skills/lean-build/scripts/build.ps1": true,
+        ".github/skills/lean-build/scripts/build.ps1 -Clean": true,
+        ".github/skills/lean-build/scripts/build.ps1 -Update": true,
+        ".github/skills/lean-build/scripts/build.sh": true,
+        ".github/skills/lean-build/scripts/build.sh --clean": true,
+        ".github/skills/lean-build/scripts/build.sh --update": true,
+        ".github/skills/lean-run/scripts/run.ps1": true,
+        ".github/skills/lean-run/scripts/run.sh": true,
         "lake": true
     }
 }

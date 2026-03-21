@@ -4,7 +4,7 @@
         {
             "label": "lean-run",
             "type": "shell",
-            "command": "pwsh.exe -File .github/skills/lean-run/scripts/run.ps1",
+            "command": ".github/skills/lean-run/scripts/run.ps1",
             "group": {
                 "kind": "build",
                 "isDefault": true
