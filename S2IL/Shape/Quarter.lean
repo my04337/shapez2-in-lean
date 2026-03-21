@@ -43,6 +43,11 @@ def isEmpty : Quarter → Bool
     | empty => true
     | _     => false
 
+/-- 象限が脆弱 (Fragile) かどうかを判定する。結晶のみが脆弱である -/
+def isFragile : Quarter → Bool
+    | crystal _ => true
+    | _         => false
+
 /-- 象限のパーツコードを取得する。空の場合は `none` -/
 def partCode? : Quarter → Option PartCode
     | empty         => none

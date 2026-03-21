@@ -75,24 +75,8 @@ structure QuarterPos where
 
 #### 2b. 隣接関係
 
-同レイヤ内の隣接（円環状4ペア）と上下レイヤ間の隣接を定義する。
-
-```lean
--- 同レイヤ内で方角が隣接しているか
-def Direction.adjacent : Direction → Direction → Bool
-    | ne, se | se, ne => true
-    | se, sw | sw, se => true
-    | sw, nw | nw, sw => true
-    | nw, ne | ne, nw => true
-    | _, _             => false
-
--- 上下レイヤが隣接しているか
-def LayerIndex.verticallyAdjacent : LayerIndex → LayerIndex → Bool
-    | l1, l2 | l2, l1 => true
-    | l2, l3 | l3, l2 => true
-    | l3, l4 | l4, l3 => true
-    | _, _             => false
-```
+同レイヤ内の隣接（円環状4ペア）と上下レイヤ間の垂直隣接を定義する。
+定義の詳細は [`docs/shapez2/adjacency.md`](shapez2/adjacency.md) を参照。
 
 ### Phase 3: 結晶結合クラスタの算出
 
