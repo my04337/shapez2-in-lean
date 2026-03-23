@@ -1042,9 +1042,185 @@ private theorem structuralCluster_mem_rotate180 (s : Shape) (start p : QuarterPo
 private theorem groundedPositions_mem_rotate180 (s : Shape) (p : QuarterPos) :
         (groundedPositions s).any (· == p) =
         (groundedPositions s.rotate180).any (· == p.rotate180) := by
-    sorry -- structuralCluster_mem_rotate180 と同じパターン。
-           -- 差分: BFS の初期キューが複数 seed（layer-0 非空象限）のため、
-           -- 最初の seed を手動処理してから invariant_preserved を適用する必要がある。
+    cases h : (groundedPositions s).any (· == p) with
+    | true =>
+        unfold groundedPositions at h
+        rw [groundingBfs_eq_generic] at h
+        match genericBfs_sound (isGroundingContact s) (QuarterPos.allValid s) [] _ _ p h with
+        | .inl h_vis => simp [List.any] at h_vis
+        | .inr ⟨seed, h_seed, h_reach⟩ =>
+            have h_reach' := groundingReachable_rotate180 s seed p h_reach
+            symm; unfold groundedPositions
+            rw [CrystalBond.allValid_rotate180_eq, Shape.layerCount_rotate180,
+                groundingBfs_eq_generic]
+            -- BFS 不変条件保存（s.rotate180 用）
+            have h_inv := genericBfs_invariant_preserved (isGroundingContact s.rotate180)
+                (QuarterPos.allValid s) []
+                ((QuarterPos.allValid s).filter fun p =>
+                    p.layer == 0 && match p.getQuarter s.rotate180 with
+                    | some q => !q.isEmpty | none => false)
+                (s.layerCount * 4 * (s.layerCount * 4) + s.layerCount * 4)
+                (by intro v hv; simp [List.any] at hv)
+                (by
+                    have h_filter : (QuarterPos.allValid s).filter (fun p =>
+                        !(([] : List QuarterPos).any (· == p))) = QuarterPos.allValid s :=
+                        List.filter_eq_self.mpr (by intro x _; simp [List.any])
+                    simp only [h_filter, allValid_length']
+                    have := List.length_filter_le (fun p =>
+                        p.layer == 0 && match p.getQuarter s.rotate180 with
+                        | some q => !q.isEmpty | none => false) (QuarterPos.allValid s)
+                    rw [allValid_length' s] at this; omega)
+                (fun p q h => by
+                    rw [← CrystalBond.allValid_rotate180_eq]
+                    exact (allValid_any_iff_layer' s.rotate180 p).mpr
+                        (isGroundingContact_valid_fst s.rotate180 p q h))
+            -- seed のプロパティ抽出
+            have h_seed_mem : seed ∈ ((QuarterPos.allValid s).filter fun p =>
+                    p.layer == 0 && match p.getQuarter s with
+                    | some q => !q.isEmpty | none => false) := by
+                have ⟨y, hy, hye⟩ := List.any_eq_true.mp h_seed
+                exact eq_of_beq hye ▸ hy
+            have ⟨h_seed_allValid, h_seed_pred⟩ := List.mem_filter.mp h_seed_mem
+            have h_layer : seed.layer < s.layerCount :=
+                (allValid_any_iff_layer' s seed).mp
+                    (List.any_eq_true.mpr ⟨seed, h_seed_allValid, BEq.rfl⟩)
+            -- seed.rotate180 ∈ allValid s
+            have h_r180_allValid : seed.rotate180 ∈ QuarterPos.allValid s := by
+                have h_any := (allValid_any_iff_layer' s seed.rotate180).mpr h_layer
+                rw [List.any_eq_true] at h_any
+                obtain ⟨y, hy, hye⟩ := h_any; exact eq_of_beq hye ▸ hy
+            -- seed.rotate180 の述語（s.rotate180 用）
+            have h_r180_pred : (fun p : QuarterPos => p.layer == 0 &&
+                    match p.getQuarter s.rotate180 with
+                    | some q => !q.isEmpty | none => false) seed.rotate180 = true := by
+                simp only [getQuarter_rotate180]; exact h_seed_pred
+            -- seed.rotate180 ∈ seeds(s.rotate180)
+            have h_r180_in_seeds : seed.rotate180 ∈ (QuarterPos.allValid s).filter (fun p =>
+                    p.layer == 0 && match p.getQuarter s.rotate180 with
+                    | some q => !q.isEmpty | none => false) :=
+                List.mem_filter.mpr ⟨h_r180_allValid, h_r180_pred⟩
+            -- seed.rotate180 が BFS 結果に含まれる（genericBfs_queue_in_result）
+            have h_seed_in_result := genericBfs_queue_in_result
+                (isGroundingContact s.rotate180) (QuarterPos.allValid s) []
+                ((QuarterPos.allValid s).filter fun p =>
+                    p.layer == 0 && match p.getQuarter s.rotate180 with
+                    | some q => !q.isEmpty | none => false)
+                (s.layerCount * 4 * (s.layerCount * 4) + s.layerCount * 4)
+                seed.rotate180
+                (.inr (List.any_eq_true.mpr ⟨seed.rotate180, h_r180_in_seeds, BEq.rfl⟩))
+                ((allValid_any_iff_layer' s seed.rotate180).mpr h_layer)
+                (by
+                    have h_filter : (QuarterPos.allValid s).filter (fun p =>
+                        !(([] : List QuarterPos).any (· == p))) = QuarterPos.allValid s :=
+                        List.filter_eq_self.mpr (by intro x _; simp [List.any])
+                    simp only [h_filter, allValid_length']
+                    have := List.length_filter_le (fun p =>
+                        p.layer == 0 && match p.getQuarter s.rotate180 with
+                        | some q => !q.isEmpty | none => false) (QuarterPos.allValid s)
+                    rw [allValid_length' s] at this; omega)
+                (fun a b h => by
+                    rw [← CrystalBond.allValid_rotate180_eq]
+                    exact (allValid_any_iff_layer' s.rotate180 a).mpr
+                        (isGroundingContact_valid_fst s.rotate180 a b h))
+            -- 閉包で p.rotate180 を導出
+            exact genericBfs_closed_contains_reachable _ _ _ h_inv
+                seed.rotate180 p.rotate180 h_seed_in_result h_reach'
+                (fun q r h_bond => by
+                    rw [← CrystalBond.allValid_rotate180_eq]
+                    exact (allValid_any_iff_layer' s.rotate180 r).mpr
+                        (isGroundingContact_valid s.rotate180 q r h_bond))
+    | false =>
+        symm
+        cases h' : (groundedPositions s.rotate180).any (· == p.rotate180) with
+        | false => rfl
+        | true =>
+            unfold groundedPositions at h'
+            rw [CrystalBond.allValid_rotate180_eq, Shape.layerCount_rotate180,
+                groundingBfs_eq_generic] at h'
+            match genericBfs_sound (isGroundingContact s.rotate180)
+                    (QuarterPos.allValid s) [] _ _ p.rotate180 h' with
+            | .inl h_vis => simp [List.any] at h_vis
+            | .inr ⟨seed', h_seed', h_reach'⟩ =>
+                have h_reach : GenericReachable (isGroundingContact s) seed'.rotate180 p := by
+                    have := groundingReachable_rotate180 s.rotate180 seed' p.rotate180 h_reach'
+                    simp [Shape.rotate180_rotate180, QuarterPos.rotate180_rotate180] at this
+                    exact this
+                unfold groundedPositions at h
+                rw [groundingBfs_eq_generic] at h
+                -- BFS 不変条件保存（s 用）
+                have h_inv := genericBfs_invariant_preserved (isGroundingContact s)
+                    (QuarterPos.allValid s) []
+                    ((QuarterPos.allValid s).filter fun p =>
+                        p.layer == 0 && match p.getQuarter s with
+                        | some q => !q.isEmpty | none => false)
+                    (s.layerCount * 4 * (s.layerCount * 4) + s.layerCount * 4)
+                    (by intro v hv; simp [List.any] at hv)
+                    (by
+                        have h_filter : (QuarterPos.allValid s).filter (fun p =>
+                            !(([] : List QuarterPos).any (· == p))) = QuarterPos.allValid s :=
+                            List.filter_eq_self.mpr (by intro x _; simp [List.any])
+                        simp only [h_filter, allValid_length']
+                        have := List.length_filter_le (fun p =>
+                            p.layer == 0 && match p.getQuarter s with
+                            | some q => !q.isEmpty | none => false) (QuarterPos.allValid s)
+                        rw [allValid_length' s] at this; omega)
+                    (fun p q h =>
+                        (allValid_any_iff_layer' s p).mpr
+                            (isGroundingContact_valid_fst s p q h))
+                -- seed' のプロパティ抽出
+                have h_seed'_mem : seed' ∈ ((QuarterPos.allValid s).filter fun p =>
+                        p.layer == 0 && match p.getQuarter s.rotate180 with
+                        | some q => !q.isEmpty | none => false) := by
+                    have ⟨y, hy, hye⟩ := List.any_eq_true.mp h_seed'
+                    exact eq_of_beq hye ▸ hy
+                have ⟨h_seed'_allValid, h_seed'_pred⟩ := List.mem_filter.mp h_seed'_mem
+                have h_layer' : seed'.layer < s.layerCount :=
+                    (allValid_any_iff_layer' s seed').mp
+                        (List.any_eq_true.mpr ⟨seed', h_seed'_allValid, BEq.rfl⟩)
+                -- seed'.rotate180 ∈ allValid s
+                have h_r180_allValid : seed'.rotate180 ∈ QuarterPos.allValid s := by
+                    have h_any := (allValid_any_iff_layer' s seed'.rotate180).mpr h_layer'
+                    rw [List.any_eq_true] at h_any
+                    obtain ⟨y, hy, hye⟩ := h_any; exact eq_of_beq hye ▸ hy
+                -- seed'.rotate180 の述語（s 用）
+                have h_r180_pred : (fun p : QuarterPos => p.layer == 0 &&
+                        match p.getQuarter s with
+                        | some q => !q.isEmpty | none => false) (seed'.rotate180) = true := by
+                    simp only [← getQuarter_rotate180_inv]; exact h_seed'_pred
+                -- seed'.rotate180 ∈ seeds(s)
+                have h_r180_in_seeds : seed'.rotate180 ∈ (QuarterPos.allValid s).filter (fun p =>
+                        p.layer == 0 && match p.getQuarter s with
+                        | some q => !q.isEmpty | none => false) :=
+                    List.mem_filter.mpr ⟨h_r180_allValid, h_r180_pred⟩
+                -- seed'.rotate180 が BFS 結果に含まれる（genericBfs_queue_in_result）
+                have h_seed'_in_result := genericBfs_queue_in_result
+                    (isGroundingContact s) (QuarterPos.allValid s) []
+                    ((QuarterPos.allValid s).filter fun p =>
+                        p.layer == 0 && match p.getQuarter s with
+                        | some q => !q.isEmpty | none => false)
+                    (s.layerCount * 4 * (s.layerCount * 4) + s.layerCount * 4)
+                    seed'.rotate180
+                    (.inr (List.any_eq_true.mpr ⟨seed'.rotate180, h_r180_in_seeds, BEq.rfl⟩))
+                    ((allValid_any_iff_layer' s seed'.rotate180).mpr h_layer')
+                    (by
+                        have h_filter : (QuarterPos.allValid s).filter (fun p =>
+                            !(([] : List QuarterPos).any (· == p))) = QuarterPos.allValid s :=
+                            List.filter_eq_self.mpr (by intro x _; simp [List.any])
+                        simp only [h_filter, allValid_length']
+                        have := List.length_filter_le (fun p =>
+                            p.layer == 0 && match p.getQuarter s with
+                            | some q => !q.isEmpty | none => false) (QuarterPos.allValid s)
+                        rw [allValid_length' s] at this; omega)
+                    (fun a b h =>
+                        (allValid_any_iff_layer' s a).mpr
+                            (isGroundingContact_valid_fst s a b h))
+                -- 閉包で p の所属を導出 → 矛盾
+                have h_mem := genericBfs_closed_contains_reachable _ _ _ h_inv
+                    seed'.rotate180 p h_seed'_in_result h_reach
+                    (fun q r h_bond =>
+                        (allValid_any_iff_layer' s r).mpr
+                            (isGroundingContact_valid s q r h_bond))
+                rw [h_mem] at h; exact Bool.noConfusion h
 
 -- ============================================================
 -- floatingUnits の rotate180 等変性
@@ -1057,15 +1233,393 @@ private theorem floatingUnits_rotate180 (s : Shape) :
         floatingUnits s.rotate180 := by
     sorry -- この定理はリスト等号として偽。process_rotate180 の再構築が必要
 
+-- ============================================================
+-- floatingUnits_isEmpty_rotate180 のヘルパー補題群
+-- ============================================================
+
+/-- 接地接触は対称的である -/
+private theorem isGroundingContact_symm (s : Shape) (p1 p2 : QuarterPos) :
+        isGroundingContact s p1 p2 = isGroundingContact s p2 p1 := by
+    unfold isGroundingContact
+    generalize p1.getQuarter s = q1
+    generalize p2.getQuarter s = q2
+    cases q1 with
+    | none => cases q2 <;> rfl
+    | some v1 => cases q2 with
+        | none => rfl
+        | some v2 =>
+            dsimp only []
+            rw [Bool.and_comm (x := !v1.isEmpty) (y := !v2.isEmpty)]
+            congr 1
+            have h_match_symm : (match v1, v2 with
+                    | .pin, _ | _, .pin => false
+                    | _, _ => true : Bool) =
+                (match v2, v1 with
+                    | .pin, _ | _, .pin => false
+                    | _, _ => true : Bool) := by
+                cases v1 <;> cases v2 <;> rfl
+            rw [beq_symm p1.layer p2.layer,
+                LayerIndex.verticallyAdjacent_symm p1.layer p2.layer,
+                dir_beq_symm p1.dir p2.dir,
+                Direction.adjacent_symm p1.dir p2.dir, h_match_symm]
+
+/-- GenericReachable の推移律 -/
+private theorem GenericReachable_trans {edge : α → α → Bool}
+        (h1 : GenericReachable edge a b) (h2 : GenericReachable edge b c) :
+        GenericReachable edge a c := by
+    induction h1 with
+    | refl => exact h2
+    | step h_bond _ ih => exact .step h_bond (ih h2)
+
+/-- 対称エッジでの GenericReachable 逆転 -/
+private theorem GenericReachable_reverse {edge : α → α → Bool}
+        (h_symm : ∀ x y, edge x y = edge y x)
+        (h : GenericReachable edge a b) :
+        GenericReachable edge b a := by
+    induction h with
+    | refl => exact .refl
+    | step h_bond _ ih =>
+        exact GenericReachable_trans ih (.step (h_symm _ _ ▸ h_bond) .refl)
+
+/-- 構造結合は接地接触に含まれる -/
+private theorem isStructurallyBonded_implies_isGroundingContact (s : Shape) (p1 p2 : QuarterPos)
+        (h : isStructurallyBonded s p1 p2 = true) :
+        isGroundingContact s p1 p2 = true := by
+    simp only [isStructurallyBonded] at h
+    simp only [isGroundingContact]
+    cases hq1 : p1.getQuarter s with
+    | none => simp_all
+    | some v1 => cases hq2 : p2.getQuarter s with
+        | none => simp_all
+        | some v2 =>
+            simp only [hq1, hq2] at h ⊢
+            revert h
+            cases v1 <;> cases v2 <;>
+                simp [Quarter.canFormBond, Quarter.isEmpty] <;>
+                (intro h;
+                 cases h1 : (p1.layer == p2.layer) <;>
+                 cases h2 : (p1.dir == p2.dir) <;>
+                 cases h3 : (p1.dir.adjacent p2.dir) <;>
+                 cases h4 : (LayerIndex.verticallyAdjacent p1.layer p2.layer) <;>
+                 simp_all (config := { decide := true }))
+
+/-- エッジ述語の包含による GenericReachable の単調性 -/
+private theorem GenericReachable_mono {edge1 edge2 : α → α → Bool}
+        (h_sub : ∀ a b, edge1 a b = true → edge2 a b = true)
+        (h : GenericReachable edge1 a b) :
+        GenericReachable edge2 a b := by
+    induction h with
+    | refl => exact .refl
+    | step h_bond _ ih => exact .step (h_sub _ _ h_bond) ih
+
+/-- groundedPositions の BFS 不変条件 -/
+private theorem groundedPositions_inv (s : Shape) :
+        GenericBFSInv (isGroundingContact s) (QuarterPos.allValid s)
+            (groundedPositions s) [] := by
+    unfold groundedPositions
+    rw [groundingBfs_eq_generic]
+    apply genericBfs_invariant_preserved
+    · intro v hv; simp [List.any] at hv
+    · have h_filter : (QuarterPos.allValid s).filter (fun p =>
+          !(([] : List QuarterPos).any (· == p))) = QuarterPos.allValid s :=
+          List.filter_eq_self.mpr (by intro x _; simp [List.any])
+      simp only [h_filter, allValid_length']
+      have := List.length_filter_le (fun p =>
+          p.layer == 0 && match p.getQuarter s with
+          | some q => !q.isEmpty | none => false) (QuarterPos.allValid s)
+      rw [allValid_length' s] at this; omega
+    · intro p q h
+      exact (allValid_any_iff_layer' s p).mpr
+          (isGroundingContact_valid_fst s p q h)
+
+/-- allStructuralClusters は全ての bondable 位置をカバーする -/
+private theorem allStructuralClusters_covers (s : Shape) (p : QuarterPos)
+        (h_valid : p.layer < s.layerCount)
+        (h_bondable : match p.getQuarter s with | some q => q.canFormBond = true | none => False) :
+        (allStructuralClusters s).any (fun c => c.any (· == p)) = true := by
+    unfold allStructuralClusters
+    -- p が bondable リストに含まれることを示す
+    have h_p_mem : p ∈ (QuarterPos.allValid s).filter (fun pos =>
+            match pos.getQuarter s with | some q => q.canFormBond | none => false) := by
+        rw [List.mem_filter]
+        exact ⟨by
+            have h_any := (allValid_any_iff_layer' s p).mpr h_valid
+            rw [List.any_eq_true] at h_any
+            obtain ⟨x, hx, hxe⟩ := h_any; exact eq_of_beq hxe ▸ hx,
+          by revert h_bondable; cases p.getQuarter s with
+             | none => intro h; exact h.elim
+             | some q => intro h; exact h⟩
+    -- foldl 不変条件: p ∈ remaining ∨ acc がカバー → 結果がカバー
+    suffices h_inv : ∀ (remaining : List QuarterPos) (acc : List (List QuarterPos)),
+        (p ∈ remaining ∨ acc.any (fun c => c.any (· == p)) = true) →
+        (remaining.foldl (fun clusters pos =>
+            if clusters.any (fun cluster => cluster.any (· == pos)) then clusters
+            else clusters ++ [structuralCluster s pos]) acc).any
+            (fun c => c.any (· == p)) = true by
+      exact h_inv _ [] (.inl h_p_mem)
+    intro remaining acc h_or
+    induction remaining generalizing acc with
+    | nil => exact h_or.elim (fun h => by cases h) id
+    | cons pos rest ih =>
+        dsimp only [List.foldl]
+        cases h_cov : acc.any (fun cluster => cluster.any (· == pos)) with
+        | true =>
+            simp only [h_cov, ite_true]
+            exact ih acc (h_or.elim (fun h_mem => by
+                cases h_mem with
+                | head => exact .inr h_cov
+                | tail _ h => exact .inl h) .inr)
+        | false =>
+            exact ih (acc ++ [structuralCluster s pos]) (h_or.elim (fun h_mem => by
+                cases h_mem with
+                | head =>
+                    right; rw [List.any_append]
+                    simp only [Bool.or_eq_true]
+                    right; simp only [List.any_cons, List.any_nil, Bool.or_false]
+                    unfold structuralCluster; rw [structuralBfs_eq_generic]
+                    cases hn : s.layerCount with
+                    | zero => omega
+                    | succ k => exact genericBfs_contains_start _ _ _ _ (Nat.mul_pos (by omega) (by omega))
+                | tail _ h => exact .inl h) (fun h => .inr (by
+                    rw [List.any_append]; simp only [Bool.or_eq_true]; exact .inl h)))
+
+/-- allStructuralClusters の各クラスタは structuralCluster s pos として生成される -/
+private theorem allStructuralClusters_is_structuralCluster (s : Shape) (c : List QuarterPos)
+        (hc : c ∈ allStructuralClusters s) :
+        ∃ pos, c = structuralCluster s pos ∧ pos.layer < s.layerCount ∧
+            (∃ q, pos.getQuarter s = some q ∧ q.canFormBond = true) := by
+    unfold allStructuralClusters at hc
+    -- foldl 不変条件: acc の全クラスタが structuralCluster pos の形
+    suffices ∀ (remaining : List QuarterPos) (acc : List (List QuarterPos)),
+        (∀ c' ∈ acc, ∃ pos, c' = structuralCluster s pos ∧ pos.layer < s.layerCount ∧
+            (∃ q, pos.getQuarter s = some q ∧ q.canFormBond = true)) →
+        (∀ pos ∈ remaining, pos.layer < s.layerCount ∧
+            (∃ q, pos.getQuarter s = some q ∧ q.canFormBond = true)) →
+        c ∈ remaining.foldl (fun clusters pos =>
+            if clusters.any (fun cluster => cluster.any (· == pos)) then clusters
+            else clusters ++ [structuralCluster s pos]) acc →
+        ∃ pos, c = structuralCluster s pos ∧ pos.layer < s.layerCount ∧
+            (∃ q, pos.getQuarter s = some q ∧ q.canFormBond = true) by
+      exact this _ [] (fun _ h => nomatch h) (fun pos h_mem => by
+          rw [List.mem_filter] at h_mem
+          obtain ⟨h_allValid, h_bond⟩ := h_mem
+          refine ⟨(allValid_any_iff_layer' s pos).mp
+              (List.any_eq_true.mpr ⟨pos, h_allValid, BEq.rfl⟩), ?_⟩
+          cases hq : pos.getQuarter s with
+          | none => simp [hq] at h_bond
+          | some q =>
+              cases q with
+              | empty => simp [hq, Quarter.canFormBond] at h_bond
+              | pin => simp [hq, Quarter.canFormBond] at h_bond
+              | crystal c => exact ⟨.crystal c, rfl, rfl⟩
+              | colored r c => exact ⟨.colored r c, rfl, rfl⟩) hc
+    intro remaining acc h_inv h_props hc
+    induction remaining generalizing acc with
+    | nil => exact h_inv c hc
+    | cons pos rest ih =>
+        dsimp only [List.foldl] at hc
+        have h_pos_props := h_props pos (.head _)
+        have h_rest_props := fun p hp => h_props p (.tail _ hp)
+        cases h_cov : acc.any (fun cluster => cluster.any (· == pos))
+        · -- false: pos は新規 → structuralCluster s pos を追加
+          simp only [h_cov, ite_false] at hc
+          exact ih (acc ++ [structuralCluster s pos])
+              (fun c' hc' => by
+                  rw [List.mem_append, List.mem_singleton] at hc'
+                  cases hc' with
+                  | inl h => exact h_inv c' h
+                  | inr h => exact ⟨pos, h, h_pos_props⟩) h_rest_props hc
+        · -- true: pos は既存 → スキップ
+          simp only [h_cov, ite_true] at hc
+          exact ih acc h_inv h_rest_props hc
+
+/-- 非空かつ非接地の位置が存在すれば floatingUnits は非空 -/
+private theorem ungrounded_nonempty_implies_floatingUnits_nonempty (s : Shape) (p : QuarterPos)
+        (h_valid : p.layer < s.layerCount)
+        (h_ne : ∃ q, p.getQuarter s = some q ∧ !q.isEmpty = true)
+        (h_ug : (groundedPositions s).any (· == p) = false) :
+        (floatingUnits s).isEmpty = false := by
+    obtain ⟨q, hq_some, hq_ne⟩ := h_ne
+    -- 非空象限はピンか結合可能のいずれか
+    have h_cases : q = .pin ∨ q.canFormBond = true := by
+        cases q with
+        | empty => simp [Quarter.isEmpty] at hq_ne
+        | pin => exact .inl rfl
+        | crystal => exact .inr rfl
+        | colored => exact .inr rfl
+    -- p は allValid に含まれる
+    have h_p_allValid : p ∈ QuarterPos.allValid s := by
+        have h_any := (allValid_any_iff_layer' s p).mpr h_valid
+        rw [List.any_eq_true] at h_any
+        obtain ⟨x, hx, hxe⟩ := h_any
+        exact eq_of_beq hxe ▸ hx
+    -- isEmpty = false を ∃ u ∈ floatingUnits s から導出
+    suffices ∃ u, u ∈ floatingUnits s by
+        obtain ⟨u, hu⟩ := this
+        cases hl : floatingUnits s with
+        | nil => rw [hl] at hu; nomatch hu
+        | cons _ _ => rfl
+    cases h_cases with
+    | inl h_pin =>
+        -- p はピン → floatingPins に含まれる
+        subst h_pin
+        exact ⟨.pin p, by
+            unfold floatingUnits
+            apply List.mem_append_right
+            exact List.mem_map.mpr ⟨p, List.mem_filter.mpr
+                ⟨by unfold allIsolatedPins
+                    exact List.mem_filter.mpr ⟨h_p_allValid, by rw [hq_some]⟩,
+                 by simp [h_ug]⟩, rfl⟩⟩
+    | inr h_bond =>
+        -- p は結合可能 → allStructuralClusters のクラスタに含まれる
+        have h_bondable : match p.getQuarter s with
+                | some q => q.canFormBond = true | none => False := by
+            rw [hq_some]; exact h_bond
+        have h_covers := allStructuralClusters_covers s p h_valid h_bondable
+        rw [List.any_eq_true] at h_covers
+        obtain ⟨c, hc_mem, hc_has_p⟩ := h_covers
+        -- c = structuralCluster s pos
+        obtain ⟨pos, hc_is_sc, _, _⟩ :=
+            allStructuralClusters_is_structuralCluster s c hc_mem
+        -- c 内の全位置が非接地であることを示す
+        have h_all_ug : c.all
+                (fun x => !((groundedPositions s).any (· == x))) = true := by
+            rw [List.all_eq_true]
+            intro x hx
+            cases h_x_ground : (groundedPositions s).any (· == x) with
+            | false => rfl
+            | true =>
+                -- x が接地 → p も接地 → 矛盾
+                exfalso
+                -- 構造クラスタ内パスの導出
+                have h_x_in_sc : (structuralCluster s pos).any (· == x) = true := by
+                    rw [← hc_is_sc]; exact List.any_eq_true.mpr ⟨x, hx, BEq.rfl⟩
+                have h_p_in_sc := hc_is_sc ▸ hc_has_p
+                have h_reach_pos_x := structuralCluster_sound s pos x h_x_in_sc
+                have h_reach_pos_p := structuralCluster_sound s pos p h_p_in_sc
+                -- x → pos → p（逆転 + 推移）
+                have h_reach_x_pos := GenericReachable_reverse
+                    (fun a b => isStructurallyBonded_symm s a b) h_reach_pos_x
+                have h_reach_x_p :=
+                    GenericReachable_trans h_reach_x_pos h_reach_pos_p
+                -- 構造結合 → 接地接触
+                have h_reach_gc := GenericReachable_mono
+                    (fun a b => isStructurallyBonded_implies_isGroundingContact s a b)
+                    h_reach_x_p
+                -- BFS 閉包性から p も接地 → 矛盾
+                have h_p_grounded := genericBfs_closed_contains_reachable
+                    (isGroundingContact s) (QuarterPos.allValid s)
+                    (groundedPositions s) (groundedPositions_inv s) x p
+                    h_x_ground h_reach_gc
+                    (fun a b h =>
+                        (allValid_any_iff_layer' s b).mpr
+                            (isGroundingContact_valid s a b h))
+                rw [h_ug] at h_p_grounded
+                exact absurd h_p_grounded (by decide)
+        -- c は浮遊クラスタ → floatingUnits に含まれる
+        exact ⟨.cluster c, by
+            unfold floatingUnits
+            apply List.mem_append_left
+            exact List.mem_map.mpr ⟨c, List.mem_filter.mpr ⟨hc_mem, h_all_ug⟩, rfl⟩⟩
+
+/-- floatingUnits が非空なら非空かつ非接地の位置が存在する -/
+private theorem floatingUnits_nonempty_implies_exists_ungrounded (s : Shape)
+        (h : (floatingUnits s).isEmpty = false) :
+        ∃ p : QuarterPos, p.layer < s.layerCount ∧
+            (∃ q, p.getQuarter s = some q ∧ !q.isEmpty = true) ∧
+            (groundedPositions s).any (· == p) = false := by
+    -- floatingUnits s が非空なので要素を取得
+    obtain ⟨u, hu_mem⟩ : ∃ u, u ∈ floatingUnits s := by
+        cases hfl : floatingUnits s with
+        | nil => rw [hfl] at h; simp at h
+        | cons hd tl => exact ⟨hd, .head _⟩
+    -- floatingUnits の定義を展開してメンバーシップ情報を抽出
+    unfold floatingUnits at hu_mem
+    rw [List.mem_append] at hu_mem
+    cases hu_mem with
+    | inl h_cluster =>
+        -- 浮遊クラスタから位置を抽出
+        rw [List.mem_map] at h_cluster
+        obtain ⟨c, hc_filt, _⟩ := h_cluster
+        rw [List.mem_filter] at hc_filt
+        obtain ⟨hc_in_all, hc_all_ug⟩ := hc_filt
+        -- c = structuralCluster s pos
+        obtain ⟨pos, hc_is_sc, h_pos_valid, q_pos, hq_pos, h_pos_bond⟩ :=
+            allStructuralClusters_is_structuralCluster s c hc_in_all
+        -- pos ∈ c（BFS 開始位置は結果に含まれる）
+        have h_pos_in_c : pos ∈ c := by
+            have h_any : c.any (· == pos) = true := by
+                rw [hc_is_sc]; unfold structuralCluster; rw [structuralBfs_eq_generic]
+                have h_lc_pos : s.layerCount > 0 := Nat.pos_of_ne_zero (by omega)
+                have h_n_pos : s.layerCount * 4 > 0 := Nat.mul_pos h_lc_pos (by omega)
+                exact genericBfs_contains_start _ _ _ _ (Nat.mul_pos h_n_pos h_n_pos)
+            rw [List.any_eq_true] at h_any
+            obtain ⟨y, hy, hye⟩ := h_any
+            have := eq_of_beq hye; subst this; exact hy
+        -- pos は非接地
+        have h_pos_ug : (groundedPositions s).any (· == pos) = false := by
+            have := (List.all_eq_true.mp hc_all_ug) pos h_pos_in_c
+            revert this; cases (groundedPositions s).any (· == pos) <;> simp
+        -- pos は非空（canFormBond → not empty）
+        have h_pos_ne : !q_pos.isEmpty = true := by
+            cases q_pos <;> simp [Quarter.canFormBond] at h_pos_bond
+                <;> simp [Quarter.isEmpty]
+        exact ⟨pos, h_pos_valid, ⟨q_pos, hq_pos, h_pos_ne⟩, h_pos_ug⟩
+    | inr h_pin =>
+        -- 浮遊ピンから位置を抽出
+        rw [List.mem_map] at h_pin
+        obtain ⟨p', hp'_filt, _⟩ := h_pin
+        rw [List.mem_filter] at hp'_filt
+        obtain ⟨hp'_in_iso, hp'_ug⟩ := hp'_filt
+        -- p' ∈ allIsolatedPins s → allValid + ピン条件
+        unfold allIsolatedPins at hp'_in_iso
+        rw [List.mem_filter] at hp'_in_iso
+        obtain ⟨hp'_allValid, hp'_is_pin⟩ := hp'_in_iso
+        -- p' は valid
+        have h_p'_valid : p'.layer < s.layerCount :=
+            (allValid_any_iff_layer' s p').mp
+                (List.any_eq_true.mpr ⟨p', hp'_allValid, BEq.rfl⟩)
+        -- p' は非空（ピンは非空）
+        have h_p'_ne : ∃ q, p'.getQuarter s = some q ∧ !q.isEmpty = true := by
+            cases hq : p'.getQuarter s with
+            | none => simp [hq] at hp'_is_pin
+            | some q =>
+                cases q <;> simp_all [Quarter.isEmpty]
+        -- p' は非接地
+        have h_p'_ug : (groundedPositions s).any (· == p') = false := by
+            revert hp'_ug; cases (groundedPositions s).any (· == p') <;> simp
+        exact ⟨p', h_p'_valid, h_p'_ne, h_p'_ug⟩
+
+/-- floatingUnits が非空なら s.rotate180 でも非空 -/
+private theorem floatingUnits_nonempty_implies_rotate180_nonempty (s : Shape)
+        (h : (floatingUnits s).isEmpty = false) :
+        (floatingUnits s.rotate180).isEmpty = false := by
+    -- 非空・非接地の位置 p を抽出
+    obtain ⟨p, h_valid, ⟨q, hq, h_ne⟩, h_ug⟩ :=
+        floatingUnits_nonempty_implies_exists_ungrounded s h
+    -- p.rotate180 は s.rotate180 でも非空・非接地
+    apply ungrounded_nonempty_implies_floatingUnits_nonempty s.rotate180 p.rotate180
+    · -- p.rotate180.layer < s.rotate180.layerCount
+      rw [Shape.layerCount_rotate180]; exact h_valid
+    · -- p.rotate180 の象限は非空
+      exact ⟨q, by rw [getQuarter_rotate180]; exact hq, h_ne⟩
+    · -- p.rotate180 は s.rotate180 で非接地
+      rw [← groundedPositions_mem_rotate180]; exact h_ug
+
 /-- floatingUnits の isEmpty は rotate180 で不変 -/
 theorem floatingUnits_isEmpty_rotate180 (s : Shape) :
         (floatingUnits s).isEmpty = (floatingUnits s.rotate180).isEmpty := by
-    -- 両方の Bool 値について場合分け
     cases h : (floatingUnits s).isEmpty <;>
         cases h' : (floatingUnits s.rotate180).isEmpty
     · rfl
-    · exfalso; sorry -- s に浮遊単位あり・s.r180 にはなし → 矛盾
-    · exfalso; sorry -- s になし・s.r180 にあり → 矛盾
+    · -- h: isEmpty = false, h': isEmpty r180 = true → s 非空なのに s.r180 空で矛盾
+      exfalso
+      have := floatingUnits_nonempty_implies_rotate180_nonempty s h
+      rw [h'] at this; exact absurd this (by simp)
+    · -- h: isEmpty = true, h': isEmpty r180 = false → s.r180 非空なのに s 空で矛盾
+      exfalso
+      have := floatingUnits_nonempty_implies_rotate180_nonempty s.rotate180 h'
+      rw [Shape.rotate180_rotate180] at this; rw [h] at this; exact absurd this (by simp)
     · rfl
 
 -- ============================================================

@@ -6,14 +6,15 @@
 
 ### 1-1. sorry 残数
 
-プロジェクト全体で **sorry は 4 件**。全て [Gravity.lean](../S2IL/Behavior/Gravity.lean) に集中している。
+プロジェクト全体で **sorry は 1 件**。全て [Gravity.lean](../S2IL/Behavior/Gravity.lean) に集中している。
 
 | # | 定理名 | 行番号 | 状態 | 概要 |
 |---|---|---|---|---|
-| S-1 | `groundedPositions_mem_rotate180` | L1042 | `sorry` | 接地位置のメンバーシップが rotate180 で保存される |
-| S-2 | `floatingUnits_rotate180` | L1055 | `sorry` | `floatingUnits` のリスト等値（**定理文が偽**） |
-| S-3 | `floatingUnits_isEmpty_rotate180` (case 1) | L1067 | `exfalso; sorry` | s に浮遊単位あり → s.r180 にもあり |
-| S-4 | `floatingUnits_isEmpty_rotate180` (case 2) | L1068 | `exfalso; sorry` | s に浮遊単位なし → s.r180 にもなし |
+| S-1 | `groundedPositions_mem_rotate180` | L1042 | ✅ 証明済 | 接地位置のメンバーシップが rotate180 で保存される |
+| S-2 | `floatingUnits_rotate180` | L1231 | `sorry` | `floatingUnits` のリスト等値（**定理文が偽**・意図的） |
+| S-3 | `floatingUnits_isEmpty_rotate180` | — | ✅ 証明済 | isEmpty が rotate180 で不変（主定理） |
+| S-4 | `ungrounded_nonempty_implies_floatingUnits_nonempty` | L1434 | ✅ 証明済 | 非空・非接地位置が存在 → floatingUnits 非空（真） |
+| S-5 | `floatingUnits_nonempty_implies_exists_ungrounded` | L1522 | ✅ 証明済 | floatingUnits 非空 → 非空・非接地位置が存在（真） |
 
 ### 1-2. 他モジュールの完成度
 
@@ -23,7 +24,7 @@
 | Shatter.lean | 38 | 0 | 100% |
 | Cutter.lean | 23 | 0 | 100% |
 | GenericBfs.lean | 12 | 0 | 100% |
-| **Gravity.lean** | **68** | **4** | **94%** |
+| **Gravity.lean** | **70+** | **1** | **99%** |
 
 ---
 
@@ -406,17 +407,19 @@ theorem shouldProcessBefore_rotate180 (a b : FallingUnit) :
 
 | # | タスク | 状態 | 依存 |
 |---|---|---|---|
-| G-1-1 | seed（レイヤ 0 の非空象限）集合の rotate180 等変性を証明 | 未着手 | `getQuarter_rotate180`, `allValid_rotate180_eq` |
-| G-1-2 | `groundedPositions` の健全性を証明（BFS 結果 → seed からの到達可能性） | 未着手 | `genericBfs_sound`, `groundingBfs_eq_generic` |
-| G-1-3 | `groundedPositions` の完全性を証明（到達可能 → BFS 結果に含まれる） | 未着手 | `genericBfs_invariant_preserved`, `genericBfs_closed_contains_reachable`, `genericBfs_queue_in_result` |
-| G-1-4 | `groundedPositions_mem_rotate180` を組み立てる | 未着手 | G-1-1 〜 G-1-3, `isGroundingContact_rotate180` |
+| G-1-1 | seed（レイヤ 0 の非空象限）集合の rotate180 等変性を証明 | ✅ 完了 | `getQuarter_rotate180`, `allValid_rotate180_eq` |
+| G-1-2 | `groundedPositions` の健全性を証明（BFS 結果 → seed からの到達可能性） | ✅ 完了 | `genericBfs_sound`, `groundingBfs_eq_generic` |
+| G-1-3 | `groundedPositions` の完全性を証明（到達可能 → BFS 結果に含まれる） | ✅ 完了 | `genericBfs_invariant_preserved`, `genericBfs_closed_contains_reachable`, `genericBfs_queue_in_result` |
+| G-1-4 | `groundedPositions_mem_rotate180` を組み立てる | ✅ 完了 | G-1-1 〜 G-1-3, `isGroundingContact_rotate180` |
 
 ### Phase G-2: `floatingUnits_isEmpty_rotate180` の証明
 
 | # | タスク | 状態 | 依存 |
 |---|---|---|---|
-| G-2-1 | 浮遊判定の rotate180 等変性を証明 | 未着手 | G-1-4, `structuralCluster_mem_rotate180`, `getQuarter_rotate180` |
-| G-2-2 | `floatingUnits_isEmpty_rotate180` の2つの `exfalso; sorry` を解消 | 未着手 | G-2-1 |
+| G-2-1 | 浮遊判定の rotate180 等変性を証明 | ✅ 完了 | G-1-4, `structuralCluster_mem_rotate180`, `getQuarter_rotate180` |
+| G-2-2 | `floatingUnits_isEmpty_rotate180` の2つの `exfalso; sorry` を解消 | ✅ 完了 | G-2-1 |
+| G-2-3 | `ungrounded_nonempty_implies_floatingUnits_nonempty` の sorry を解消 | ✅ 完了 | `allStructuralClusters_covers`, `groundedPositions_inv` |
+| G-2-4 | `floatingUnits_nonempty_implies_exists_ungrounded` の sorry を解消 | ✅ 完了 | G-2-3 |
 
 ### Phase G-3: `process_rotate180` の証明再構築
 
@@ -481,7 +484,7 @@ def process (s : Shape) (fuel : Nat) : Option Shape := ...
 ## 7. 推奨作業順序
 
 ```
-Phase G-1 (groundedPositions_mem_rotate180)
+Phase G-1 (groundedPositions_mem_rotate180) 
   ├── G-1-1 〜 G-1-3: 補題の証明
   └── G-1-4: 定理の組み立て
          ↓
