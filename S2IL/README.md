@@ -18,7 +18,7 @@
 | `Layer.lean` | レイヤ構造体（4象限の組） |
 | `Shape.lean` | シェイプ構造体・シリアライズ・正規化 |
 | `QuarterPos.lean` | 方角・レイヤインデックス・象限位置 |
-| `GameConfig.lean` | ゲーム設定（最大レイヤ数）・truncate |
+| `GameConfig.lean` | ゲーム設定（構造体）・プリセット（vanilla4 / vanilla5）・truncate |
 
 ## Behavior/ — シェイプの振る舞い
 

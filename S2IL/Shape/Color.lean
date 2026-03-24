@@ -199,6 +199,28 @@ theorem mix_white_left (a : Color) : mix white a = a := by
 theorem mix_white_right (a : Color) : mix a white = a := by
     cases a <;> rfl
 
+/-!
+## 型クラスインスタンス
+
+混色の代数的性質を `Std` の型クラスとして登録する。
+これにより `Std.Commutative.comm`、`Std.IdempotentOp.idempotent`、
+`Std.LawfulLeftIdentity.left_id` 等が型クラス推論で自動的に利用可能になる。
+-/
+
+instance : Std.Commutative Color.mix where
+    comm := mix_comm
+
+instance : Std.IdempotentOp Color.mix where
+    idempotent := mix_self
+
+instance : Std.LeftIdentity Color.mix Color.white := ⟨⟩
+instance : Std.LawfulLeftIdentity Color.mix Color.white where
+    left_id := mix_white_left
+
+instance : Std.RightIdentity Color.mix Color.white := ⟨⟩
+instance : Std.LawfulRightIdentity Color.mix Color.white where
+    right_id := mix_white_right
+
 /-- 混色は結合的でない: `mix (mix red green) blue ≠ mix red (mix green blue)` の反例 -/
 theorem mix_not_assoc : mix (mix red green) blue ≠ mix red (mix green blue) := by
     decide

@@ -1,504 +1,394 @@
 # Gravity rotate180 等変性の証明計画
 
-> 作成日: 2025-07
+> 最終更新: 2026-06（3 回目の改定 — `sortFU_foldl_perm_input_eq` 偽定理修正後）
 
-## 1. 現状のまとめ
+## 1. 目標
 
-### 1-1. sorry 残数
+`process_rotate180`: 落下処理 (`Gravity.process`) と 180° 回転 (`Shape.rotate180`) の可換性を示す。
 
-プロジェクト全体で **sorry は 2 件**。全て [Gravity.lean](../S2IL/Behavior/Gravity.lean) に集中している。
+```lean
+theorem process_rotate180 (s : Shape) :
+        (process s).map Shape.rotate180 = process s.rotate180
+```
 
-| # | 定理名 | 行番号 | 状態 | 概要 |
+この定理は `Shape.gravity_rotate180_comm` の直接の根拠であり、
+Shapez2 のシェイプ操作の回転等変性を保証する中心定理の一つ。
+
+---
+
+## 2. 現状
+
+### 2-1. sorry 残数: 2 件
+
+| # | 定理名 | 行 | 概要 | 状態 |
 |---|---|---|---|---|
-| S-1 | `groundedPositions_mem_rotate180` | L1042 | ✅ 証明済 | 接地位置のメンバーシップが rotate180 で保存される |
-| S-2 | `floatingUnits_rotate180` | — | ✅ 削除済 | リスト等値は**定理文が偽**のため削除 |
-| S-3 | `floatingUnits_isEmpty_rotate180` | — | ✅ 証明済 | isEmpty が rotate180 で不変（主定理） |
-| S-4 | `ungrounded_nonempty_implies_floatingUnits_nonempty` | L1434 | ✅ 証明済 | 非空・非接地位置が存在 → floatingUnits 非空（真） |
-| S-5 | `floatingUnits_nonempty_implies_exists_ungrounded` | L1522 | ✅ 証明済 | floatingUnits 非空 → 非空・非接地位置が存在（真） |
+| S-1 | `floatingUnits_spb_rank` | L5556 | floatingUnits 上で spb が DAG（ランク関数の存在） | sorry（TRUE） |
+| S-2 | `sortFU_foldl_perm_input_eq` | L5585 | floatingUnits の Perm 入力に対する sortFU 後 foldl 不変性 | sorry（TRUE, floatingUnits 限定） |
 
-### 1-2. 他モジュールの完成度
+### 2-2. ファイルサイズ
 
-| モジュール | 定理数 | sorry数 | 完成度 |
-|---|---|---|---|
-| CrystalBond.lean | 43 | 0 | 100% |
-| Shatter.lean | 38 | 0 | 100% |
-| Cutter.lean | 23 | 0 | 100% |
-| GenericBfs.lean | 12 | 0 | 100% |
-| **Gravity.lean** | **70+** | **1** | **99%** |
+- `Gravity.lean`: ~5,710 行（settle_foldl_eq の大幅簡略化後）
+- sorry: 2 件
+- ビルド: 0 errors, 2 sorry warnings
+
+### 2-3. 偽定理の発見と修正
+
+#### sortFU_preserves_spb_order（2026-06 第1セッション）
+
+2-cycle 禁止仮定では **偽**。第三者との 3-cycle が insertSorted を破壊する。
+
+```
+a = cluster [⟨0, .ne⟩, ⟨5, .se⟩]
+b = cluster [⟨3, .ne⟩, ⟨0, .sw⟩]
+w = cluster [⟨3, .sw⟩, ⟨0, .se⟩]
+
+spb: a→b→w→a (3-cycle)
+l = [w, a, b] → sortFU = [b, w, a] → a は b の後
+```
+
+**修正**: 削除済み。DAG ランク関数方式の `floatingUnits_spb_rank` に置換。
+
+#### sortFU_foldl_perm_input_eq 旧版（2026-06 第2セッション）
+
+一般の h_disj + h_rank 仮定では **偽**（新発見）。
+
+```
+x = pin(NE, 7), u = cluster[(NE,8),(SW,1)], w = pin(SW, 3)
+DAG: rank(x) < rank(u) < rank(w)
+spb(x,u)=true, spb(u,w)=true, x と w は tied (方角素)
+
+l1 = [w, x, u] → sortFU = [u, w, x]
+l2 = [x, u, w] → sortFU = [w, x, u]
+→ u が w,x 両方と方角共有 → foldl 不可換 → 結果が異なる
+```
+
+**根本原因**: DAG 条件下でも insertSorted のグリーディ停止が非 tied ペアの
+相対順序を壊す。tied な x と w の間に、両者と方角共有する u が挟まると、
+u の挿入位置が入力順に依存し、non-commutative ペアの順序が変わる。
+
+**修正**: 定理文を floatingUnits 限定に変更（`h_sub : ∀ x ∈ l1, x ∈ floatingUnits s`）。
+floatingUnits の幾何制約により上記の反例パターンは実際には発生しない（後述）。
+
+### 2-4. リファクタリング履歴
+
+- **2026-03-29**: 半シェイプ関連コードの全削除（~160行削減, sorry 2→1）
+- **2026-04**: `invCount_adj_swap_lt` 完全証明、基盤補題群 (nodup, disjoint, etc.) 完成
+- **2026-06 第1セッション**: `sortFU_preserves_spb_order` 偽定理を発見・削除。
+  DAG ランク関数方式に移行。
+- **2026-06 第2セッション**: `sortFU_foldl_perm_input_eq` 旧版が一般入力で偽と判明。
+  floatingUnits 限定に修正。settle_foldl_eq Step 3 を大幅簡略化（~60行削減）。
 
 ---
 
-## 2. 証明の依存関係グラフ
+## 3. 証明パイプライン
 
-### 2-1. 最上位定理から sorry までの全体像
+`process_rotate180` は以下のステップの連鎖で構成されている。
+`settle_foldl_eq` を除く全ステップが完全証明済み:
 
-```mermaid
-graph TD
-    classDef proven fill:#c8e6c9,stroke:#333
-    classDef sorry fill:#ffcdd2,stroke:#333
-    classDef false fill:#ff8a80,stroke:#333,stroke-width:2px
-    classDef target fill:#fff9c4,stroke:#333
-
-    CUT["Shape.cut_rotate180_comm<br/>(Cutter.lean)"]:::proven
-    GRAV["Shape.gravity_rotate180_comm<br/>(Gravity.lean)"]:::proven
-
-    SETTLE["settleAfterCut_rotate180<br/>(Cutter.lean)"]:::proven
-    SHATTER_CUT["shatterOnCut_rotate180_comm<br/>(Shatter.lean)"]:::proven
-    EAST["eastHalf_rotate180"]:::proven
-    WEST["westHalf_rotate180"]:::proven
-
-    PROC["process_rotate180<br/>(Gravity.lean)"]:::target
-
-    FU_EMPTY["floatingUnits_isEmpty_rotate180"]:::sorry
-    FU_LIST["floatingUnits_rotate180<br/>⚠ 定理文が偽"]:::false
-    SORT_R["sortFallingUnits_rotate180"]:::proven
-    FOLDL["foldl_place_rotate180"]:::proven
-    CP_R["clearPositions_rotate180"]:::proven
-    NORM_R["normalize_rotate180"]:::proven
-    OFL_R["ofLayers_rotate180"]:::proven
-    FM_R["flatMap_map_rotate180"]:::proven
-
-    GP_MEM["groundedPositions_mem_rotate180"]:::sorry
-
-    CUT --> SETTLE
-    CUT --> SHATTER_CUT
-    CUT --> EAST
-    CUT --> WEST
-    SETTLE --> GRAV
-    GRAV --> PROC
-
-    PROC --> FU_EMPTY
-    PROC --> FU_LIST
-    PROC --> SORT_R
-    PROC --> FOLDL
-    PROC --> CP_R
-    PROC --> NORM_R
-    PROC --> OFL_R
-    PROC --> FM_R
-
-    FU_EMPTY --> GP_MEM
 ```
-
-### 2-2. BFS に帰着する依存チェーン
-
-```mermaid
-graph TD
-    classDef proven fill:#c8e6c9,stroke:#333
-    classDef sorry fill:#ffcdd2,stroke:#333
-    classDef infra fill:#bbdefb,stroke:#333
-
-    GP_MEM["groundedPositions_mem_rotate180<br/>sorry"]:::sorry
-    FU_EMPTY["floatingUnits_isEmpty_rotate180<br/>sorry (2件)"]:::sorry
-    FU_LIST["floatingUnits_rotate180<br/>⚠ 定理文が偽"]:::sorry
-
-    subgraph "BFS インフラ (GenericBfs.lean, 全て証明済)"
-        INV["genericBfs_invariant_preserved"]:::infra
-        CLOSED["genericBfs_closed_contains_reachable"]:::infra
-        SOUND["genericBfs_sound"]:::infra
-        START["genericBfs_contains_start"]:::infra
-        QUEUE["genericBfs_queue_in_result"]:::infra
-    end
-
-    subgraph "エッジ述語の等変性 (証明済)"
-        GC_R["isGroundingContact_rotate180"]:::proven
-        SB_R["isStructurallyBonded_rotate180"]:::proven
-        AV_R["allValid_rotate180_eq"]:::proven
-    end
-
-    GBG["groundingBfs_eq_generic"]:::proven
-
-    GP_MEM --> GBG
-    GP_MEM --> INV
-    GP_MEM --> CLOSED
-    GP_MEM --> GC_R
-    GP_MEM --> AV_R
-
-    FU_EMPTY --> GP_MEM
-    FU_LIST -.->|定理文が偽<br/>だが証明に使用中| GP_MEM
-```
-
-### 2-3. 既に証明完了の類似定理との比較
-
-```mermaid
-graph LR
-    classDef proven fill:#c8e6c9,stroke:#333
-    classDef sorry fill:#ffcdd2,stroke:#333
-
-    subgraph "CrystalBond.lean (100% 証明済)"
-        CC["crystalCluster_mem_rotate180<br/>✅ 証明済"]:::proven
-        CC_S["crystalCluster_sound"]:::proven
-        BR["bondReachable_rotate180"]:::proven
-        IB_R["isBonded_rotate180"]:::proven
-    end
-
-    subgraph "Gravity.lean (部分的)"
-        SC["structuralCluster_mem_rotate180<br/>✅ 証明済"]:::proven
-        GP["groundedPositions_mem_rotate180<br/>❌ sorry"]:::sorry
-    end
-
-    CC -->|"同パターン"| SC
-    SC -->|"複数 seed に拡張"| GP
+process_rotate180
+  ├─ floatingUnits_isEmpty_rotate180       ✅ 落下単位の有無が r180 不変
+  ├─ option_bind_normalize_rotate180       ✅ normalize と r180 の交換
+  ├─ ofLayers_rotate180                    ✅ ofLayers と r180 の交換
+  ├─ foldl_place_rotate180                 ✅ foldl 内の map Layer.rotate180 を除去
+  ├─ sortFallingUnits_rotate180            ✅ ソートの r180 等変性
+  ├─ clearPositions_rotate180              ✅ obstacle 等変性
+  ├─ clearPositions_ext                    ✅ obstacle の .any メンバーシップ同値
+  ├─ any_map_rotate180_beq                 ✅ 位置メンバーシップ等変性
+  ├─ falling_positions_any_rotate180       ✅ 浮遊位置メンバーシップ等変性
+  └─ settle_foldl_eq                       ❌ sorry — 最後の 1 ピース
 ```
 
 ---
 
-## 3. ボトルネック分析
-
-### 3-1. 直接の問題: `groundedPositions_mem_rotate180`
-
-`crystalCluster_mem_rotate180` と `structuralCluster_mem_rotate180` は
-**単一の start 位置** から BFS を開始するため、以下のパターンで証明されている:
-
-1. BFS 健全性 (`genericBfs_sound`) で「結果の要素は start から到達可能」
-2. BFS 閉包性 (`genericBfs_invariant_preserved`) で「到達可能な全頂点が結果に含まれる」
-3. `start.rotate180` が結果に含まれることを `genericBfs_contains_start` で確認
-4. 到達可能性の rotate180 保存 (`bondReachable_rotate180` 等) で接続
-
-`groundedPositions` は **レイヤ 0 の全非空象限を seed** として BFS を開始する。
-単一 seed のパターンを複数 seed に拡張する必要がある。
-
-これは `genericBfs_queue_in_result`（キューの全要素が結果に含まれる）を活用すれば
-対処可能であり、**証明困難度は中程度**。
-
-### 3-2. 根本的な問題: `floatingUnits_rotate180` が偽
-
-現在の定理文:
-```lean
-theorem floatingUnits_rotate180 (s : Shape) :
-        (floatingUnits s).map FallingUnit.rotate180 =
-        floatingUnits s.rotate180
-```
-
-**この定理文は偽である。** 理由:
-
-1. `floatingUnits` は内部で `allStructuralClusters` を呼び出す
-2. `allStructuralClusters` は `allValid s` の順序で bondable 位置を走査し、BFS でクラスタを発見する
-3. `s` と `s.rotate180` では `getQuarter s p` と `getQuarter s.r180 p` が異なるため、bondable 位置の列挙順序が異なる
-4. BFS は走査開始位置に依存して異なる順序で結果を返す
-5. `List.map rotate180` は要素の順序を変える (ne↔sw, se↔nw)
-
-結果として `(floatingUnits s).map r180 ≠ floatingUnits s.r180` が一般に成立する。
-**リストの等値ではなく、集合レベルの等価性が正しい命題**である。
-
-### 3-3. 波及範囲: sorry の汚染チェーン
-
-`floatingUnits_rotate180` と `floatingUnits_isEmpty_rotate180` の sorry は
-以下の定理チェーンに波及する:
-
-```
-floatingUnits_rotate180 (偽)
-  → process_rotate180 の h_sorted / h_obs
-    → Gravity.process_rotate180
-      → gravity_rotate180_comm
-        → settleAfterCut_rotate180 (Cutter.lean)
-          → cut_rotate180_comm (Cutter.lean)
-```
-
-つまり **`cut_rotate180_comm` も sorry に汚染**されている。
-Lean コンパイラは sorry を含む証明を受理するが、形式的には未完成である。
-
-### 3-4. BFS が問題の本質か
-
-**BFS 自体は問題ではない。** BFS の健全性・完全性は `GenericBfs.lean` で十分に証明されており、
-単一 seed のケース (`crystalCluster`, `structuralCluster`) は既に完全証明済みである。
-
-**真の問題は以下の2点:**
-
-1. **複数 seed の BFS 完全性**: `groundedPositions` は複数 seed を使うが、
-   これは既存インフラの自然な拡張で対処可能
-2. **リスト順序への依存**: `floatingUnits` の結果がリストとして rotate180 等変でない。
-   `process_rotate180` の証明が `floatingUnits` のリスト等値に依存している
-   設計になっており、これが根本原因
-
----
-
-## 4. 対処方針
-
-### 4-1. 方針の概要
-
-3段階で対処する:
-
-| Phase | 内容 | 難易度 | 変更範囲 |
-|---|---|---|---|
-| **G-1** | `groundedPositions_mem_rotate180` の証明 | 中 | Gravity.lean 内部 |
-| **G-2** | `floatingUnits_isEmpty_rotate180` の証明 | 低 | Gravity.lean 内部 |
-| **G-3** | `process_rotate180` の証明再構築 | 高 | Gravity.lean + 関連定義の変更 |
-
-### 4-2. Phase G-1: `groundedPositions_mem_rotate180`
-
-#### 目標
+## 4. settle_foldl_eq の定理文
 
 ```lean
-theorem groundedPositions_mem_rotate180 (s : Shape) (p : QuarterPos) :
-        (groundedPositions s).any (· == p) =
-        (groundedPositions s.rotate180).any (· == p.rotate180)
+private theorem settle_foldl_eq (s : Shape) (obs : List Layer) :
+        Shape.ofLayers
+          ((sortFallingUnits ((floatingUnits s).map FallingUnit.rotate180)).foldl
+            (fun obs u => placeFallingUnit s.rotate180 obs u (landingDistance u obs)) obs) =
+        Shape.ofLayers
+          ((sortFallingUnits (floatingUnits s.rotate180)).foldl
+            (fun obs u => placeFallingUnit s.rotate180 obs u (landingDistance u obs)) obs)
 ```
 
-#### 証明戦略
+LHS は `(floatingUnits s).map FU.rotate180` をソートして foldl、
+RHS は `floatingUnits s.rotate180` をソートして foldl する。
+2 つの入力リストは BFS 探索順序の違いにより **リスト等号でも List.Perm でもない**。
 
-`structuralCluster_mem_rotate180` と同じパターンで証明する。
-差分は BFS の初期キューが複数 seed であること。
+### 4-1. settle_foldl_eq の現在の証明構造
 
-**手順:**
+```
+settle_foldl_eq
+  ├─ l_mid 構築 (Classical choice)                    ✅ 証明済
+  ├─ Step 2: sortFU l1 foldl = sortFU l_mid foldl
+  │   └─ sorted_foldl_pointwise_eq                    ✅ 証明済
+  └─ Step 3: sortFU l_mid foldl = sortFU l2 foldl
+      └─ sortFU_foldl_perm_input_eq (floatingUnits版) ← sorry
+```
 
-1. **到達可能述語の定義**: 接地接触チェーンによる到達可能性
-   ```lean
-   -- GroundingReachable s seeds p:
-   -- seeds のいずれかから isGroundingContact 経由で p に到達可能
-   inductive GroundingReachable ...
-   ```
-   ※ 既存の `GenericReachable (isGroundingContact s)` を利用可能
+Step 3 は `sortFU_foldl_perm_input_eq` への単純な `apply + exact` で完了。
+h_sub の提供は `h_mid_sub : l_mid ⊆ l2 = floatingUnits s.rotate180` で直接。
 
-2. **seed 集合の rotate180 等変性**: レイヤ 0 の非空象限の集合が等変であることを示す
-   ```lean
-   -- seeds s.r180 のメンバー p に対して、p.r180 は seeds s のメンバー
-   theorem seeds_mem_rotate180 ...
-   ```
-   - `getQuarter_rotate180`（証明済み）と `allValid_rotate180_eq`（証明済み）から導出
+---
 
-3. **BFS 完全性の適用**: `genericBfs_invariant_preserved` + `genericBfs_closed_contains_reachable` で
-   到達可能な全頂点が BFS 結果に含まれることを示す
+## 5. 核心問題: shouldProcessBefore の非反対称性
 
-4. **seed の結果包含**: `genericBfs_queue_in_result` を使い、全 seed が結果に含まれることを示す
+### 5-1. shouldProcessBefore の性質
 
-5. **双方向の証明**: `p ∈ result(s) → p.r180 ∈ result(s.r180)` と逆方向を、
-   到達可能性の rotate180 保存から導出
+`shouldProcessBefore a b` は各方角列での最小レイヤの大小比較であり、
+**反対称律を一般には満たさない**。
 
-#### 必要な追加補題
+```
+クラスタ A: {(layer 0, NE), (layer 3, SW)}
+クラスタ B: {(layer 1, NE), (layer 2, SW)}
+→ spb(A,B) = true (NE列: 0 < 1)
+→ spb(B,A) = true (SW列: 2 < 3)
+```
 
-| 補題名 | 内容 | 依存 |
+### 5-2. ペアの分類
+
+| 種類 | 条件 | 方角列共有 | foldl 交換可能 |
+|---|---|---|---|
+| 通常 | 片方のみ true | あり | 順序固定（ソートで解決） |
+| tied | 双方 false | なし | はい (`settleStep_comm_ne_dir`) |
+| cyclic | 双方 true | あり（複数列で逆方向） | 幾何的に発生不可能（推定） |
+
+### 5-3. insertSorted のグリーディ動作と DAG の関係
+
+**DAG 条件下でも insertSorted は非 tied ペアの順序を壊しうる**（§2-3 の反例参照）。
+
+根本原因: insertSorted は「最初のマッチで停止」するグリーディアルゴリズム。
+要素 u の挿入時、spb(u, w) = true で停止した場合、
+u の手前にある tied 要素 x が u と方角共有していても、
+x と u の相対順序は制御できない。
+
+---
+
+## 6. 正しい証明方針: floatingUnits 限定アプローチ
+
+### 6-1. なぜ一般定理は偽か
+
+`sortFU_foldl_perm_input_eq` に必要な仮定:
+- `l1 ~ l2` (Perm) + NoDup
+- 位置素性 (h_disj)
+- DAG 条件 (h_rank)
+
+これだけでは、以下のパターンを排除できない:
+- 3 要素 x, u, w で x-w tied, u が x,w 両方と方角共有
+- tiebreaker により w が x より先にソートされる
+- u 挿入時に w で停止 → u が x より前に配置 → x-u の順序が入力順依存
+
+### 6-2. floatingUnits の幾何制約が排除するもの
+
+floatingUnits の幾何的制約:
+
+1. **同レイヤ隣接方角排除**: 異なる構造クラスタは同一レイヤの隣接方角に
+   位置を持てない（持てば構造結合で同一クラスタにマージ）。
+
+2. **方角遷移層の排他性**: クラスタが水平結合で方角を変える層では、
+   そのクラスタが 2 方角を占有し、残り 2 方角も隣接して封鎖される。
+   → 他クラスタはその層に一切位置不可。
+
+3. **2方角クラスタの制約**: 反例の u = cluster[(NE,8),(SW,1)] のような
+   対角方角の組み合わせは、中間方角(SE or NW)の遷移層を必要とする。
+   遷移層で全方角が封鎖されるため、同一領域に tied な別要素が存在不可能。
+
+4. **孤立ピン**: 各ピンは 1 方角列のみ占有。ピン同士では反例パターン不可。
+
+これらの制約により、反例の 3 要素パターン（x-w tied, u が両方と方角共有）は
+floatingUnits から生成される FallingUnit リストでは発生しない。
+
+### 6-3. 定理文の正しい形
+
+```lean
+private theorem sortFU_foldl_perm_input_eq (s : Shape)
+        (l1 l2 : List FallingUnit) (obs : List Layer)
+        (h_perm : l1.Perm l2)
+        (h_nodup_l1 : l1.Nodup)
+        (h_sub : ∀ x, x ∈ l1 → x ∈ floatingUnits s) :
+        (sortFallingUnits l1).foldl
+            (fun obs u => placeFallingUnit s obs u (landingDistance u obs)) obs =
+        (sortFallingUnits l2).foldl
+            (fun obs u => placeFallingUnit s obs u (landingDistance u obs)) obs
+```
+
+`h_sub` により、floatingUnits_pairwise_disjoint, floatingUnits_nodup,
+floatingUnits_spb_rank, 及び幾何制約を全て利用可能。
+
+---
+
+## 7. 推奨ロードマップ
+
+### Phase 1: `floatingUnits_spb_rank` の証明 (~200-400 行) ← 最大の難所
+
+floatingUnits 上で spb が DAG であることを証明する。
+ランク関数 `rank : FallingUnit → Nat` を構成し、
+`spb(fU[i], fU[j]) = true → rank(fU[i]) < rank(fU[j])` を示す。
+
+**サブステップ**:
+1. Pin-Pin: 同方角なら minLayer がランク、異方角なら spb=false
+2. Pin-Cluster: ピンの唯一の方角列でのレイヤ比較
+3. Cluster-Cluster: 幾何制約の形式化（最大の難所）
+   - `reachable_visits_intermediate_layer` (BFS パスの中間値定理)
+   - `clusters_no_adj_same_layer` (同レイヤ排除)
+   - minLayer の per-direction 比較 → global ランクへの集約
+
+### Phase 2: `sortFU_foldl_perm_input_eq` の証明 (~200-400 行)
+
+**方法 A**: sortFU の反転ペアが全て direction-disjoint であることを証明
+
+1. `sortFU_preserves_spb_order_inFU`: floatingUnits 条件下の spb 順序保存
+   - insertSorted の帰納法 + `insertSorted_split`
+   - DAG 条件 + floatingUnits 幾何制約の追加仮定
+   - 反例パターン (§2-3) の排除
+
+2. `foldl_eq_of_perm_tied_adj_comm` の既存証明を活用
+   - s1 = sortFU l1, s2 = sortFU l2
+   - 反転ペアは全て tied → 方角素 → foldl 可換
+
+**方法 B**: sortFU の出力が入力順序非依存であることを直接証明
+
+1. floatingUnits 幾何制約から「反例パターン排除」を形式化
+2. 排除されたパターン以外では insertSorted が一貫 → sortFU l1 = sortFU l2
+
+**方法 C**: 別のソートを定義して等価性を示す
+
+1. ランク関数で要素をソートした `rankSort` を定義
+2. `rankSort l foldl = sortFU l foldl` を tied ペア可換性で証明
+3. `rankSort l1 = rankSort l2` (決定的ソート)
+
+### Phase 3: 統合と検証 (~50 行)
+
+- settle_foldl_eq の sorry 除去
+- process_rotate180 → gravity_rotate180_comm の完全証明確認
+- ビルド: 0 errors, 0 sorry warnings
+
+---
+
+## 8. 利用可能な基盤補題
+
+### 等変性インフラ
+
+| 補題 | 概要 |
+|---|---|
+| `isStructurallyBonded_rotate180` | 構造結合の rotate180 不変性 |
+| `structuralCluster_mem_rotate180` | クラスタメンバーシップの .any レベル rotate180 保存 |
+| `groundedPositions_mem_rotate180` | 接地位置の .any レベル rotate180 保存 |
+| `shouldProcessBefore_rotate180` | ソート述語の rotate180 不変性 |
+| `FallingUnit.positions_rotate180` | 位置リストの rotate180 等変性 |
+| `FallingUnit.minLayer_rotate180` | 最小レイヤの rotate180 不変性 |
+| `FallingUnit.minLayerAtDir_rotate180` | 方角別最小レイヤの rotate180 等変性 |
+| `sortFallingUnits_rotate180` | ソートの rotate180 等変性 |
+| `landingDistance_rotate180` | 着地距離の rotate180 不変性 |
+| `placeFallingUnit_rotate180` | 配置操作の rotate180 等変性 |
+
+### ソート・foldl インフラ
+
+| 補題 | 概要 |
+|---|---|
+| `insertSorted_perm` | insertSorted は Perm を保存 |
+| `insertSorted_split` | insertSorted = take k ++ [u] ++ drop k |
+| `sortFallingUnits_perm` | sortFU は入力の Perm |
+| `sortFallingUnits_any_positions` | sortFU は位置 .any を保存 |
+| `sortFallingUnits_pointwise_ext` | pointwise .any 等価入力 → pointwise .any 等価出力 |
+| `sorted_foldl_pointwise_eq` | pointwise .any 等価 → foldl 結果一致 |
+| `foldl_pointwise_ext` | pointwise .any 等価 → foldl 全体一致 |
+| `invCount_adj_swap_lt` | 隣接要素の反転 swap で転置数が減少 |
+
+### 交換則インフラ
+
+| 補題 | 概要 |
+|---|---|
+| `settleStep_comm_ne_dir` | 方角列非共有ペアの settleStep 可換性 |
+| `foldl_settle_head_swap` | 方角素隣接要素の swap → foldl 不変 |
+| `foldl_settle_swap_at` | prefix 付き方角素 swap → foldl 不変 |
+| `tied_no_shared_dir` / `_rev` | tied ペア → 方角列を共有しない |
+| `shouldProcessBefore_ext` | spb は .any にのみ依存 |
+
+### 位置素性・NoDup インフラ
+
+| 補題 | 概要 |
+|---|---|
+| `floatingUnits_pairwise_disjoint` | 浮遊単位は互いに位置素 |
+| `map_rotate180_pairwise_disjoint` | .map rotate180 は位置素性を保存 |
+| `floatingUnits_nodup` | floatingUnits は NoDup |
+| `allValid_nodup` | allValid は NoDup |
+| `allStructuralClusters_nodup` | クラスタリストは NoDup |
+| `allStructuralClusters_disjoint` | クラスタは互いに位置素 |
+| `allStructuralClusters_all_bondable` | クラスタ全位置は bondable |
+
+### 浮遊単位構造
+
+| 補題 | 概要 |
+|---|---|
+| `floatingUnits_eq_append` | floatingUnits = fc.map .cluster ++ fp.map .pin |
+| `allIsolatedPins_is_pin` | ピン位置の getQuarter = some .pin |
+| `floatingUnits_isEmpty_rotate180` | 浮遊単位の有無は rotate180 不変 |
+| `falling_positions_any_rotate180` | flatMap positions の .any メンバーシップ等変性 |
+| `floatingUnits_length_rotate180` | \|fU(s)\| = \|fU(s.r180)\| |
+| `floatingUnit_any_in_rotate180` | 各 u ∈ fU(s) に .any 等価な v ∈ fU(s.r180) |
+
+---
+
+## 9. 過去の棄却済みアプローチ
+
+| アプローチ | 棄却理由 |
+|---|---|
+| リスト等号 `fU s.r180 = (fU s).map r180` | BFS 順序差で偽 |
+| `List.Perm` レベル `floatingUnits_perm_rotate180` | BFS 内部順序差で偽（cluster [p1,p2] ≠ cluster [p2,p1]） |
+| flatMap .any 等価 + 位置素 → foldl 一致 | ユニット分割差で偽 |
+| pointwise .any 等価 → foldl 一致 | 入力順序差で pointwise にならない |
+| tiebreaker 厳密全順序 | r180 等変な厳密全順序は (u, u.r180) ペアで矛盾 |
+| shouldProcessBefore の反対称化 | cyclic → tied 化で方角共有の foldl 可換性が不成立 |
+| `sortFU_preserves_spb_order` (2-cycle 禁止のみ) | 偽定理: 3-cycle で insertSorted 不整合 |
+| `sortFU_foldl_perm_input_eq` 一般版 (h_disj + h_rank) | 偽定理: DAG+位置素でも排除不可な 3 要素パターン |
+| tiebreaker 全順序 (minLayerAtDir 辞書式) | r180 が方角を置換するため辞書式順序が r180 非等変 |
+
+---
+
+## 10. 偽定理の教訓
+
+### 10-1. `sortFU_preserves_spb_order` (2026-06 第1セッション)
+
+- **ペアワイズ 2-cycle 禁止 ≠ DAG**: 全ペアの 2-cycle がなくても 3-cycle 以上が存在
+- **insertSorted のグリーディ性**: 最初のマッチで停止 → 第三者が遮ると不整合
+- **修正**: 偽定理を削除。DAG ランク関数方式に移行。
+
+### 10-2. `sortFU_foldl_perm_input_eq` 一般版 (2026-06 第2セッション)
+
+- **DAG + 位置素 ≠ sortFU 順序一貫性**: 3 要素パターン (x-w tied, u が両者と方角共有)
+  で insertSorted が入力順依存の順序を生成する
+- **一般的な h_disj + h_rank ではこのパターンを排除不可能**
+- **修正**: 定理文を floatingUnits 限定に変更。幾何制約が反例パターンを排除。
+
+### 10-3. tiebreaker 全順序化 (2026-06 第2セッション)
+
+- **r180 等変な全順序は FallingUnit 上に存在しない**: u と u.r180 が同値になるため
+- **sortFallingUnits_rotate180** を保つには比較関数が r180 不変である必要
+- **方角の置換により辞書式順序は r180 非等変**
+- **修正**: tiebreaker 変更アプローチを棄却。一般化を諦め floatingUnits 限定に。
+
+### 10-4. 過去の偽定理一覧
+
+| 定理 | 発見時期 | 根本原因 |
 |---|---|---|
-| `groundingSeeds_mem_rotate180` | seed 集合のメンバーシップが rotate180 で保存される | `getQuarter_rotate180`, `allValid_rotate180_eq` |
-| `groundedPositions_sound` | BFS 結果の健全性: 結果の要素は seed から到達可能 | `genericBfs_sound` |
-| `groundedPositions_complete` | BFS 結果の完全性: seed から到達可能な要素は全て結果に含まれる | `genericBfs_invariant_preserved`, `genericBfs_closed_contains_reachable` |
-
-### 4-3. Phase G-2: `floatingUnits_isEmpty_rotate180`
-
-#### 目標
-
-```lean
-theorem floatingUnits_isEmpty_rotate180 (s : Shape) :
-        (floatingUnits s).isEmpty = (floatingUnits s.rotate180).isEmpty
-```
-
-#### 証明戦略
-
-Phase G-1 の `groundedPositions_mem_rotate180` を用いて、以下を示す:
-
-1. **浮遊判定の等変性**: 位置 p が s で浮遊 ⟺ p.rotate180 が s.rotate180 で浮遊
-   - 「浮遊」= 非空かつ非接地かつ（構造結合クラスタが全て非接地 or 孤立ピン）
-   - 非空の等変性: `getQuarter_rotate180` から
-   - 非接地の等変性: `groundedPositions_mem_rotate180` から
-   - クラスタメンバーシップの等変性: `structuralCluster_mem_rotate180` から
-
-2. **存在の等変性**: s に浮遊位置が存在 → s.r180 にも浮遊位置が存在
-
-3. **isEmpty の等値**: 浮遊単位の「有無」が保存されることから `isEmpty` が等しい
-
-#### 既存インフラで定理が十分
-
-追加補題はほぼ不要。Phase G-1 の帰結として直接証明可能。
-
-### 4-4. Phase G-3: `process_rotate180` の証明再構築
-
-#### 現状の問題
-
-`process_rotate180` の証明は `floatingUnits_rotate180`（リスト等値、偽）に依存している:
-
-```lean
--- 現在の証明（偽の定理に依存）
-have h_sorted : (sortFallingUnits (floatingUnits s)).map FallingUnit.rotate180 =
-    sortFallingUnits (floatingUnits s.rotate180) := by
-    rw [sortFallingUnits_rotate180, floatingUnits_rotate180]  -- ← 偽の定理を使用
-```
-
-#### 対処案
-
-3つの選択肢がある。実現可能性・コスト・リスクを評価する。
-
-##### 案 A: `floatingUnits` の出力を正規化
-
-`allStructuralClusters` と `allIsolatedPins` の内部で、
-BFS 結果を `allValid` 順にソートして返すよう変更する。
-
-```lean
--- 変更前
-def structuralCluster (s : Shape) (pos : QuarterPos) : List QuarterPos :=
-    let allPos := QuarterPos.allValid s
-    let n := s.layerCount * 4
-    structuralBfs s allPos [] [pos] (n * n)
-
--- 変更後: 結果を allValid 順にフィルタ
-def structuralCluster (s : Shape) (pos : QuarterPos) : List QuarterPos :=
-    let allPos := QuarterPos.allValid s
-    let n := s.layerCount * 4
-    let bfsResult := structuralBfs s allPos [] [pos] (n * n)
-    allPos.filter (fun p => bfsResult.any (· == p))
-```
-
-**問題**: `map rotate180` はリストの要素順序を変えるため、
-`(allValid s |> filter pred).map r180 ≠ allValid s |> filter pred'` が一般に成立。
-**リスト等値は rotate180 では原理的に不可能**（rotate180 が direction を置換するため）。
-
-**結論: 案 A は不可能**
-
-##### 案 B: `process` の定義を述語ベースに書き換え
-
-`floatingUnits` のリストに依存せず、位置ごとの述語で `process` を再定義する。
-
-**利点**: リスト順序問題を完全回避
-
-**問題**: `process` の逐次配置パイプライン（先に落ちた単位が後続単位の障害物になる）は
-本質的に順序依存であり、述語ベースでは同等の計算を表現できない。
-
-**結論: パイプライン全体の書き換えは非現実的だが、部分的に述語を活用可能**
-
-##### 案 C (推奨): ソート後リスト等値の直接証明
-
-`floatingUnits_rotate180` を放棄し、代わりに最終的に必要な
-**ソート後のリスト等値** を直接証明する。
-
-```lean
--- 偽の定理（削除）
--- floatingUnits_rotate180 : (floatingUnits s).map r180 = floatingUnits s.r180
-
--- 代替: ソート後の等値
-theorem sortedFloatingUnits_rotate180 (s : Shape) :
-        (sortFallingUnits (floatingUnits s)).map FallingUnit.rotate180 =
-        sortFallingUnits (floatingUnits s.rotate180)
-```
-
-この定理は以下の条件が成立する場合に証明可能:
-
-1. **集合等価**: `floatingUnits s` と `floatingUnits s.r180` が rotate180 で集合として等価
-2. **ソートの順序不変性**: `sortFallingUnits` が入力の順列に対して同じ結果を返す
-   （＝ 比較関数が全順序であるか、同順位の要素の入れ替えが結果に影響しない）
-
-条件 1 は Phase G-1 と `structuralCluster_mem_rotate180` から導出可能。
-
-条件 2 は `shouldProcessBefore` の分析が必要:
-- 第一ソートキー `minLayer` は rotate180 不変 (`QuarterPos.layer` は保存される)
-- 第二ソートキー `shouldProcessBefore` は `minLayerAtDir` に依存し、
-  direction が rotate180 で置換されるが、`Direction.all.any` は全方角を走査するため結果は不変
-
-**`shouldProcessBefore` の rotate180 不変性**（証明する必要あり）:
-```lean
-theorem shouldProcessBefore_rotate180 (a b : FallingUnit) :
-        shouldProcessBefore a.rotate180 b.rotate180 = shouldProcessBefore a b
-```
-これは `minLayerAtDir` が direction を走査する際の rotate180 対称性から導出可能。
-
-ソートが決定的であることの証明には:
-- `insertSorted` が比較関数に対して安定であることの証明
-- または、floatingUnits の集合が重複なし（各単位が異なる `minLayer` を持つ）の場合に
-  ソート結果が一意であることの証明
-
-**リスク**: ソートの決定性証明は非自明。同じ `minLayer` を持つ複数の落下単位が
-存在する場合、ソート結果が入力順序に依存する可能性がある。
-
-**緩和策**: 同一 `minLayer` の落下単位が配置で互いに影響しないこと（異なるカラム、
-または同カラムでも非干渉）を示せれば、ソート順序によらず配置結果が同一であることを証明できる。
+| `spb_antisymm_of_disjoint` | 2026-03 | 位置素のみでは反対称不成立 |
+| `foldl_sorted_disjoint_flatMap_eq` | 2026-03 | unit 分割差を考慮していない |
+| `floatingUnits_rotate180` | 2026-03 | BFS 順序差でリスト等号が偽 |
+| `floatingUnits_perm_rotate180` | 2026-03 | BFS 内部順序差（cluster 要素順） |
+| `sortFU_preserves_spb_order` | 2026-06 | 3-cycle で insertSorted 不整合 |
+| `sortFU_foldl_perm_input_eq` 一般版 | 2026-06 | DAG+位置素でも排除不可な 3 要素パターン |
 
 ---
 
-## 5. TODO リスト
+## 11. リスク
 
-### Phase G-1: `groundedPositions_mem_rotate180` の証明
-
-| # | タスク | 状態 | 依存 |
+| # | リスク | 深刻度 | 回避策 |
 |---|---|---|---|
-| G-1-1 | seed（レイヤ 0 の非空象限）集合の rotate180 等変性を証明 | ✅ 完了 | `getQuarter_rotate180`, `allValid_rotate180_eq` |
-| G-1-2 | `groundedPositions` の健全性を証明（BFS 結果 → seed からの到達可能性） | ✅ 完了 | `genericBfs_sound`, `groundingBfs_eq_generic` |
-| G-1-3 | `groundedPositions` の完全性を証明（到達可能 → BFS 結果に含まれる） | ✅ 完了 | `genericBfs_invariant_preserved`, `genericBfs_closed_contains_reachable`, `genericBfs_queue_in_result` |
-| G-1-4 | `groundedPositions_mem_rotate180` を組み立てる | ✅ 完了 | G-1-1 〜 G-1-3, `isGroundingContact_rotate180` |
-
-### Phase G-2: `floatingUnits_isEmpty_rotate180` の証明
-
-| # | タスク | 状態 | 依存 |
-|---|---|---|---|
-| G-2-1 | 浮遊判定の rotate180 等変性を証明 | ✅ 完了 | G-1-4, `structuralCluster_mem_rotate180`, `getQuarter_rotate180` |
-| G-2-2 | `floatingUnits_isEmpty_rotate180` の2つの `exfalso; sorry` を解消 | ✅ 完了 | G-2-1 |
-| G-2-3 | `ungrounded_nonempty_implies_floatingUnits_nonempty` の sorry を解消 | ✅ 完了 | `allStructuralClusters_covers`, `groundedPositions_inv` |
-| G-2-4 | `floatingUnits_nonempty_implies_exists_ungrounded` の sorry を解消 | ✅ 完了 | G-2-3 |
-
-### Phase G-3: `process_rotate180` の証明再構築
-
-| # | タスク | 状態 | 依存 |
-|---|---|---|---|
-| G-3-1 | 偽の定理 `floatingUnits_rotate180` を削除 | ✅ 完了 | — |
-| G-3-2 | `shouldProcessBefore_rotate180` を証明 | ✅ 完了 | `minLayerAtDir` の rotate180 等変性 |
-| G-3-3 | `sortFallingUnits` の入力順列不変性の検討 | 未着手 | G-3-2 |
-| G-3-4 | `sortedFloatingUnits_rotate180` を証明（案 C）| 未着手 | G-3-2, G-3-3, G-2-1 |
-| G-3-5 | `process_rotate180` の証明を再構築 | 未着手 | G-2-2, G-3-4 |
-
-### リスク項目
-
-| # | リスク | 影響 | 軽減策 |
-|---|---|---|---|
-| R-1 | ソートが入力順列で結果が変わる場合がある | G-3-3 が不成立 → 案 C の破綻 | 同一 minLayer 単位の非干渉性を証明 |
-| R-2 | 同一 minLayer 単位が配置で互いに影響する | R-1 の軽減策が不成立 | `insertSorted` のタイブレーク規則を正規化するか、`process` 定義の変更を検討 |
-| R-3 | seed 集合の等変性証明が想定より複雑 | G-1-1 の遅延 | `getQuarter_rotate180` が証明済みのため低リスク |
-
----
-
-## 6. 代替アプローチの検討記録
-
-### 案 D: BFS を排除し、到達可能性を帰納的述語のみで定義
-
-```lean
-inductive IsGrounded (s : Shape) : QuarterPos → Prop where
-    | base : p.layer = 0 → p.getQuarter s = some q → ¬q.isEmpty → IsGrounded s p
-    | step : IsGrounded s q → isGroundingContact s q p = true → IsGrounded s p
-```
-
-**利点**:
-- rotate180 等変性が帰納法で直接証明可能（数十行）
-- BFS の fuel 帰納や不変条件が不要
-- リスト順序の問題が発生しない
-
-**欠点**:
-- `process` パイプラインは具体的なリスト（`floatingUnits`）を必要とするため、
-  述語だけでは `process` の等変性を証明できない
-- BFS と述語の同値性 (`groundedPositions_mem ↔ IsGrounded`) を証明する必要があり、
-  結局 BFS 完全性が必要
-- `clearPositions` はリストを受け取るため、述語版の `clearByPred` が必要
-
-**評価**: 等変性の証明自体は容易になるが、`process` との接続で同等のコストが発生する。
-**単独では根本解決にならない**が、Phase G-1 の中間ステップとして有用。
-
-### 案 E: `process` を反復的単一ステップに分解
-
-```lean
-def processStep (s : Shape) : Option (Shape × List QuarterPos) := ...
-def process (s : Shape) (fuel : Nat) : Option Shape := ...
-```
-
-**利点**: 各ステップの等変性を個別に証明でき、リスト全体の等値が不要
-
-**欠点**: `process` の定義変更が大規模であり、既存の証明・テストへの影響が大きい
-
-**評価**: 長期的にはクリーンだが、現時点でのコストが高い。
-
----
-
-## 7. 推奨作業順序
-
-```
-Phase G-1 (groundedPositions_mem_rotate180) 
-  ├── G-1-1 〜 G-1-3: 補題の証明
-  └── G-1-4: 定理の組み立て
-         ↓
-Phase G-2 (floatingUnits_isEmpty_rotate180)
-  ├── G-2-1: 浮遊判定の等変性
-  └── G-2-2: isEmpty の等値
-         ↓
-Phase G-3 (process_rotate180 の再構築)
-  ├── G-3-1: 偽の定理を削除
-  ├── G-3-2: shouldProcessBefore の等変性
-  ├── G-3-3: ソート不変性の検討
-  ├── G-3-4: ソート後等値の証明
-  └── G-3-5: process_rotate180 の再証明
-```
-
-Phase G-1 と G-2 は着手可能。
-Phase G-3 は G-3-3 の結果によって案 C の成否が決まるため、先に調査を行う。
+| R-1 | floatingUnits 幾何制約の形式化コスト | 高 | BFS パスの方角遷移層 + 同レイヤ排除の帰納法。GenericReachable 基盤は既存 |
+| R-2 | 方角遷移層の封鎖証明 | 高 | Direction の 4 要素環状構造を場合分けで処理 |
+| R-3 | sortFU_preserves_spb_order に floatingUnits 条件が必要 | 中 | h_sub 仮定により floatingUnits の全補題が利用可能 |
+| R-4 | Phase 2 の方法選択 | 中 | 方法 A (反転ペア方角素) が既存インフラを最大活用。方法 C (rankSort) は バックアップ |
+| R-5 | 経験的検証では未発見のエッジケース | 低 | テストケースで幅広くカバー済み。反例チェック手法は確立済み |

@@ -20,3 +20,4 @@ Lean 4 の理解を深めるための情報起点ページです。
 | [The Lean Language Reference — エージェント向けリファレンス索引](lean-reference-guide.md) | リファレンスマニュアルの逆引き索引・機能別参照ガイド |
 | [初学者のための数学用語簡易辞書](math-glossary.md) | ガイド中の高度な数学用語を初学者向けに簡潔に解説した辞書 |
 | [Lean 4 ツールチェインガイド](toolchain-guide.md) | elan・Lake・Lean 等のツールチェイン構成要素の名称と役割 |
+| [Mathlib — エージェント向けリファレンス索引](mathlib-reference-guide.md) | Mathlib の分野別機能索引・タクティク一覧・逆引きリファレンス |

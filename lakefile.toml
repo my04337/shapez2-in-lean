@@ -2,12 +2,21 @@ name = "shapez2-in-lean"
 version = "0.1.0"
 defaultTargets = ["s2il", "Test"]
 
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "v4.29.0-rc8"
+
 [[lean_lib]]
 name = "S2IL"
 
 [[lean_exe]]
 name = "s2il"
 root = "Main"
+
+[[lean_exe]]
+name = "depgraph"
+root = "DepGraph"
 
 [[lean_lib]]
 name = "Test"

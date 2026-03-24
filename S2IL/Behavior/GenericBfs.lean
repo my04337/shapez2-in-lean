@@ -33,6 +33,24 @@ inductive GenericReachable (edge : α → α → Bool) : α → α → Prop wher
     | refl : GenericReachable edge p p
     | step : edge p q = true → GenericReachable edge q r → GenericReachable edge p r
 
+/-- 到達可能性の推移性 -/
+theorem GenericReachable.trans {edge : α → α → Bool}
+        (h1 : GenericReachable edge p q) (h2 : GenericReachable edge q r) :
+        GenericReachable edge p r := by
+    induction h1 with
+    | refl => exact h2
+    | step h_edge _ ih => exact .step h_edge (ih h2)
+
+/-- 辺が対称ならば到達可能性も対称 -/
+theorem GenericReachable.symm {edge : α → α → Bool}
+        (h_symm : ∀ a b, edge a b = edge b a)
+        (h : GenericReachable edge p q) :
+        GenericReachable edge q p := by
+    induction h with
+    | refl => exact .refl
+    | step h_edge _ ih =>
+        exact ih.trans (.step (h_symm _ _ ▸ h_edge) .refl)
+
 -- ============================================================
 -- BFS 基本補題
 -- ============================================================
@@ -62,7 +80,7 @@ theorem genericBfs_contains_start [BEq α] [LawfulBEq α]
     cases fuel with
     | zero => omega
     | succ n =>
-        simp only [genericBfs, List.any, Bool.false_or]
+        simp only [genericBfs, List.any]
         exact genericBfs_vis_subset edge allNodes [start] _ n start
             (by rw [List.any_cons]; simp [BEq.rfl])
 
@@ -149,7 +167,7 @@ theorem genericBfsInv_process [BEq α] [LawfulBEq α]
         (edge : α → α → Bool) (allNodes vis : List α)
         (pos : α) (rest : List α)
         (h_inv : GenericBFSInv edge allNodes vis (pos :: rest))
-        (h_not_vis : ¬(vis.any (· == pos) = true)) :
+        (_h_not_vis : ¬(vis.any (· == pos) = true)) :
         GenericBFSInv edge allNodes (pos :: vis)
             (rest ++ allNodes.filter fun p =>
                 edge pos p && !((pos :: vis).any (· == p))) := by
@@ -192,11 +210,11 @@ private theorem filter_length_lt_of_mem_of_not' [BEq α]
     | cons a as ih =>
         simp only [List.filter, List.length]
         cases h_mem with
-        | head => simp only [h_not, ite_false]; have := List.length_filter_le (p := pred) as; omega
+        | head => simp only [h_not]; have := List.length_filter_le (p := pred) as; omega
         | tail _ h_as =>
             cases pred a with
-            | false => simp only [ite_false]; have := ih h_as; omega
-            | true => simp only [ite_true, List.length]; have := ih h_as; omega
+            | false => simp only []; have := ih h_as; omega
+            | true => simp only [List.length]; have := ih h_as; omega
 
 private theorem filter_and_length_le' [BEq α]
         (l : List α) (p q : α → Bool) :
@@ -206,17 +224,17 @@ private theorem filter_and_length_le' [BEq α]
     | cons a as ih =>
         simp only [List.filter]
         cases h_q : q a with
-        | false => simp only [h_q, Bool.and_false, ite_false]; have := ih; omega
+        | false => simp only [Bool.and_false]; have := ih; omega
         | true =>
-            simp only [h_q, Bool.and_true]
+            simp only [Bool.and_true]
             cases p a with
-            | true => simp only [ite_true, ite_true, List.length]; have := ih; omega
-            | false => simp only [ite_false, ite_true, List.length]; have := ih; omega
+            | true => simp only [List.length]; have := ih; omega
+            | false => simp only [List.length]; have := ih; omega
 
 private theorem add_sq_le_sq_of_lt' (nb u' u : Nat)
         (h_nb : nb ≤ u') (h_lt : u' < u) :
         nb + u' * u' ≤ u * u := by
-    have h1 : u' ≤ u := Nat.le_of_lt h_lt
+    have h1 : u' ≤ u := by omega
     have h3 : u' * (u' + 1) ≤ u * u := Nat.mul_le_mul h1 h_lt
     have h4 : u' + u' * u' = u' * (u' + 1) := by rw [Nat.mul_succ]; omega
     omega
@@ -301,14 +319,14 @@ theorem genericBfs_invariant_preserved [BEq α] [LawfulBEq α]
                           intro l; induction l with
                           | nil => rfl
                           | cons a as ih_l =>
-                              simp only [List.filter, h_no_edge a, Bool.false_and, ite_false]; exact ih_l
+                              simp only [List.filter, h_no_edge a, Bool.false_and]; exact ih_l
                       have h_u_eq :
                           (allNodes.filter fun p => !((pos :: vis).any (· == p))).length =
                           (allNodes.filter fun p => !(vis.any (· == p))).length := by
                           congr 1; apply List.filter_congr; intro x hx
                           simp only [List.any_cons]
                           cases h_eq : (pos == x) with
-                          | false => simp [h_eq]
+                          | false => simp
                           | true =>
                               exfalso
                               have := eq_of_beq h_eq; subst this
@@ -333,7 +351,7 @@ theorem genericBfs_invariant_preserved [BEq α] [LawfulBEq α]
                               (allNodes.filter (fun p => !(vis.any (· == p)))).filter
                                   (fun p => !(pos == p)) := by
                               rw [List.filter_filter]; apply List.filter_congr
-                              intro x _; simp only [List.any_cons, Bool.not_or, Bool.and_comm]
+                              intro x _; simp only [List.any_cons, Bool.not_or]
                           rw [h_eq]
                           exact filter_length_lt_of_mem_of_not'
                               (allNodes.filter (fun p => !(vis.any (· == p))))
@@ -380,7 +398,7 @@ theorem genericBfs_queue_in_result [BEq α] [LawfulBEq α]
                 have h_nil : allNodes.filter (fun q => !(vis.any (· == q))) = [] := by
                     cases hf : allNodes.filter (fun q => !(vis.any (· == q))) with
                     | nil => rfl
-                    | cons _ _ => simp [hf, List.length] at h_u_zero
+                    | cons _ _ => simp [hf] at h_u_zero
                 rw [h_nil] at h_in_filter; nomatch h_in_filter
         | succ n ih =>
             cases queue with
@@ -441,7 +459,7 @@ theorem genericBfs_queue_in_result [BEq α] [LawfulBEq α]
                                     intro l; induction l with
                                     | nil => rfl
                                     | cons a as ih_l =>
-                                        simp only [List.filter, h_no_edge a, Bool.false_and, ite_false]
+                                        simp only [List.filter, h_no_edge a, Bool.false_and]
                                         exact ih_l
                                 have h_u_eq :
                                     (allNodes.filter fun p => !((pos :: vis).any (· == p))).length =
@@ -449,7 +467,7 @@ theorem genericBfs_queue_in_result [BEq α] [LawfulBEq α]
                                     congr 1; apply List.filter_congr; intro x hx
                                     simp only [List.any_cons]
                                     cases h_eq' : (pos == x) with
-                                    | false => simp [h_eq']
+                                    | false => simp
                                     | true =>
                                         exfalso
                                         have := eq_of_beq h_eq'; subst this
@@ -479,7 +497,7 @@ theorem genericBfs_queue_in_result [BEq α] [LawfulBEq α]
                                             (fun p => !(pos == p)) := by
                                         rw [List.filter_filter]; apply List.filter_congr
                                         intro x _
-                                        simp only [List.any_cons, Bool.not_or, Bool.and_comm]
+                                        simp only [List.any_cons, Bool.not_or]
                                     rw [h_eq']
                                     exact filter_length_lt_of_mem_of_not'
                                         (allNodes.filter (fun p => !(vis.any (· == p))))

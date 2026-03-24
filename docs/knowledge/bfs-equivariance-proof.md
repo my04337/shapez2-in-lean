@@ -276,6 +276,6 @@ shatterOnCut_rotate180_comm
 
 ## 参考: 実装ファイル
 
-- `S2IL/Processing/CrystalBond.lean` — BFS 等変性の証明
-- `S2IL/Processing/Shatter.lean` — 砕け散り等変性の証明
-- `S2IL/Processing/Cutter.lean` — 切断等変性の最終目標
+- `S2IL/Behavior/CrystalBond.lean` — BFS 等変性の証明
+- `S2IL/Behavior/Shatter.lean` — 砕け散り等変性の証明
+- `S2IL/Behavior/Cutter.lean` — 切断等変性の最終目標

@@ -25,16 +25,18 @@
 | `docs/lean/fp-in-lean-guide.md` | 関数型プログラミング in Lean ガイド |
 | `docs/lean/math-glossary.md` | 数学用語辞書（型理論・論理学・代数構造など） |
 | `docs/lean/toolchain-guide.md` | ツールチェインガイド（elan・Lake・Lean 等の役割） |
+| `docs/lean/mathlib-reference-guide.md` | Mathlib リファレンス索引（分野別機能・タクティク・逆引き） |
 
 ### プロジェクト固有のナレッジ
 
-証明やコーディングで行き詰まった場合、まず以下を参照すること。
+証明やコーディングで行き詰まった場合は **[`docs/knowledge/README.md`](../docs/knowledge/README.md)** を参照すること。
 過去の試行錯誤から得られた実践的なパターンと回避策がまとまっている。
 
+### エージェントカスタマイズ
 | ファイル | 内容 |
 |---|---|
-| `docs/knowledge/lean-proof-tips.md` | Lean 4 証明の実践 Tips（タクティク使い分け・`List.mapM` 回避など） |
-| `docs/knowledge/string-roundtrip-proof.md` | 文字列ラウンドトリップ定理の証明パターン（`String` 展開不可問題の回避策） |
+| `docs/agent/skill-authoring-guide.md` | Agent Skills 記述ガイド（SKILL.md フォーマット・ベストプラクティス） |
+| `docs/agent/hooks-guide.md` | GitHub Copilot Hooks リファレンス（ライフサイクルイベント・設定） |
 
 ## コーディング規約
 - 文字コード: UTF-8 (BOMなし)。ただしBOMが必要な場合はBOMを付ける
@@ -180,3 +182,39 @@ bash .github/skills/lean-build/scripts/build.sh
 - **利用可**: パブリックドメイン、MIT-0 等（義務なし）
 - **要確認**: MIT, BSD-2, BSD-3, MPL 2.0 等（著作権・許諾表示が必要）
 - **利用厳禁**: GPL, AGPL, LGPL 等コピーレフト系、商用ライブラリ、ライセンス不明・制限が厳しいもの
+
+## GameConfig（ゲーム設定）の設計方針
+
+`GameConfig` は**構造体**であり、レイヤ数上限を必要とする関数には**明示的に引数として渡す**。
+型クラス (`class`) やデフォルト引数 (`inferInstance`) は使用しない。
+
+```lean
+-- ✅ 正しい使い方: 明示的に config を渡す
+Shape.stack bottom top GameConfig.vanilla4
+s.pinPush GameConfig.vanilla5
+
+-- ❌ 避けるべき使い方: デフォルト引数に頼る
+Shape.stack bottom top  -- config を省略しない
+```
+
+### プリセット
+
+| 定義 | レイヤ数 | 用途 |
+|---|---|---|
+| `GameConfig.vanilla4` | 4 | 通常モード (Normal / Hard) |
+| `GameConfig.vanilla5` | 5 | 高難度モード (Insane) |
+| `GameConfig.stress16` | 16 | ストレステスト専用 |
+
+カスタム設定は `GameConfig.mk n proof` で自由に構築できる。
+
+## テスト方針
+
+### GameConfig ごとのテストレベル
+
+| レベル | 対象 config | 方針 |
+|---|---|---|
+| **標準テスト** | `vanilla4`, `vanilla5` | 全操作で網羅的にテスト |
+| **ストレステスト** | 16レイヤ等の大規模 config | ボトルネック性質（truncate 冪等性等）のみ |
+
+- テストヘルパーには使用する `GameConfig` を明示する（例: `stackTest` は vanilla4 使用）
+- 16レイヤ等のストレステストは `Test/Shape/Shape.lean` に配置し、層ごとの力業 (`cases`) が不可能な規模で性質を検証する

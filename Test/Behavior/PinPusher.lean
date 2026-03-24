@@ -8,19 +8,19 @@ import S2IL.Behavior.PinPusher
 -- テストヘルパー
 -- ============================================================
 
-/-- シェイプコードからピン押しし、結果を文字列比較するヘルパー -/
+/-- シェイプコードからピン押しし、結果を文字列比較するヘルパー（vanilla4）-/
 private def pinPushTest (inputCode expected : String) : Bool :=
     match Shape.ofString? inputCode with
     | some s =>
-        match s.pinPush with
+        match s.pinPush GameConfig.vanilla4 with
         | some result => result.toString == expected
         | none => false
     | none => false
 
-/-- ピン押し結果が none になることを検証するヘルパー -/
+/-- ピン押し結果が none になることを検証するヘルパー（vanilla4）-/
 private def pinPushNone (inputCode : String) : Bool :=
     match Shape.ofString? inputCode with
-    | some s => (s.pinPush).isNone
+    | some s => (s.pinPush GameConfig.vanilla4).isNone
     | none => false
 
 -- ============================================================
@@ -138,7 +138,7 @@ private def pinPushNone (inputCode : String) : Bool :=
 private def pinPushV5 (inputCode : String) : Option String :=
     match Shape.ofString? inputCode with
     | some s =>
-        (Shape.pinPush (config := GameConfig.vanilla5) s).map Shape.toString
+        (s.pinPush GameConfig.vanilla5).map Shape.toString
     | none => none
 
 -- 4レイヤ → 5レイヤに収まる（vanilla5 なら truncate 不要）

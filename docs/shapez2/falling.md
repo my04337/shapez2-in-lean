@@ -194,13 +194,12 @@ def Quarter.canFormBond : Quarter → Bool
    d. 落下単位が存在しない場合、S をそのまま返して終了
 
 2. 落下単位をソートする
-   以下の半順序を満たすトポロジカルソートを行う:
+   以下の関係を満たす挿入ソートを行う:
      「落下単位 A が方角列 D のレイヤ a に、
       落下単位 B が同じ方角列 D のレイヤ b に象限を持ち、
       a < b ならば A を B より先に処理する」
-   実用上、最小レイヤ番号昇順が第一ソートキーとなる。
-   同一最小レイヤで方角列を共有する場合（ピンとクラスタの組合せで
-   発生しうる）は、共有列でより下位の落下単位を先に処理する
+   ソートキーは `shouldProcessBefore` 述語（全方角について
+   共有列での最小レイヤの上下関係を判定）のみである
 
 3. 障害物シェイプを初期化する
    全落下単位の象限を S から除去したものを「障害物シェイプ」O とする
@@ -477,7 +476,16 @@ d({L3:SE, L3:SW}):
 
 落下処理の結果は入力シェイプに対して一意に定まる。
 
-**理由**: 落下単位の列挙は初期シェイプから一意に決まる。処理順序は 6.2 節の半順序（共有方角列での上下関係）のトポロジカルソートで決定される。この半順序は非循環（DAG）である（循環が存在するには 2 つのクラスタが異なる列で互いに上下を入れ替える必要があるが、4 方角の円環構造と構造結合の連結性制約によりそのような配置は不可能）。半順序で比較不能な落下単位同士（方角列を共有しない）は互いの着地位置に影響しないため、どの有効なトポロジカルソートも同一の結果を産む（6.4 節参照）。
+**理由**: 落下単位の列挙は初期シェイプから一意に決まる。処理順序は 6.2 節の `shouldProcessBefore` 述語による挿入ソートで決定される。
+
+> **注意**: `shouldProcessBefore` は **反対称律を満たさない**。すなわち `shouldProcessBefore A B = true` かつ `shouldProcessBefore B A = true` となる循環ペアが存在する。例えば、クラスタ A が {(layer 0, East), (layer 3, West)} に、クラスタ B が {(layer 1, East), (layer 2, West)} に象限を持つ場合、East 列では A が下位 (0 < 1) だが West 列では B が下位 (2 < 3) であり、双方向で true となる。
+
+決定性が成り立つ根拠は以下の 2 点である:
+
+1. **方角列を共有しない落下単位同士は互いの着地位置に影響しない** ため、処理順序に関わらず同一の結果を産む（6.4 節参照）
+2. **方角列を共有する落下単位のうち `shouldProcessBefore` が循環するペアは、共有する各方角列で異なる方向の上下関係を持つ** ため、settleStep の交換法則 (`settleStep_comm_ne_dir`) により処理順序に関わらず同一の結果を産む
+
+> **未完了**: 上記の決定性は現在 sorry を含む形で Lean 上に記述されている。`floatingUnits_perm_rotate180` および `settle_foldl_eq` の証明が完了すれば、`process_rotate180`（回転等変性）から間接的に決定性も帰結する。
 
 ### 7.3 冪等性 (Idempotency)
 
@@ -529,13 +537,14 @@ d({L3:SE, L3:SW}):
 
 ### 8.3 Lean コードとの対応
 
-| 概念 | 既存 Lean 定義 | 備考 |
+| 概念 | Lean 定義 | ファイル |
 |---|---|---|
-| 砕け散り対象の算出（落下時） | `Shape.shatterTargetsOnFall` | [`Shatter.lean`](../../S2IL/Processing/Shatter.lean) |
+| 砕け散り対象の算出（落下時） | `Shape.shatterTargetsOnFall` | [`Shatter.lean`](../../S2IL/Behavior/Shatter.lean) |
 | 砕け散りの適用（落下時） | `Shape.shatterOnFall` | 同上 |
 | 砕け散り対象の算出（切断時） | `Shape.shatterTargetsOnCut` | 同上 |
 | 砕け散りの適用（切断時） | `Shape.shatterOnCut` | 同上 |
-| 構造結合・落下処理 | **未実装** | 本仕様をもとに今後実装 |
+| 構造結合・接地・浮遊・落下処理 | `Gravity.process`, `Shape.gravity` | [`Gravity.lean`](../../S2IL/Behavior/Gravity.lean) |
+| 落下処理の 180° 回転等変性 | `Gravity.process_rotate180` | 同上（sorry 2 箇所を含む） |
 
 ---
 

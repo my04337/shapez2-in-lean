@@ -1,7 +1,8 @@
 ---
 name: lean-build
 description: 'Lean 4 プロジェクトを lake build でビルドする。Use when: build lean project, compile lean code, lake build, check compilation errors, resolve build failures.'
-argument-hint: 'Lean プロジェクトのビルドを実行します'
+metadata:
+  argument-hint: 'Lean プロジェクトのビルドを実行します'
 ---
 
 # Lean プロジェクトのビルド
@@ -62,6 +63,43 @@ Ctrl+Shift+B で `lake build` タスクが実行される (`.vscode/tasks.json` 
 
 診断の詳細な分析・トリアージは **lean-diagnostics** スキルを参照。
 
+## 単一ファイルの高速ビルド
+
+証明作業中は特定ファイル 1 つだけの高速フィードバックが必要な場合がある。
+プロジェクト全体のビルドは時間がかかるため、単一ファイルのチェックが有効。
+
+### lake env lean による単一ファイルチェック
+
+```powershell
+# Windows
+lake env lean S2IL/Behavior/Gravity.lean 2>&1 | Select-String -Pattern "error|sorry"
+```
+
+```bash
+# macOS / Linux
+lake env lean S2IL/Behavior/Gravity.lean 2>&1 | grep -E 'error|sorry'
+```
+
+### sorry 行番号と周辺コンテキストの確認
+
+```powershell
+# Windows: sorry の位置を行番号付きで表示
+Select-String -Pattern '\bsorry\b' -Path S2IL/Behavior/Gravity.lean | Format-Table LineNumber, Line
+```
+
+```bash
+# macOS / Linux
+grep -n '\bsorry\b' S2IL/Behavior/Gravity.lean
+```
+
+### 使い分けの指針
+
+| 状況 | 推奨方法 |
+|---|---|
+| 証明作業中の頻繁なチェック | `lake env lean <file>` |
+| 全体の整合性確認 | ビルドスクリプト（通常ビルド） |
+| CI / リリース前 | ビルドスクリプト + `--update` |
+
 ## トラブルシューティング
 
 - `lake` が見つからない → **lean-setup** スキルを参照
@@ -69,3 +107,4 @@ Ctrl+Shift+B で `lake build` タスクが実行される (`.vscode/tasks.json` 
 - sorry 検出 → サマリーの `[sorry]` 行で未証明箇所を特定
 - 依存解決エラー → `--update` オプションで再ビルド
 - toolchain バージョン不一致 → `lean-toolchain` の内容を確認
+- Mathlib のビルドが遅い → README.md の「バージョンアップとビルド高速化」セクションを参照

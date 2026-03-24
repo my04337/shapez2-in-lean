@@ -29,15 +29,15 @@ private def mrotateCWTest (shapeCode expected : String) : Bool :=
     | some result => result.toString == expected
     | none => false
 
-/-- Machine.pinPush の結果を文字列比較するヘルパー -/
+/-- Machine.pinPush の結果を文字列比較するヘルパー（vanilla4）-/
 private def mpinPushTest (shapeCode expected : String) : Bool :=
-    match Machine.pinPush (s shapeCode) with
+    match Machine.pinPush (s shapeCode) GameConfig.vanilla4 with
     | some result => result.toString == expected
     | none => false
 
-/-- Machine.stack の結果を文字列比較するヘルパー -/
+/-- Machine.stack の結果を文字列比較するヘルパー（vanilla4）-/
 private def mstackTest (bottomCode topCode expected : String) : Bool :=
-    match Machine.stack (s bottomCode) (s topCode) with
+    match Machine.stack (s bottomCode) (s topCode) GameConfig.vanilla4 with
     | some result => result.toString == expected
     | none => false
 
@@ -89,20 +89,20 @@ private def mstackTest (bottomCode topCode expected : String) : Bool :=
 -- ============================================================
 
 -- 入力なし → none
-#guard (Machine.pinPush none).isNone
+#guard (Machine.pinPush none GameConfig.vanilla4).isNone
 
 -- ============================================================
 -- 積層機: 入力欠落
 -- ============================================================
 
 -- 下側なし、上側あり → none
-#guard (Machine.stack none (s "CrCrCrCr")).isNone
+#guard (Machine.stack none (s "CrCrCrCr") GameConfig.vanilla4).isNone
 
 -- 下側あり、上側なし → none
-#guard (Machine.stack (s "CrCrCrCr") none).isNone
+#guard (Machine.stack (s "CrCrCrCr") none GameConfig.vanilla4).isNone
 
 -- 両方なし → none
-#guard (Machine.stack none none).isNone
+#guard (Machine.stack none none GameConfig.vanilla4).isNone
 
 -- ############################################################
 -- 入力有効テスト: コア関数と同じ結果を返す
@@ -169,8 +169,8 @@ private def mstackTest (bottomCode topCode expected : String) : Bool :=
 #guard mpinPushTest "CrCrCrCr" "P-P-P-P-:CrCrCrCr"
 
 -- コア関数との等価性
-#guard Machine.pinPush (s "CrCrCrCr") ==
-    ((s "CrCrCrCr").bind (·.pinPush))
+#guard Machine.pinPush (s "CrCrCrCr") GameConfig.vanilla4 ==
+    ((s "CrCrCrCr").bind (·.pinPush GameConfig.vanilla4))
 
 -- ============================================================
 -- 積層機: 有効入力
@@ -180,9 +180,9 @@ private def mstackTest (bottomCode topCode expected : String) : Bool :=
 #guard mstackTest "CrCrCrCr" "RgRgRgRg" "CrCrCrCr:RgRgRgRg"
 
 -- コア関数との等価性
-#guard Machine.stack (s "CrCrCrCr") (s "RgRgRgRg") ==
+#guard Machine.stack (s "CrCrCrCr") (s "RgRgRgRg") GameConfig.vanilla4 ==
     (match s "CrCrCrCr", s "RgRgRgRg" with
-    | some b, some t => b.stack t
+    | some b, some t => b.stack t GameConfig.vanilla4
     | _, _ => none)
 
 -- ############################################################

@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": ".github/hooks/scripts/inject-proof-state.sh",
+        "windows": "pwsh -ExecutionPolicy Bypass -NoProfile -File .github/hooks/scripts/inject-proof-state.ps1",
+        "timeout": 10
+      }
+    ],
+    "PostToolUse": [
+      {
+        "type": "command",
+        "command": ".github/hooks/scripts/count-sorry.sh",
+        "windows": "pwsh -ExecutionPolicy Bypass -NoProfile -File .github/hooks/scripts/count-sorry.ps1",
+        "timeout": 5
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": ".github/hooks/scripts/check-sorry-on-stop.sh",
+        "windows": "pwsh -ExecutionPolicy Bypass -NoProfile -File .github/hooks/scripts/check-sorry-on-stop.ps1",
+        "timeout": 10
+      }
+    ]
+  }
+}

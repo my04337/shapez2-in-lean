@@ -3,6 +3,8 @@
 
 import S2IL.Behavior.CrystalBond
 import S2IL.Behavior.Rotate
+import S2IL.Behavior.Rotate180Lemmas
+import Mathlib.Data.Finset.Image
 
 /-!
 # Shatter (砕け散り)
@@ -47,7 +49,7 @@ def shatterTargetsOnCut (s : Shape) : List QuarterPos :=
         match p.getQuarter s with
         | some (.crystal _) =>
             let cc := CrystalBond.crystalCluster s p
-            cc.any (fun q => q.dir.isEast) && cc.any (fun q => q.dir.isWest)
+            decide (∃ q ∈ cc, q.dir.isEast = true) && decide (∃ q ∈ cc, q.dir.isWest = true)
         | _ => false
 
 /-- 切断前の砕け散りを適用した結果のシェイプを返す -/
@@ -74,7 +76,7 @@ def shatterTargetsOnFall (s : Shape) (fallingPositions : List QuarterPos)
         match p.getQuarter s with
         | some (.crystal _) =>
             let cc := CrystalBond.crystalCluster s p
-            cc.any (fun q => fragilePositions.any (· == q))
+            decide (∃ q ∈ cc, q ∈ fragilePositions)
         | _ => false
 
 /-- 落下前の砕け散りを適用した結果のシェイプを返す -/
@@ -83,164 +85,18 @@ def shatterOnFall (s : Shape) (fallingPositions : List QuarterPos) : Shape :=
 
 -- ============================================================
 -- 180° 回転等変性の基盤補題
+-- Rotate180Lemmas.lean に共通補題を集約済み
 -- ============================================================
 
-/-- getDir と rotate180 の可換性: 回転後の方角で取得 = 回転前の方角で取得 -/
-private theorem getDir_rotate180 (l : Layer) (d : Direction) :
-        QuarterPos.getDir (l.rotate180) (d.rotate180) = QuarterPos.getDir l d := by
-    cases d <;> rfl
-
-/-- setDir (.empty) と rotate180 の可換性 -/
-private theorem setDir_rotate180_empty (l : Layer) (d : Direction) :
-        (QuarterPos.setDir l d .empty).rotate180 = QuarterPos.setDir (l.rotate180) (d.rotate180) .empty := by
-    cases d <;> rfl
-
-/-- Shape.layers と rotate180 の関係 -/
-private theorem layers_rotate180 (s : Shape) :
-        s.rotate180.layers = s.layers.map Layer.rotate180 := by
-    simp [Shape.rotate180, Shape.mapLayers]
-
-/-- getQuarter と rotate180 の可換性 -/
-private theorem getQuarter_rotate180 (s : Shape) (pos : QuarterPos) :
-        pos.rotate180.getQuarter s.rotate180 = pos.getQuarter s := by
-    simp only [QuarterPos.getQuarter, QuarterPos.rotate180, layers_rotate180]
-    rw [List.getElem?_map]
-    cases s.layers[pos.layer]? with
-    | none => rfl
-    | some l => simp [getDir_rotate180]
-
-/-- List.map_set 補助: (l.set i a).map f = (l.map f).set i (f a) -/
-private theorem list_map_set {α β : Type} (f : α → β) (l : List α) (i : Nat) (a : α) :
-        (l.set i a).map f = (l.map f).set i (f a) := by
-    induction l generalizing i with
-    | nil => simp
-    | cons x xs ih =>
-        cases i with
-        | zero => simp [List.set]
-        | succ n => simp [List.set, ih]
-
-/-- layers のリストから構築されるシェイプの rotate180 -/
-private theorem shape_of_layers_rotate180 (xs : List Layer) (fallback : Shape) :
-        (match xs with
-         | [] => fallback
-         | b :: us => ⟨b :: us, List.cons_ne_nil b us⟩ : Shape).rotate180 =
-        match xs.map Layer.rotate180 with
-         | [] => fallback.rotate180
-         | b :: us => ⟨b :: us, List.cons_ne_nil b us⟩ := by
-    cases xs with
-    | nil => rfl
-    | cons b us => ext1; simp [Shape.rotate180, Shape.mapLayers]
-
-/-- List.set は非空リストを空にしない -/
-private theorem set_ne_nil_of_ne_nil {α : Type} {l : List α} (h : l ≠ []) (i : Nat) (a : α) :
-        l.set i a ≠ [] := by
-    cases l with
-    | nil => exact absurd rfl h
-    | cons x xs => cases i <;> simp [List.set]
-
-/-- setQuarter のレイヤが存在する場合、.layers は List.set の結果に等しい -/
-private theorem setQuarter_layers_eq (s : Shape) (pos : QuarterPos) (q : Quarter) (l : Layer)
-        (hl : s.layers[pos.layer]? = some l) :
-        (pos.setQuarter s q).layers = s.layers.set pos.layer (QuarterPos.setDir l pos.dir q) := by
-    simp only [QuarterPos.setQuarter, hl]
-    -- 内部 match の分岐を split で解決する
-    split
-    · -- nil case: s.layers.set ... = [] は s.layers ≠ [] と矛盾
-      rename_i h
-      exact absurd h (set_ne_nil_of_ne_nil s.layers_ne pos.layer _)
-    · -- cons case: .layers = newLayers
-      rfl
-
-/-- setQuarter (.empty) と rotate180 の可換性 -/
-private theorem setQuarter_rotate180_empty (s : Shape) (pos : QuarterPos) :
-        (pos.setQuarter s .empty).rotate180 = (pos.rotate180).setQuarter (s.rotate180) .empty := by
-    cases hl : s.layers[pos.layer]? with
-    | none =>
-        -- 範囲外: 両辺とも元のシェイプを返す
-        simp only [QuarterPos.setQuarter, QuarterPos.rotate180, layers_rotate180,
-                    List.getElem?_map, hl, Option.map_none]
-    | some l =>
-        -- .layers を抽出して等式を証明する
-        have hl_r : (s.layers.map Layer.rotate180)[pos.layer]? = some (l.rotate180) := by
-            rw [List.getElem?_map, hl]; rfl
-        -- layers の等式に帰着
-        apply Shape.ext
-        show (pos.setQuarter s .empty).layers.map Layer.rotate180 =
-             ((pos.rotate180).setQuarter s.rotate180 .empty).layers
-        rw [setQuarter_layers_eq s pos .empty l hl]
-        rw [setQuarter_layers_eq s.rotate180 pos.rotate180 .empty (l.rotate180)
-                (show s.rotate180.layers[pos.rotate180.layer]? = some (l.rotate180) by
-                    simp only [Shape.rotate180, Shape.mapLayers, QuarterPos.rotate180]
-                    exact hl_r)]
-        simp only [QuarterPos.rotate180, list_map_set, setDir_rotate180_empty,
-                    Shape.rotate180, Shape.mapLayers]
-
-/-- clearPositions と rotate180 の可換性 -/
-private theorem clearPositions_rotate180 (s : Shape) (ps : List QuarterPos) :
-        (s.clearPositions ps).rotate180 =
-        (s.rotate180).clearPositions (ps.map QuarterPos.rotate180) := by
-    induction ps generalizing s with
-    | nil => rfl
-    | cons p rest ih =>
-        show (Shape.clearPositions (p.setQuarter s .empty) rest).rotate180 =
-            Shape.clearPositions ((p.rotate180).setQuarter (s.rotate180) .empty)
-                (rest.map QuarterPos.rotate180)
-        rw [ih, setQuarter_rotate180_empty]
-
-/-- isBondedInLayer は rotate180 で不変 -/
-private theorem isBondedInLayer_rotate180 (s : Shape) (p1 p2 : QuarterPos) :
-        CrystalBond.isBondedInLayer (s.rotate180) (p1.rotate180) (p2.rotate180) =
-        CrystalBond.isBondedInLayer s p1 p2 := by
-    -- getQuarter_rotate180 を QuarterPos.rotate180 展開前に適用
-    simp only [CrystalBond.isBondedInLayer, getQuarter_rotate180]
-    simp only [QuarterPos.rotate180, Direction.adjacent_rotate180]
-
-/-- isBondedCrossLayer は rotate180 で不変 -/
-private theorem isBondedCrossLayer_rotate180 (s : Shape) (p1 p2 : QuarterPos) :
-        CrystalBond.isBondedCrossLayer (s.rotate180) (p1.rotate180) (p2.rotate180) =
-        CrystalBond.isBondedCrossLayer s p1 p2 := by
-    -- getQuarter_rotate180 を QuarterPos.rotate180 展開前に適用
-    simp only [CrystalBond.isBondedCrossLayer, getQuarter_rotate180]
-    simp only [QuarterPos.rotate180]
-    -- 残り: dir.rotate180 == dir.rotate180 を dir == dir に
-    congr 1
-    cases p1.dir <;> cases p2.dir <;> rfl
-
-/-- isBonded は rotate180 で不変 -/
-private theorem isBonded_rotate180 (s : Shape) (p1 p2 : QuarterPos) :
-        CrystalBond.isBonded (s.rotate180) (p1.rotate180) (p2.rotate180) =
-        CrystalBond.isBonded s p1 p2 := by
-    simp only [CrystalBond.isBonded,
-               isBondedInLayer_rotate180, isBondedCrossLayer_rotate180]
+open QuarterPos (getQuarter_rotate180 getQuarter_rotate180_inv)
 
 -- ============================================================
 -- 180° 回転と shatterOnCut の可換性
 -- ============================================================
 
 -- ------------------------------------------------------------
--- foldl の一般的メンバーシップ補題
+-- List.any ヘルパー補題群
 -- ------------------------------------------------------------
-
-/-- 条件付き連結 foldl のメンバーシップ分解 -/
-private theorem foldl_concat_any {α : Type} [BEq α] [LawfulBEq α]
-        (clusters : List (List α)) (pred : List α → Bool) (init : List α)
-        (p : α) :
-        (clusters.foldl (fun acc c => if pred c then acc ++ c else acc) init).any (· == p) =
-        (init.any (· == p) || clusters.any (fun c => pred c && c.any (· == p))) := by
-    induction clusters generalizing init with
-    | nil => simp [List.foldl]
-    | cons c rest ih =>
-        simp only [List.foldl, List.any_cons]
-        cases hpc : pred c with
-        | false =>
-            have : (false = true) = False := by simp
-            simp only [this, ite_false, ih, Bool.false_and, Bool.false_or]
-        | true =>
-            simp only [ite_true, ih, List.any_append, Bool.true_and]
-            -- init.any p || c.any p || rest.any ... = (init.any p || (c.any p || rest.any ...))
-            cases hinit : init.any (· == p) <;>
-            cases hc : c.any (· == p) <;>
-            simp_all
 
 /-- List.map の any と BEq の関係: (ps.map f).any (· == p) = ps.any (fun q => f q == p) -/
 private theorem any_map_beq {α : Type} [BEq α] (ps : List α) (f : α → α) (p : α) :
@@ -294,105 +150,49 @@ private theorem isWest_rotate180 (d : Direction) :
     cases d <;> rfl
 
 -- ------------------------------------------------------------
--- クラスタの東西跨ぎ判定の rotate180 等変性
+-- crystalCluster の decide-exists の rotate180 等変性（Finset 版）
 -- ------------------------------------------------------------
 
-/-- クラスタの東側判定は rotate180 で西側判定に対応する -/
-private theorem cluster_any_isEast_rotate180 (cluster : List QuarterPos) :
-        cluster.any (fun p => p.dir.isEast) =
-        (cluster.map QuarterPos.rotate180).any (fun p => p.dir.isWest) := by
-    induction cluster with
-    | nil => simp
-    | cons x xs ih =>
-        simp [List.any_cons, ih, QuarterPos.rotate180, isWest_rotate180]
-
-/-- クラスタの西側判定は rotate180 で東側判定に対応する -/
-private theorem cluster_any_isWest_rotate180 (cluster : List QuarterPos) :
-        cluster.any (fun p => p.dir.isWest) =
-        (cluster.map QuarterPos.rotate180).any (fun p => p.dir.isEast) := by
-    induction cluster with
-    | nil => simp
-    | cons x xs ih =>
-        simp [List.any_cons, ih, QuarterPos.rotate180, isEast_rotate180]
-
--- ------------------------------------------------------------
--- shatterTargetsOnCut / shatterTargetsOnFall の rotate180 等変性
--- crystalCluster ベースの定義に対して直接証明する
--- ------------------------------------------------------------
-
-/-- getQuarter の rotate180 逆方向: p から s.r180 へのアクセス = p.r180 から s へのアクセス -/
-private theorem getQuarter_rotate180_inv (s : Shape) (p : QuarterPos) :
-        p.getQuarter s.rotate180 = p.rotate180.getQuarter s := by
-    have h := getQuarter_rotate180 s p.rotate180
-    rw [QuarterPos.rotate180_rotate180] at h
-    exact h
-
-/-- crystalCluster の any は r180 で述語変換に対応する（一般版）
-    f q = g q.r180 なら (cc s.r180 p).any f = (cc s p.r180).any g -/
-private theorem crystalCluster_any_rotate180_general (s : Shape) (p : QuarterPos)
-        (f g : QuarterPos → Bool)
-        (h_fg : ∀ q, f q = g q.rotate180) :
-        (CrystalBond.crystalCluster s.rotate180 p).any f =
-        (CrystalBond.crystalCluster s p.rotate180).any g := by
-    cases h : (CrystalBond.crystalCluster s.rotate180 p).any f with
-    | true =>
-        rw [List.any_eq_true] at h
-        obtain ⟨q, hq_mem, hq_f⟩ := h
-        have hq_any : (CrystalBond.crystalCluster s.rotate180 p).any (· == q) = true :=
-            List.any_eq_true.mpr ⟨q, hq_mem, BEq.rfl⟩
-        have hq_r180 : (CrystalBond.crystalCluster s p.rotate180).any (· == q.rotate180) = true := by
-            have := CrystalBond.crystalCluster_mem_rotate180 s.rotate180 p q
-            rw [Shape.rotate180_rotate180] at this
-            rw [← this]; exact hq_any
-        rw [List.any_eq_true] at hq_r180
-        obtain ⟨x, hx_mem, hx_beq⟩ := hq_r180
-        have hx_eq := eq_of_beq hx_beq
-        symm; rw [List.any_eq_true]
-        exact ⟨x, hx_mem, by subst hx_eq; rw [← h_fg]; exact hq_f⟩
-    | false =>
-        symm; rw [Bool.eq_false_iff]
-        intro h_g
-        rw [List.any_eq_true] at h_g
-        obtain ⟨q', hq'_mem, hq'_g⟩ := h_g
-        have hq'_any : (CrystalBond.crystalCluster s p.rotate180).any (· == q') = true :=
-            List.any_eq_true.mpr ⟨q', hq'_mem, BEq.rfl⟩
-        have hq'_r180 : (CrystalBond.crystalCluster s.rotate180 p).any (· == q'.rotate180) = true := by
-            have := CrystalBond.crystalCluster_mem_rotate180 s p.rotate180 q'
-            rw [QuarterPos.rotate180_rotate180] at this
-            rw [← this]; exact hq'_any
-        rw [List.any_eq_true] at hq'_r180
-        obtain ⟨y, hy_mem, hy_beq⟩ := hq'_r180
-        have hy_eq := eq_of_beq hy_beq
-        rw [Bool.eq_false_iff] at h
-        apply h
-        rw [List.any_eq_true]
-        exact ⟨y, hy_mem, by rw [hy_eq, h_fg, QuarterPos.rotate180_rotate180]; exact hq'_g⟩
-
-/-- crystalCluster の any-isEast は r180 で any-isWest に対応 -/
-private theorem crystalCluster_any_isEast_r180 (s : Shape) (p : QuarterPos) :
-        (CrystalBond.crystalCluster s.rotate180 p).any (fun q => q.dir.isEast) =
-        (CrystalBond.crystalCluster s p.rotate180).any (fun q => q.dir.isWest) :=
-    crystalCluster_any_rotate180_general s p _ _ (fun q => by
-        simp [QuarterPos.rotate180, isWest_rotate180])
-
-/-- crystalCluster の any-isWest は r180 で any-isEast に対応 -/
-private theorem crystalCluster_any_isWest_r180 (s : Shape) (p : QuarterPos) :
-        (CrystalBond.crystalCluster s.rotate180 p).any (fun q => q.dir.isWest) =
-        (CrystalBond.crystalCluster s p.rotate180).any (fun q => q.dir.isEast) :=
-    crystalCluster_any_rotate180_general s p _ _ (fun q => by
-        simp [QuarterPos.rotate180, isEast_rotate180])
+/-- crystalCluster 上の decide-exists は r180 で述語変換に対応する（Finset 版）。
+    P q ↔ Q q.r180 なら decide (∃ q ∈ cc s.r180 p, P q) = decide (∃ q ∈ cc s p.r180, Q q)。
+    Finset.image (crystalCluster_rotate180) を使って証明。 -/
+private theorem crystalCluster_decide_exists_rotate180 (s : Shape) (p : QuarterPos)
+        (P Q : QuarterPos → Prop) [DecidablePred P] [DecidablePred Q]
+        (h_pq : ∀ q, P q ↔ Q q.rotate180) :
+        decide (∃ q ∈ CrystalBond.crystalCluster s.rotate180 p, P q) =
+        decide (∃ q ∈ CrystalBond.crystalCluster s p.rotate180, Q q) := by
+    -- crystalCluster s.r180 p = (crystalCluster s p.r180).image r180
+    have h_cc : CrystalBond.crystalCluster s.rotate180 p =
+        (CrystalBond.crystalCluster s p.rotate180).image QuarterPos.rotate180 := by
+      have := CrystalBond.crystalCluster_rotate180 s p.rotate180
+      simp only [QuarterPos.rotate180_rotate180] at this; exact this
+    -- Prop ↔ を示して decide の等価性に帰着
+    suffices h_iff : (∃ q ∈ CrystalBond.crystalCluster s.rotate180 p, P q) ↔
+                     (∃ q ∈ CrystalBond.crystalCluster s p.rotate180, Q q) by
+      cases h1 : decide (∃ q ∈ CrystalBond.crystalCluster s.rotate180 p, P q) <;>
+        cases h2 : decide (∃ q ∈ CrystalBond.crystalCluster s p.rotate180, Q q) <;>
+        simp_all [decide_eq_true_eq, decide_eq_false_iff_not]
+    rw [h_cc]
+    constructor
+    · rintro ⟨q, hq, hpq⟩
+      rw [Finset.mem_image] at hq
+      obtain ⟨r, hr, rfl⟩ := hq
+      exact ⟨r, hr, by have := (h_pq r.rotate180).mp hpq; rwa [QuarterPos.rotate180_rotate180] at this⟩
+    · rintro ⟨q, hq, hqq⟩
+      exact ⟨q.rotate180, Finset.mem_image_of_mem _ hq,
+        (h_pq q.rotate180).mpr (by rwa [QuarterPos.rotate180_rotate180])⟩
 
 /-- shatterTargetsOnCut の判定述語は r180 で不変 -/
 private theorem shatterTargetPred_rotate180 (s : Shape) (p : QuarterPos) :
         (match p.getQuarter s.rotate180 with
          | some (.crystal _) =>
-            (CrystalBond.crystalCluster s.rotate180 p).any (fun q => q.dir.isEast) &&
-            (CrystalBond.crystalCluster s.rotate180 p).any (fun q => q.dir.isWest)
+            decide (∃ q ∈ CrystalBond.crystalCluster s.rotate180 p, q.dir.isEast = true) &&
+            decide (∃ q ∈ CrystalBond.crystalCluster s.rotate180 p, q.dir.isWest = true)
          | _ => false) =
         (match p.rotate180.getQuarter s with
          | some (.crystal _) =>
-            (CrystalBond.crystalCluster s p.rotate180).any (fun q => q.dir.isEast) &&
-            (CrystalBond.crystalCluster s p.rotate180).any (fun q => q.dir.isWest)
+            decide (∃ q ∈ CrystalBond.crystalCluster s p.rotate180, q.dir.isEast = true) &&
+            decide (∃ q ∈ CrystalBond.crystalCluster s p.rotate180, q.dir.isWest = true)
          | _ => false) := by
     rw [getQuarter_rotate180_inv]
     cases p.rotate180.getQuarter s with
@@ -401,7 +201,14 @@ private theorem shatterTargetPred_rotate180 (s : Shape) (p : QuarterPos) :
         cases q with
         | crystal _ =>
             simp only
-            rw [crystalCluster_any_isEast_r180, crystalCluster_any_isWest_r180]
+            -- isEast r180 = isWest, isWest r180 = isEast なので東西が入れ替わり && で戻る
+            have h_east := crystalCluster_decide_exists_rotate180 s p
+                (fun q => q.dir.isEast = true) (fun q => q.dir.isWest = true)
+                (fun q => by simp [QuarterPos.rotate180, isWest_rotate180])
+            have h_west := crystalCluster_decide_exists_rotate180 s p
+                (fun q => q.dir.isWest = true) (fun q => q.dir.isEast = true)
+                (fun q => by simp [QuarterPos.rotate180, isEast_rotate180])
+            rw [h_east, h_west]
             exact Bool.and_comm ..
         | _ => rfl
 
@@ -420,7 +227,7 @@ private theorem any_beq_and [BEq α] [LawfulBEq α] (l : List α) (p : α) (f : 
         | false => simp
         | true =>
             have hxp := eq_of_beq hx; subst hxp
-            simp [BEq.rfl]
+            simp
 
 /-- any_beq_and の && 逆順版 -/
 private theorem any_and_beq [BEq α] [LawfulBEq α] (l : List α) (p : α) (f : α → Bool) :
@@ -443,7 +250,7 @@ private theorem filter_any_rotate180 (s : Shape)
 private theorem shatterTargetsOnCut_any_rotate180 (s : Shape) (p : QuarterPos) :
         (shatterTargetsOnCut s.rotate180).any (· == p) =
         (shatterTargetsOnCut s).any (· == p.rotate180) := by
-    simp only [shatterTargetsOnCut, Shape.layerCount_rotate180,
+    simp only [shatterTargetsOnCut,
         CrystalBond.allValid_rotate180_eq]
     exact filter_any_rotate180 s _ _ (fun q => shatterTargetPred_rotate180 s q) p
 
@@ -486,15 +293,15 @@ private theorem shatterFallPred_rotate180 (s : Shape) (ps : List QuarterPos)
         (p : QuarterPos) :
         (match p.getQuarter s.rotate180 with
          | some (.crystal _) =>
-            (CrystalBond.crystalCluster s.rotate180 p).any (fun qq =>
-                ((ps.map QuarterPos.rotate180).filter (fun (rr : QuarterPos) =>
-                    match rr.getQuarter s.rotate180 with | some w => w.isFragile | none => false)).any (· == qq))
+            decide (∃ q ∈ CrystalBond.crystalCluster s.rotate180 p,
+                q ∈ (ps.map QuarterPos.rotate180).filter (fun (rr : QuarterPos) =>
+                    match rr.getQuarter s.rotate180 with | some w => w.isFragile | none => false))
          | _ => false) =
         (match p.rotate180.getQuarter s with
          | some (.crystal _) =>
-            (CrystalBond.crystalCluster s p.rotate180).any (fun qq =>
-                (ps.filter (fun (rr : QuarterPos) =>
-                    match rr.getQuarter s with | some w => w.isFragile | none => false)).any (· == qq))
+            decide (∃ q ∈ CrystalBond.crystalCluster s p.rotate180,
+                q ∈ ps.filter (fun (rr : QuarterPos) =>
+                    match rr.getQuarter s with | some w => w.isFragile | none => false))
          | _ => false) := by
     rw [getQuarter_rotate180_inv]
     cases h : p.rotate180.getQuarter s with
@@ -503,17 +310,23 @@ private theorem shatterFallPred_rotate180 (s : Shape) (ps : List QuarterPos)
         cases q with
         | crystal _ =>
             simp only
+            -- fragilePositions の r180 等変性
             have h_frag := fragilePositions_map_rotate180 s ps
-            suffices h_eq : (fun qq : QuarterPos =>
-                    ((ps.map QuarterPos.rotate180).filter (fun (rr : QuarterPos) =>
-                        match QuarterPos.getQuarter s.rotate180 rr with | some w => Quarter.isFragile w | none => false)).any (· == qq)) =
-                (fun qq : QuarterPos =>
-                    (ps.filter (fun (rr : QuarterPos) =>
-                        match QuarterPos.getQuarter s rr with | some w => Quarter.isFragile w | none => false)).any (· == qq.rotate180)) by
-                rw [h_eq]
-                exact crystalCluster_any_rotate180_general s p _ _ (fun _ => rfl)
-            funext qq
-            rw [h_frag, any_map_rotate180_beq]
+            -- qq ∈ fragR180 ↔ qq.r180 ∈ fragOrig を示して
+            -- crystalCluster_decide_exists_rotate180 に帰着
+            let fragOrig := ps.filter (fun rr =>
+                match rr.getQuarter s with | some w => w.isFragile | none => false)
+            exact crystalCluster_decide_exists_rotate180 s p
+                (fun qq => qq ∈ (ps.map QuarterPos.rotate180).filter (fun (rr : QuarterPos) =>
+                    match rr.getQuarter s.rotate180 with | some w => w.isFragile | none => false))
+                (fun qq => qq ∈ fragOrig)
+                (fun qq => by
+                    simp only [h_frag, List.mem_map]
+                    constructor
+                    · rintro ⟨r, hr, rfl⟩
+                      rwa [QuarterPos.rotate180_rotate180]
+                    · intro hq
+                      exact ⟨qq.rotate180, hq, QuarterPos.rotate180_rotate180 qq⟩)
         | _ => rfl
 
 /-- shatterTargetsOnFall の any-membership は rotate180 で等変 -/
@@ -521,7 +334,7 @@ private theorem shatterTargetsOnFall_any_rotate180 (s : Shape)
         (ps : List QuarterPos) (p : QuarterPos) :
         (shatterTargetsOnFall s.rotate180 (ps.map QuarterPos.rotate180)).any (· == p) =
         (shatterTargetsOnFall s ps).any (· == p.rotate180) := by
-    simp only [shatterTargetsOnFall, Shape.layerCount_rotate180,
+    simp only [shatterTargetsOnFall,
         CrystalBond.allValid_rotate180_eq]
     exact filter_any_rotate180 s _ _ (fun q => shatterFallPred_rotate180 s ps q) p
 
@@ -553,6 +366,90 @@ theorem shatterOnFall_rotate180_comm (s : Shape) (ps : List QuarterPos) :
     simp only [shatterOnFall]
     rw [clearPositions_rotate180]
     exact (clearPositions_shatterTargetsOnFall_rotate180_eq s ps).symm
+
+-- ============================================================
+-- shatterOnFall の位置集合拡張性
+-- ============================================================
+
+/-- filter 後の .any メンバーシップは元リストの .any と述語値の AND に等しい -/
+private theorem filter_any_eq (l : List QuarterPos) (pred : QuarterPos → Bool)
+        (q : QuarterPos) :
+        (l.filter pred).any (· == q) = (l.any (· == q) && pred q) := by
+    induction l with
+    | nil => simp [List.filter, List.any]
+    | cons x xs ih =>
+        simp only [List.filter]
+        cases hpx : pred x with
+        | false =>
+            simp only [List.any_cons, ih]
+            cases hxq : (x == q) with
+            | false => simp
+            | true =>
+                have := eq_of_beq hxq; subst this
+                simp [hpx]
+        | true =>
+            simp only [List.any_cons, ih]
+            cases hxq : (x == q) with
+            | false => simp
+            | true =>
+                have := eq_of_beq hxq; subst this
+                simp [hpx]
+
+/-- shatterOnFall は位置集合の .any メンバーシップのみに依存する。
+    2 つの位置リストが各位置について同じ .any 結果を返すなら、
+    shatterOnFall の結果は同じである -/
+theorem shatterOnFall_ext (s : Shape) (ps1 ps2 : List QuarterPos)
+        (h : ∀ p, ps1.any (· == p) = ps2.any (· == p)) :
+        s.shatterOnFall ps1 = s.shatterOnFall ps2 := by
+    simp only [shatterOnFall, shatterTargetsOnFall]
+    -- clearPositions の引数が同じことを示す
+    congr 1
+    -- allPos.filter の述語が各 p について同値であることを示す
+    let fragPred := fun (p : QuarterPos) =>
+        match p.getQuarter s with | some q => q.isFragile | none => false
+    -- fragilePositions の .any メンバーシップが同値
+    have h_frag : ∀ q,
+            (ps1.filter fragPred).any (· == q) =
+            (ps2.filter fragPred).any (· == q) := by
+        intro q
+        simp only [filter_any_eq]
+        rw [h q]
+    -- allPos.filter の述語が一致
+    apply List.filter_congr
+    intro p _
+    -- h : ∀ p, ps1.any == = ps2.any == から List メンバーシップの同値を導く
+    have h_ps_mem : ∀ q, q ∈ ps1 ↔ q ∈ ps2 := by
+        intro q
+        constructor
+        · intro hq
+          have h1 : ps1.any (· == q) = true := by
+              simp only [List.any_eq_true]; exact ⟨q, hq, BEq.rfl⟩
+          rw [h] at h1
+          obtain ⟨x, hx, hbeq⟩ := List.any_eq_true.mp h1
+          exact eq_of_beq hbeq ▸ hx
+        · intro hq
+          have h2 : ps2.any (· == q) = true := by
+              simp only [List.any_eq_true]; exact ⟨q, hq, BEq.rfl⟩
+          rw [← h] at h2
+          obtain ⟨x, hx, hbeq⟩ := List.any_eq_true.mp h2
+          exact eq_of_beq hbeq ▸ hx
+    have h_frag_mem : ∀ q, q ∈ ps1.filter fragPred ↔ q ∈ ps2.filter fragPred := by
+        intro q
+        simp only [List.mem_filter]
+        exact ⟨fun ⟨hm, hp⟩ => ⟨(h_ps_mem q).mp hm, hp⟩,
+               fun ⟨hm, hp⟩ => ⟨(h_ps_mem q).mpr hm, hp⟩⟩
+    -- match p.getQuarter s の各ケース
+    cases p.getQuarter s with
+    | none => rfl
+    | some q =>
+        cases q <;> try rfl
+        case crystal c =>
+            -- decide (∃ q ∈ cc, q ∈ filter1) = decide (∃ q ∈ cc, q ∈ filter2)
+            show decide _ = decide _
+            congr 1
+            exact propext ⟨fun ⟨q, hq, hm⟩ => ⟨q, hq, (h_frag_mem q).mp hm⟩,
+                   fun ⟨q, hq, hm⟩ => ⟨q, hq, (h_frag_mem q).mpr hm⟩⟩
+
 -- ============================================================
 -- 超過レイヤの砖け散り
 -- ============================================================

@@ -170,37 +170,37 @@ def rotate180 (s : Shape) : Shape := s.mapLayers Layer.rotate180
 /-- 時計回り 90° 回転を 4 回適用すると元に戻る -/
 @[simp] theorem rotateCW_four (s : Shape) :
         s.rotateCW.rotateCW.rotateCW.rotateCW = s := by
-    ext; simp [rotateCW, mapLayers, List.map_map, Layer.rotateCW_four]
+    ext; simp [rotateCW, mapLayers, List.map_map]
 
 /-- 反時計回り回転の後に時計回り回転を適用すると元に戻る -/
 @[simp] theorem rotateCCW_rotateCW (s : Shape) :
         s.rotateCCW.rotateCW = s := by
-    ext; simp [rotateCCW, rotateCW, mapLayers, List.map_map, Layer.rotateCCW_rotateCW]
+    ext; simp [rotateCCW, rotateCW, mapLayers, List.map_map]
 
 /-- 時計回り回転の後に反時計回り回転を適用すると元に戻る -/
 @[simp] theorem rotateCW_rotateCCW (s : Shape) :
         s.rotateCW.rotateCCW = s := by
-    ext; simp [rotateCW, rotateCCW, mapLayers, List.map_map, Layer.rotateCW_rotateCCW]
+    ext; simp [rotateCW, rotateCCW, mapLayers, List.map_map]
 
 /-- 180° 回転を 2 回適用すると元に戻る -/
 @[simp] theorem rotate180_rotate180 (s : Shape) :
         s.rotate180.rotate180 = s := by
-    ext; simp [rotate180, mapLayers, List.map_map, Layer.rotate180_rotate180]
+    ext; simp [rotate180, mapLayers, List.map_map]
 
 /-- 反時計回り 90° 回転を 4 回適用すると元に戻る -/
 @[simp] theorem rotateCCW_four (s : Shape) :
         s.rotateCCW.rotateCCW.rotateCCW.rotateCCW = s := by
-    ext; simp [rotateCCW, mapLayers, List.map_map, Layer.rotateCCW_four]
+    ext; simp [rotateCCW, mapLayers, List.map_map]
 
 /-- 時計回り回転と 180° 回転は可換である -/
 @[simp] theorem rotateCW_rotate180_comm (s : Shape) :
         s.rotateCW.rotate180 = s.rotate180.rotateCW := by
-    ext; simp [rotateCW, rotate180, mapLayers, List.map_map, Layer.rotateCW_rotate180_comm]
+    ext; simp [rotateCW, rotate180, mapLayers, List.map_map]
 
 /-- 反時計回り回転と 180° 回転は可換である -/
 @[simp] theorem rotateCCW_rotate180_comm (s : Shape) :
         s.rotateCCW.rotate180 = s.rotate180.rotateCCW := by
-    ext; simp [rotateCCW, rotate180, mapLayers, List.map_map, Layer.rotateCCW_rotate180_comm]
+    ext; simp [rotateCCW, rotate180, mapLayers, List.map_map]
 
 /-- 回転してもレイヤ数は変わらない -/
 @[simp] theorem layerCount_rotateCW (s : Shape) :

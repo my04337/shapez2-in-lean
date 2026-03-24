@@ -10,6 +10,7 @@ import S2IL.Shape.GameConfig
 import S2IL.Behavior.Rotate
 import S2IL.Behavior.GenericBfs
 import S2IL.Behavior.CrystalBond
+import S2IL.Behavior.Rotate180Lemmas
 import S2IL.Behavior.Shatter
 import S2IL.Behavior.Gravity
 import S2IL.Behavior.Stacker

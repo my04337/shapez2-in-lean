@@ -297,8 +297,17 @@ private theorem settleAfterCut_rotate180 (s : Shape) :
     · -- isEmpty = true → normalize
       exact normalize_rotate180 s
     · -- isEmpty = false → gravity
-      rw [gravity_rotate180_comm, shatterOnFall_rotate180_comm,
-          Gravity.floatingUnits_flatMap_positions_rotate180]
+      rw [gravity_rotate180_comm, shatterOnFall_rotate180_comm]
+      -- ゴール: (s.r180.shatterOnFall (A.map r180)).gravity = (s.r180.shatterOnFall B).gravity
+      -- where A = (floatingUnits s).flatMap positions, B = (floatingUnits s.r180).flatMap positions
+      -- shatterOnFall_ext で .any メンバーシップ同値に帰着
+      congr 1
+      apply shatterOnFall_ext
+      intro p
+      -- (A.map r180).any (· == p) = A.any (· == p.r180) = B.any (· == p.r180.r180) = B.any (· == p)
+      rw [Gravity.any_map_rotate180_beq,
+          Gravity.falling_positions_any_rotate180,
+          QuarterPos.rotate180_rotate180]
 
 /-- cut の展開 -/
 private theorem cut_eq (s : Shape) :

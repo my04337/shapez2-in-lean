@@ -10,19 +10,19 @@ import S2IL.Behavior.Stacker
 
 private def emptyLayer : Layer := Layer.mk .empty .empty .empty .empty
 
-/-- シェイプコードから積層し、結果を文字列比較するヘルパー -/
+/-- シェイプコードから積層し、結果を文字列比較するヘルパー（vanilla4）-/
 private def stackTest (bottomCode topCode expected : String) : Bool :=
     match Shape.ofString? bottomCode, Shape.ofString? topCode with
     | some b, some t =>
-        match Shape.stack b t with
+        match Shape.stack b t GameConfig.vanilla4 with
         | some result => result.toString == expected
         | none => false
     | _, _ => false
 
-/-- 積層結果が none になることを検証するヘルパー -/
+/-- 積層結果が none になることを検証するヘルパー（vanilla4）-/
 private def stackNone (bottomCode topCode : String) : Bool :=
     match Shape.ofString? bottomCode, Shape.ofString? topCode with
-    | some b, some t => (Shape.stack b t).isNone
+    | some b, some t => (Shape.stack b t GameConfig.vanilla4).isNone
     | _, _ => false
 
 -- ============================================================
@@ -99,7 +99,7 @@ private def bottomWithGap : Shape :=
 -- Rg は L3 にあり、L2 が空 → L1:NE(Cr)の直上 L2:NE は空 → Rg(NE)はL1に着地できない
 -- L3:NE の直下 L2:NE は空 → さらに L1:NE(Cr) → L2 に着地
 -- 結局: Cr------:Rg------
-#guard (Shape.stack bottomWithGap (Shape.single (Layer.mk (.colored .rectangle .green) .empty .empty .empty))).map Shape.toString
+#guard (Shape.stack bottomWithGap (Shape.single (Layer.mk (.colored .rectangle .green) .empty .empty .empty)) GameConfig.vanilla4).map Shape.toString
     == some "Cr------:Rg------"
 
 -- 部分的な落下: 下側に穴があり上側パーツが部分的に落下
@@ -151,7 +151,7 @@ private def top2full : Shape :=
 -- shatterOnTruncate: L5 は Cy (非結晶) → 砕け散りなし
 -- truncated = 4レイヤ: L1(Cr), L2(Rg), L3(Sb--), L4(Wu)
 -- 再gravity: 全て接地 → 変化なし
-#guard (Shape.stack bottom3partial top2full).map Shape.toString
+#guard (Shape.stack bottom3partial top2full GameConfig.vanilla4).map Shape.toString
     == some "CrCrCrCr:RgRgRgRg:SbSb----:WuWuWuWu"
 
 -- ============================================================
@@ -186,7 +186,7 @@ private def top2full : Shape :=
 private def stackV5 (bottomCode topCode : String) : Option String :=
     match Shape.ofString? bottomCode, Shape.ofString? topCode with
     | some b, some t =>
-        (Shape.stack (config := GameConfig.vanilla5) b t).map Shape.toString
+        (Shape.stack b t GameConfig.vanilla5).map Shape.toString
     | _, _ => none
 
 -- 4レイヤ + 1レイヤ → 5レイヤに収まる（vanilla5 なら truncate 不要）

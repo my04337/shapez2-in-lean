@@ -1,7 +1,8 @@
 ---
 name: lean-diagnostics
 description: 'Lean 4 ビルド・実行結果の診断メッセージを解析・トリアージする。Use when: analyze build errors, triage warnings, prioritize fixes, parse diagnostics, review build output, sorry detection.'
-argument-hint: 'ビルド結果の診断とトリアージを行います'
+metadata:
+  argument-hint: 'ビルド結果の診断とトリアージを行います'
 ---
 
 # ビルド診断の解析とトリアージ
@@ -117,3 +118,46 @@ grep "declaration uses 'sorry'" .lake/build-log.txt
 - **lean-build**: ビルドの実行
 - **lean-run**: ビルド＋実行
 - **lean-setup**: ツールチェインの PATH 解決
+- **lean-proof-progress**: sorry の進捗管理と撤退判断
+- **lean-depgraph**: sorry 間の依存関係の可視化
+
+## sorry の依存関係分析
+
+証明作業では sorry 間の依存関係が重要。以下の手順で分析する。
+
+### sorry 依存グラフの取得
+
+**lean-depgraph** を使って sorry を含む宣言の依存関係を可視化する:
+
+```powershell
+# sorry を含むノードが赤色で強調される
+.github/skills/lean-depgraph/scripts/depgraph.ps1
+```
+
+### sorry の分類
+
+| 分類 | 意味 | 対応方針 |
+|---|---|---|
+| **独立 sorry** | 他の sorry に依存しない | 即座に着手可能。優先候補 |
+| **依存 sorry** | 他の sorry の結果を前提とする | 依存先を先に解決 |
+| **被依存 sorry** | 多くの宣言がこの sorry に依存 | 解決のインパクトが大きい |
+
+### sorry の型シグネチャ要約
+
+sorry の対象（何を証明する必要があるか）を素早く把握するには:
+
+```powershell
+# Windows: sorry を含む宣言の一覧
+Get-Content .lake/build-diagnostics.jsonl |
+    ConvertFrom-Json |
+    Where-Object { $_.isSorry -eq $true } |
+    Select-Object file, line, message
+```
+
+```bash
+# macOS / Linux
+grep '"isSorry":true' .lake/build-diagnostics.jsonl | jq '{file, line, message}'
+```
+
+sorry の行番号から対象の `theorem` / `lemma` 宣言を特定し、
+その型シグネチャ（ゴール）を確認する。

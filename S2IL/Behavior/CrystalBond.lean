@@ -3,6 +3,8 @@
 
 import S2IL.Shape.QuarterPos
 import S2IL.Behavior.Rotate
+import Batteries
+import Mathlib.Data.Finset.Image
 
 /-!
 # CrystalBond (結晶結合)
@@ -62,24 +64,13 @@ def isBonded (s : Shape) (p1 p2 : QuarterPos) : Bool :=
 -- 定理
 -- ============================================================
 
-/-- LawfulBEq を持つ型に対して == は可換である -/
-private theorem beq_symm [BEq α] [LawfulBEq α] (a b : α) : (a == b) = (b == a) := by
-    cases h : a == b with
-    | true => have := eq_of_beq h; subst this; exact h.symm
-    | false =>
-        symm; cases h2 : b == a with
-        | false => rfl
-        | true => exact absurd (eq_of_beq h2).symm (by intro heq; subst heq; simp at h)
-
-/-- Direction の == は可換である -/
-private theorem dir_beq_symm (a b : Direction) : (a == b) = (b == a) := by
-    cases a <;> cases b <;> rfl
+-- beq_symm / dir_beq_symm は Batteries の BEq.comm に統一
 
 /-- 同レイヤ内結合は対称的である -/
 theorem isBondedInLayer_symm (s : Shape) (p1 p2 : QuarterPos) :
         isBondedInLayer s p1 p2 = isBondedInLayer s p2 p1 := by
     simp only [isBondedInLayer]
-    rw [beq_symm p1.layer p2.layer, Direction.adjacent_symm p1.dir p2.dir]
+    rw [BEq.comm (a := p1.layer), Direction.adjacent_symm p1.dir p2.dir]
     congr 1
     generalize p1.getQuarter s = q1
     generalize p2.getQuarter s = q2
@@ -101,7 +92,7 @@ theorem isBondedCrossLayer_symm (s : Shape) (p1 p2 : QuarterPos) :
         isBondedCrossLayer s p1 p2 = isBondedCrossLayer s p2 p1 := by
     simp only [isBondedCrossLayer]
     rw [LayerIndex.verticallyAdjacent_symm p1.layer p2.layer,
-        dir_beq_symm p1.dir p2.dir]
+        BEq.comm (a := p1.dir)]
     congr 1
     generalize p1.getQuarter s = q1
     generalize p2.getQuarter s = q2
@@ -143,15 +134,19 @@ private def bfs (s : Shape) (allPos : List QuarterPos) (visited queue : List Qua
                     isBonded s pos p && !(newVisited.any (· == p))
                 bfs s allPos newVisited (rest ++ neighbors) fuel
 
-/-- 指定位置から到達可能な結合クラスタを返す -/
-def crystalCluster (s : Shape) (pos : QuarterPos) : List QuarterPos :=
+/-- 指定位置から到達可能な結合クラスタを返す（リスト版、計算用） -/
+def crystalClusterList (s : Shape) (pos : QuarterPos) : List QuarterPos :=
     let allPos := QuarterPos.allValid s
     -- fuel は最大頂点数の2乗で十分
     let n := s.layerCount * 4
     bfs s allPos [] [pos] (n * n)
 
-/-- シェイプ内の全結合クラスタを返す。各クラスタは `QuarterPos` のリスト -/
-def allCrystalClusters (s : Shape) : List (List QuarterPos) :=
+/-- 指定位置から到達可能な結合クラスタを返す（Finset 版、証明用） -/
+def crystalCluster (s : Shape) (pos : QuarterPos) : Finset QuarterPos :=
+    (crystalClusterList s pos).toFinset
+
+/-- シェイプ内の全結合クラスタを返す。各クラスタは `QuarterPos` の有限集合 -/
+def allCrystalClusters (s : Shape) : List (Finset QuarterPos) :=
     let allPos := QuarterPos.allValid s
     -- 結晶位置のみを対象にする
     let crystalPositions := allPos.filter fun p =>
@@ -161,7 +156,7 @@ def allCrystalClusters (s : Shape) : List (List QuarterPos) :=
     -- 各結晶位置についてクラスタを算出し、重複を除去する
     crystalPositions.foldl (fun clusters pos =>
         -- この位置が既存のクラスタに含まれているか確認
-        if clusters.any (fun cluster => cluster.any (· == pos)) then
+        if clusters.any (fun cluster => (crystalClusterList s pos).any (· == pos)) then
             clusters
         else
             let cluster := crystalCluster s pos
@@ -235,20 +230,10 @@ private theorem quarterPos_beq_rotate180 (p q : QuarterPos) :
 /-- List.any は rotate180 のマッピングで保存される -/
 private theorem list_any_map_rotate180 (l : List QuarterPos) (p : QuarterPos) :
         (l.map QuarterPos.rotate180).any (· == p.rotate180) = l.any (· == p) := by
-    induction l with
-    | nil => rfl
-    | cons x xs ih =>
-        simp only [List.map, List.any, ih, quarterPos_beq_rotate180]
-
-/-- List.filter と map rotate180 の関係 -/
-private theorem list_filter_map_rotate180 (l : List QuarterPos) (pred : QuarterPos → Bool) :
-        (l.map QuarterPos.rotate180).filter pred =
-        (l.filter (pred ∘ QuarterPos.rotate180)).map QuarterPos.rotate180 := by
-    induction l with
-    | nil => rfl
-    | cons x xs ih =>
-        simp only [List.map, List.filter, Function.comp, ih]
-        cases pred (x.rotate180) <;> rfl
+    rw [List.any_map]
+    congr 1
+    funext x
+    exact quarterPos_beq_rotate180 x p
 
 /-- List.any の cons と rotate180 の関係 -/
 private theorem list_any_cons_rotate180 (x : QuarterPos) (l : List QuarterPos)
@@ -320,15 +305,15 @@ theorem allValid_rotate180_eq (s : Shape) :
 -- crystalCluster の rotate180 等変性（mapped allPos 版）
 -- ============================================================
 
-/-- crystalCluster を mapped allPos で呼んだ場合の等変性。
+/-- crystalClusterList を mapped allPos で呼んだ場合の等変性。
     bfs_rotate180 から直接導出される。 -/
-theorem crystalCluster_rotate180_mapped (s : Shape) (pos : QuarterPos) :
+private theorem crystalClusterList_rotate180_mapped (s : Shape) (pos : QuarterPos) :
         bfs s.rotate180
             ((QuarterPos.allValid s).map QuarterPos.rotate180) []
             [pos.rotate180]
             (s.layerCount * 4 * (s.layerCount * 4)) =
-        (crystalCluster s pos).map QuarterPos.rotate180 := by
-    unfold crystalCluster
+        (crystalClusterList s pos).map QuarterPos.rotate180 := by
+    unfold crystalClusterList
     exact bfs_rotate180 s (QuarterPos.allValid s) [] [pos]
         (s.layerCount * 4 * (s.layerCount * 4))
 
@@ -379,7 +364,7 @@ private theorem bfs_contains_start (s : Shape) (allPos : List QuarterPos)
     cases fuel with
     | zero => omega
     | succ n =>
-        simp only [bfs, List.any, Bool.false_or]
+        simp only [bfs, List.any]
         -- start ∉ [] なので処理される
         exact bfs_vis_subset s allPos [start] _ n start
             (by rw [List.any_cons]; simp [BEq.rfl])
@@ -451,7 +436,7 @@ private theorem allValid_any_iff_layer (s : Shape) (p : QuarterPos) :
       rw [List.mem_map] at h_dir
       obtain ⟨d, _, h_mk⟩ := h_dir
       simp only [Shape.layerCount]
-      rw [← h_mk]; simp only [QuarterPos.layer]
+      rw [← h_mk]; simp only []
       exact List.mem_range.mp h_li
     · -- layer < layerCount → any = true
       intro h
@@ -497,7 +482,7 @@ private theorem allValid_map_rotate180_any (s : Shape) (p : QuarterPos) :
         obtain ⟨x, h_x_mem, h_x_eq⟩ := h_r180_mem
         exact ⟨x.rotate180, List.mem_map.mpr ⟨x, h_x_mem, rfl⟩, by
             have := eq_of_beq h_x_eq; subst this
-            simp [quarterPos_beq_rotate180, QuarterPos.rotate180_rotate180, BEq.rfl]⟩
+            simp [QuarterPos.rotate180_rotate180, BEq.rfl]⟩
     | false =>
         have h_ge : ¬(p.layer < s.layerCount) := by
             intro h_lt; exact absurd ((allValid_any_iff_layer s p).mpr h_lt) (by simp [h])
@@ -513,7 +498,7 @@ private theorem allValid_map_rotate180_any (s : Shape) (p : QuarterPos) :
             have := eq_of_beq h_x_eq; subst this
             have h_a_valid := (allValid_any_iff_layer s a).mp
                 (List.any_eq_true.mpr ⟨a, h_a_mem, BEq.rfl⟩)
-            simp [QuarterPos.rotate180] at h_a_valid
+            simp at h_a_valid
             exact absurd h_a_valid h_ge
 
 -- ============================================================
@@ -626,7 +611,7 @@ private theorem bfsInv_skip (s : Shape) (allPos vis : List QuarterPos)
 private theorem bfsInv_process (s : Shape) (allPos vis : List QuarterPos)
         (pos : QuarterPos) (rest : List QuarterPos)
         (h_inv : BFSInv s allPos vis (pos :: rest))
-        (h_not_vis : ¬(vis.any (· == pos) = true)) :
+        (_h_not_vis : ¬(vis.any (· == pos) = true)) :
         BFSInv s allPos (pos :: vis)
             (rest ++ allPos.filter fun p =>
                 isBonded s pos p && !((pos :: vis).any (· == p))) := by
@@ -673,17 +658,17 @@ private theorem filter_length_lt_of_mem_of_not (l : List QuarterPos)
         simp only [List.filter, List.length]
         cases h_mem with
         | head =>
-            simp only [h_not, ite_false]
+            simp only [h_not]
             have := List.length_filter_le (p := pred) as
             omega
         | tail _ h_as =>
             cases h_pa : pred a with
             | false =>
-                simp only [h_pa, ite_false]
+                simp only []
                 have := ih h_as
                 omega
             | true =>
-                simp only [h_pa, ite_true, List.length]
+                simp only [List.length]
                 have := ih h_as
                 omega
 
@@ -697,16 +682,16 @@ private theorem filter_and_length_le (l : List QuarterPos)
         simp only [List.filter]
         cases h_q : q a with
         | false =>
-            simp only [h_q, Bool.and_false, ite_false]
+            simp only [Bool.and_false]
             have := ih; omega
         | true =>
-            simp only [h_q, Bool.and_true]
+            simp only [Bool.and_true]
             cases h_p : p a with
             | true =>
-                simp only [h_p, ite_true, ite_true, List.length]
+                simp only [List.length]
                 have := ih; omega
             | false =>
-                simp only [h_p, ite_false, ite_true, List.length]
+                simp only [List.length]
                 have := ih; omega
 
 /-- nb + u'² ≤ u² を示すための算術補題。
@@ -714,7 +699,7 @@ private theorem filter_and_length_le (l : List QuarterPos)
 private theorem add_sq_le_sq_of_lt (nb u' u : Nat)
         (h_nb : nb ≤ u') (h_lt : u' < u) :
         nb + u' * u' ≤ u * u := by
-    have h1 : u' ≤ u := Nat.le_of_lt h_lt
+    have h1 : u' ≤ u := by omega
     have h3 : u' * (u' + 1) ≤ u * u := Nat.mul_le_mul h1 h_lt
     have h4 : u' + u' * u' = u' * (u' + 1) := by rw [Nat.mul_succ]; omega
     omega
@@ -836,7 +821,7 @@ private theorem bfs_invariant_preserved (s : Shape) (allPos vis queue : List Qua
                           induction l with
                           | nil => rfl
                           | cons a as ih_l =>
-                              simp only [List.filter, h_pred_false a, ite_false]; exact ih_l
+                              simp only [List.filter, h_pred_false a]; exact ih_l
                       -- u' = u (pos ∉ allPos → フィルタ不変)
                       have h_u_eq :
                           (allPos.filter fun p => !((pos :: vis).any (· == p))).length =
@@ -884,7 +869,7 @@ private theorem bfs_invariant_preserved (s : Shape) (allPos vis queue : List Qua
                               rw [List.filter_filter]
                               apply List.filter_congr
                               intro x _
-                              simp only [List.any_cons, Bool.not_or, Bool.and_comm]
+                              simp only [List.any_cons, Bool.not_or]
                           rw [h_eq]
                           exact filter_length_lt_of_mem_of_not
                               (allPos.filter (fun p => !(vis.any (· == p))))
@@ -936,13 +921,25 @@ private theorem allValid_contains_isBonded (s : Shape) (p q : QuarterPos)
 -- crystalCluster の健全性
 -- ============================================================
 
+/-- .any (· == p) と List.mem の等価性（LawfulBEq 前提） -/
+private theorem any_beq_iff_mem (l : List QuarterPos) (p : QuarterPos) :
+        l.any (· == p) = true ↔ p ∈ l := by
+    constructor
+    · intro h
+      rw [List.any_eq_true] at h
+      obtain ⟨x, hx, he⟩ := h
+      exact eq_of_beq he ▸ hx
+    · intro h
+      exact List.any_eq_true.mpr ⟨p, h, BEq.rfl⟩
+
 /-- crystalCluster の健全性:
     結果に含まれる要素は start から BondReachable -/
 theorem crystalCluster_sound (s : Shape) (start p : QuarterPos) :
-        (crystalCluster s start).any (· == p) = true →
+        p ∈ crystalCluster s start →
         BondReachable s start p := by
+    unfold crystalCluster; rw [List.mem_toFinset, ← any_beq_iff_mem]
     intro h
-    unfold crystalCluster at h
+    unfold crystalClusterList at h
     match bfs_sound s _ [] [start] _ p h with
     | .inl h_vis => simp [List.any] at h_vis
     | .inr ⟨q, h_q, h_reach⟩ =>
@@ -954,96 +951,95 @@ theorem crystalCluster_sound (s : Shape) (start p : QuarterPos) :
             simp [List.any] at h_rest
 
 -- ============================================================
+-- crystalCluster の完全性
+-- ============================================================
+
+/-- crystalCluster の完全性:
+    start から BondReachable な要素が結果に含まれる
+    （s.layerCount > 0 が必要: layerCount = 0 では BFS のキューが空） -/
+theorem crystalCluster_complete (s : Shape) (start p : QuarterPos)
+        (h_lc : s.layerCount > 0)
+        (h_reach : BondReachable s start p) :
+        p ∈ crystalCluster s start := by
+    unfold crystalCluster; rw [List.mem_toFinset, ← any_beq_iff_mem]
+    unfold crystalClusterList
+    -- BFS 不変条件保存
+    have h_inv := bfs_invariant_preserved s (QuarterPos.allValid s) []
+        [start] (s.layerCount * 4 * (s.layerCount * 4))
+        (bfsInv_initial s (QuarterPos.allValid s) start)
+        (by
+            have h_filter : (QuarterPos.allValid s).filter (fun p =>
+                !(([] : List QuarterPos).any (· == p))) = QuarterPos.allValid s :=
+                List.filter_eq_self.mpr (by intro x _; simp [List.any])
+            simp only [h_filter, List.length, allValid_length]; omega)
+        (fun p q h => allValid_contains_isBonded_fst s p q h)
+    -- start が BFS 結果に含まれることを確認
+    have h_start : (bfs s (QuarterPos.allValid s) [] [start]
+        (s.layerCount * 4 * (s.layerCount * 4))).any (· == start) = true :=
+        bfs_contains_start s (QuarterPos.allValid s) start
+            (s.layerCount * 4 * (s.layerCount * 4))
+            (Nat.mul_pos (by omega) (by omega))
+    -- 閉包で p の所属を導出
+    exact closed_contains_reachable s (QuarterPos.allValid s) _ h_inv
+        start p h_start h_reach
+        (fun q r h_bond => allValid_contains_isBonded s q r h_bond)
+
+-- ============================================================
 -- crystalCluster の rotate180 等変性
 -- ============================================================
 
+/-- crystalCluster の rotate180 等変性（Finset.image 形式）。
+    rotate180 してからクラスタ算出 = クラスタ算出してから Finset.image。
+    BFS の健全性・完全性・到達可能性の等変性から直接導出。 -/
+theorem crystalCluster_rotate180 (s : Shape) (start : QuarterPos) :
+        crystalCluster s.rotate180 start.rotate180 =
+        (crystalCluster s start).image QuarterPos.rotate180 := by
+    ext p
+    simp only [Finset.mem_image]
+    constructor
+    · intro hp
+      -- 健全性: p は start.r180 から s.r180 で BondReachable
+      have h_reach := crystalCluster_sound s.rotate180 start.rotate180 p hp
+      -- 等変性の逆方向: s での start → p.r180 の到達可能性
+      have h_back : BondReachable s start p.rotate180 := by
+          have := bondReachable_rotate180 s.rotate180 start.rotate180 p h_reach
+          simp only [Shape.rotate180_rotate180, QuarterPos.rotate180_rotate180] at this
+          exact this
+      refine ⟨p.rotate180, ?_, by simp⟩
+      -- 完全性: layerCount = 0 では BFS 結果は空 → hp に矛盾
+      cases h_lc : s.layerCount with
+      | zero =>
+          exfalso
+          unfold crystalCluster at hp; rw [List.mem_toFinset, ← any_beq_iff_mem] at hp
+          unfold crystalClusterList at hp
+          simp [Shape.layerCount_rotate180, allValid_rotate180_eq, h_lc, bfs] at hp
+      | succ n =>
+          exact crystalCluster_complete s start p.rotate180 (by omega) h_back
+    · rintro ⟨q, hq, rfl⟩
+      -- 健全性 + 等変性: q.r180 は start.r180 から s.r180 で BondReachable
+      have h_reach := crystalCluster_sound s start q hq
+      have h_r180 := bondReachable_rotate180 s start q h_reach
+      -- 完全性
+      cases h_lc : s.layerCount with
+      | zero =>
+          exfalso
+          unfold crystalCluster at hq; rw [List.mem_toFinset, ← any_beq_iff_mem] at hq
+          unfold crystalClusterList at hq; simp [h_lc, bfs] at hq
+      | succ n =>
+          exact crystalCluster_complete s.rotate180 start.rotate180 q.rotate180
+              (by rw [Shape.layerCount_rotate180]; omega) h_r180
+
 /-- crystalCluster メンバーシップの rotate180 等変性。
-    BFS の健全性と BFS 不変条件の保存性を経由して証明する。
-    燃料充足性は queue.length + (未訪問数)² のポテンシャル引数で保証。 -/
+    crystalCluster_rotate180 (Finset.image) から導出。 -/
 theorem crystalCluster_mem_rotate180 (s : Shape) (start p : QuarterPos) :
-        (crystalCluster s start).any (· == p) =
-        (crystalCluster s.rotate180 start.rotate180).any (· == p.rotate180) := by
-    cases h : (crystalCluster s start).any (· == p) with
-    | true =>
-        -- p は start から BondReachable
-        have h_reach := crystalCluster_sound s start p h
-        have h_reach' := bondReachable_rotate180 s start p h_reach
-        symm
-        -- crystalCluster s.r180 start.r180 を展開
-        unfold crystalCluster
-        rw [allValid_rotate180_eq, Shape.layerCount_rotate180]
-        -- BFS 不変条件の閉包性
-        have h_inv := bfs_invariant_preserved s.rotate180 (QuarterPos.allValid s) []
-            [start.rotate180] (s.layerCount * 4 * (s.layerCount * 4))
-            (bfsInv_initial s.rotate180 (QuarterPos.allValid s) start.rotate180)
-            (by
-                -- 空 vis でのフィルタは元リストと同じ長さ
-                have h_filter : (QuarterPos.allValid s).filter (fun p =>
-                    !(([] : List QuarterPos).any (· == p))) = QuarterPos.allValid s :=
-                    List.filter_eq_self.mpr (by intro x _; simp [List.any])
-                simp only [h_filter, List.length, allValid_length]
-                omega)
-            (fun p q h => by
-                rw [← allValid_rotate180_eq]
-                exact allValid_contains_isBonded_fst s.rotate180 p q h)
-        -- start.r180 は結果に含まれる
-        have h_start : (bfs s.rotate180 (QuarterPos.allValid s) [] [start.rotate180]
-            (s.layerCount * 4 * (s.layerCount * 4))).any (· == start.rotate180) = true := by
-            cases hn : s.layerCount with
-            | zero =>
-                -- layerCount = 0 → fuel = 0 → bfs = []
-                -- しかし h : (crystalCluster s start).any ... = true
-                -- crystalCluster s start = bfs s (allValid s) [] [start] 0 = []
-                -- any [] = false ≠ true → 矛盾
-                simp [hn] at h ⊢
-                unfold crystalCluster at h; simp [hn, bfs] at h
-            | succ n =>
-                exact bfs_contains_start s.rotate180 (QuarterPos.allValid s) start.rotate180
-                    (Nat.succ n * 4 * (Nat.succ n * 4)) (by simp)
-        -- 閉包性から p.r180 も結果に含まれる
-        exact closed_contains_reachable s.rotate180 (QuarterPos.allValid s) _ h_inv
-            start.rotate180 p.rotate180 h_start h_reach'
-            (fun q r h_bond => by
-                rw [← allValid_rotate180_eq]
-                exact allValid_contains_isBonded s.rotate180 q r h_bond)
-    | false =>
-        symm
-        cases h' : (crystalCluster s.rotate180 start.rotate180).any (· == p.rotate180) with
-        | false => rfl
-        | true =>
-            -- p.r180 は start.r180 から到達可能
-            have h_reach' := crystalCluster_sound s.rotate180 start.rotate180 p.rotate180 h'
-            -- r180 を戻す
-            have h_reach : BondReachable s start p := by
-                have := bondReachable_rotate180 s.rotate180 start.rotate180 p.rotate180 h_reach'
-                simp [Shape.rotate180_rotate180, QuarterPos.rotate180_rotate180] at this
-                exact this
-            -- BFS 不変条件の閉包性（s 側）
-            unfold crystalCluster at h
-            have h_inv := bfs_invariant_preserved s (QuarterPos.allValid s) []
-                [start] (s.layerCount * 4 * (s.layerCount * 4))
-                (bfsInv_initial s (QuarterPos.allValid s) start)
-                (by
-                    have h_filter : (QuarterPos.allValid s).filter (fun p =>
-                        !(([] : List QuarterPos).any (· == p))) = QuarterPos.allValid s :=
-                        List.filter_eq_self.mpr (by intro x _; simp [List.any])
-                    simp only [h_filter, List.length, allValid_length]
-                    omega)
-                (fun p q h => allValid_contains_isBonded_fst s p q h)
-            have h_start_mem : (bfs s (QuarterPos.allValid s) [] [start]
-                (s.layerCount * 4 * (s.layerCount * 4))).any (· == start) = true := by
-                cases hn : s.layerCount with
-                | zero =>
-                    -- 同様に矛盾
-                    unfold crystalCluster at h'
-                    simp [hn, bfs, allValid_rotate180_eq] at h'
-                | succ n =>
-                    exact bfs_contains_start s (QuarterPos.allValid s) start
-                        (Nat.succ n * 4 * (Nat.succ n * 4)) (by simp)
-            -- 閉包性から p も結果に含まれる
-            have h_mem := closed_contains_reachable s (QuarterPos.allValid s) _ h_inv
-                start p h_start_mem h_reach
-                (fun q r h_bond => allValid_contains_isBonded s q r h_bond)
-            rw [h_mem] at h; exact Bool.noConfusion h
+        p ∈ crystalCluster s start ↔
+        p.rotate180 ∈ crystalCluster s.rotate180 start.rotate180 := by
+    rw [crystalCluster_rotate180, Finset.mem_image]
+    constructor
+    · exact fun h => ⟨p, h, rfl⟩
+    · rintro ⟨q, hq, hqe⟩
+      have := congr_arg QuarterPos.rotate180 hqe
+      simp only [QuarterPos.rotate180_rotate180] at this
+      exact this ▸ hq
 
 end CrystalBond
