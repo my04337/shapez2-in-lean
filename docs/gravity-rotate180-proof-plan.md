@@ -6,12 +6,12 @@
 
 ### 1-1. sorry 残数
 
-プロジェクト全体で **sorry は 1 件**。全て [Gravity.lean](../S2IL/Behavior/Gravity.lean) に集中している。
+プロジェクト全体で **sorry は 2 件**。全て [Gravity.lean](../S2IL/Behavior/Gravity.lean) に集中している。
 
 | # | 定理名 | 行番号 | 状態 | 概要 |
 |---|---|---|---|---|
 | S-1 | `groundedPositions_mem_rotate180` | L1042 | ✅ 証明済 | 接地位置のメンバーシップが rotate180 で保存される |
-| S-2 | `floatingUnits_rotate180` | L1231 | `sorry` | `floatingUnits` のリスト等値（**定理文が偽**・意図的） |
+| S-2 | `floatingUnits_rotate180` | — | ✅ 削除済 | リスト等値は**定理文が偽**のため削除 |
 | S-3 | `floatingUnits_isEmpty_rotate180` | — | ✅ 証明済 | isEmpty が rotate180 で不変（主定理） |
 | S-4 | `ungrounded_nonempty_implies_floatingUnits_nonempty` | L1434 | ✅ 証明済 | 非空・非接地位置が存在 → floatingUnits 非空（真） |
 | S-5 | `floatingUnits_nonempty_implies_exists_ungrounded` | L1522 | ✅ 証明済 | floatingUnits 非空 → 非空・非接地位置が存在（真） |
@@ -425,8 +425,8 @@ theorem shouldProcessBefore_rotate180 (a b : FallingUnit) :
 
 | # | タスク | 状態 | 依存 |
 |---|---|---|---|
-| G-3-1 | 偽の定理 `floatingUnits_rotate180` を削除 | 未着手 | — |
-| G-3-2 | `shouldProcessBefore_rotate180` を証明 | 未着手 | `minLayerAtDir` の rotate180 等変性 |
+| G-3-1 | 偽の定理 `floatingUnits_rotate180` を削除 | ✅ 完了 | — |
+| G-3-2 | `shouldProcessBefore_rotate180` を証明 | ✅ 完了 | `minLayerAtDir` の rotate180 等変性 |
 | G-3-3 | `sortFallingUnits` の入力順列不変性の検討 | 未着手 | G-3-2 |
 | G-3-4 | `sortedFloatingUnits_rotate180` を証明（案 C）| 未着手 | G-3-2, G-3-3, G-2-1 |
 | G-3-5 | `process_rotate180` の証明を再構築 | 未着手 | G-2-2, G-3-4 |

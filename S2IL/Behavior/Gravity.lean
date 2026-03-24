@@ -1223,17 +1223,6 @@ private theorem groundedPositions_mem_rotate180 (s : Shape) (p : QuarterPos) :
                 rw [h_mem] at h; exact Bool.noConfusion h
 
 -- ============================================================
--- floatingUnits の rotate180 等変性
--- ============================================================
-
-/-- floatingUnits は rotate180 で等変（リスト等号は BFS 探索順序のため成立しない。
-    代わりにメンバーシップレベルでの等変性を使用する） -/
-private theorem floatingUnits_rotate180 (s : Shape) :
-        (floatingUnits s).map FallingUnit.rotate180 =
-        floatingUnits s.rotate180 := by
-    sorry -- この定理はリスト等号として偽。process_rotate180 の再構築が必要
-
--- ============================================================
 -- floatingUnits_isEmpty_rotate180 のヘルパー補題群
 -- ============================================================
 
@@ -1812,10 +1801,10 @@ theorem process_rotate180 (s : Shape) :
       -- foldl の等変性 (map Layer.rotate180 を foldl 内部に移動)
       rw [foldl_place_rotate180]
       -- sorted, obstacle をそれぞれ rotate180 等変に書き換え
-      -- sorted の等変性
+      -- sorted の等変性（G-3-4 で証明予定: sortFallingUnits の入力順列不変性が必要）
       have h_sorted : (sortFallingUnits (floatingUnits s)).map FallingUnit.rotate180 =
           sortFallingUnits (floatingUnits s.rotate180) := by
-          rw [sortFallingUnits_rotate180, floatingUnits_rotate180]
+          sorry
       -- obstacle の等変性
       have h_obs : ((s.clearPositions ((sortFallingUnits (floatingUnits s)).flatMap FallingUnit.positions)).layers).map Layer.rotate180 =
           (s.rotate180.clearPositions ((sortFallingUnits (floatingUnits s.rotate180)).flatMap FallingUnit.positions)).layers := by
@@ -1827,11 +1816,14 @@ theorem process_rotate180 (s : Shape) :
           rw [layers_rotate180]
       rw [h_sorted, h_obs]
 
-/-- floatingUnits の flatMap positions は rotate180 で等変 -/
+/-- floatingUnits の flatMap positions は rotate180 で等変
+    ⚠ この定理文はリスト等号であり偽（BFS 探索順序のため）。
+    反例: "--------:Cr----Cr" で LHS=[(1,se),(1,sw)] ≠ RHS=[(1,sw),(1,se)]。
+    G-3-4/G-3-5 で定理文の修正を含め再検討する -/
 theorem floatingUnits_flatMap_positions_rotate180 (s : Shape) :
         ((floatingUnits s).flatMap FallingUnit.positions).map QuarterPos.rotate180 =
         (floatingUnits s.rotate180).flatMap FallingUnit.positions := by
-    rw [← flatMap_map_rotate180, floatingUnits_rotate180]
+    sorry
 
 end Gravity
 
