@@ -62,5 +62,5 @@
 
 ## 関連リンク
 
-- [docs/gravity-rotate180-proof-plan.md](../gravity-rotate180-proof-plan.md) — `process_rotate180` 証明の現在の計画
+- [docs/plans/gravity-rotate180-proof-plan.md](../plans/gravity-rotate180-proof-plan.md) — `process_rotate180` 証明の現在の計画
 - [.github/skills/](../../.github/skills/) — 証明ワークフロー支援 Skills（lean-proof-planning、lean-proof-progress 等）

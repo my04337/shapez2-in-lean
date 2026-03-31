@@ -211,7 +211,7 @@ u ≠ u.r180 のペアでは比較結果が r180 で反転し、
 
 ### 修正の選択肢（更新版）
 
-詳細は `docs/gravity-rotate180-proof-plan.md` §7 を参照。
+詳細は `docs/plans/gravity-rotate180-proof-plan.md` §7 を参照。
 
 - **Phase 1**: `floatingUnits_spb_rank` の証明 (幾何制約 → DAG)
 - **Phase 2**: `sortFU_foldl_perm_input_eq` の証明
