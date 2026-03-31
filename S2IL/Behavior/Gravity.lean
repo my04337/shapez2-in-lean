@@ -4228,7 +4228,7 @@ private theorem floatingUnit_any_in_rotate180 (s : Shape) (u : FallingUnit)
         have hp_floating_raw := (List.mem_filter.mp hp_filtered).2
         -- grounded の .any == false を示す
         have hp_floating_bool : (groundedPositionsList s).any (· == p) = false := by
-            simp only [Bool.not_eq_true', decide_eq_true_eq, Bool.eq_false_iff] at hp_floating_raw ⊢
+            simp only [Bool.not_eq_true', Bool.eq_false_iff] at hp_floating_raw ⊢
             exact hp_floating_raw
         have h_pin_r180 : p.rotate180 ∈ allIsolatedPins s.rotate180 := by
             unfold allIsolatedPins
@@ -4264,7 +4264,7 @@ private theorem floatingUnit_any_in_rotate180 (s : Shape) (u : FallingUnit)
             refine .inr (List.mem_map.mpr ⟨p.rotate180, ?_, rfl⟩)
             rw [List.mem_filter]
             refine ⟨h_pin_r180, ?_⟩
-            simp only [Bool.not_eq_true', decide_eq_true_eq]
+            simp only [Bool.not_eq_true']
             exact h_ungrounded_bool
         exact ⟨.pin p.rotate180, h_v_mem, fun q => rfl⟩
 
@@ -4308,7 +4308,7 @@ private theorem length_le_of_injection {α β : Type} [DecidableEq β]
         (h_mem : ∀ a ∈ l1, f a ∈ l2)
         (h_inj : ∀ a₁ ∈ l1, ∀ a₂ ∈ l1, f a₁ = f a₂ → a₁ = a₂)
         (h_nodup1 : l1.Nodup)
-        (h_nodup2 : l2.Nodup) :
+        (_h_nodup2 : l2.Nodup) :
         l1.length ≤ l2.length := by
     have h_map_nodup : (l1.map f).Nodup :=
         (List.nodup_map_iff_inj_on h_nodup1).mpr h_inj
@@ -4395,7 +4395,7 @@ private theorem insertSorted_split (u : FallingUnit) (sorted : List FallingUnit)
         exact ⟨0, by omega, rfl⟩
     | case4 fuel v rest h_not_spb_uv h_spb_vu ih =>
         -- spb(v, u) = true → v :: insertSorted u rest fuel
-        simp only [insertSorted, h_not_spb_uv, ite_false, h_spb_vu, ite_true]
+        simp only [insertSorted, h_not_spb_uv, h_spb_vu, ite_true]
         have h_fuel' : fuel ≥ rest.length := by
             simp only [List.length] at h_fuel; omega
         obtain ⟨k', hk', hk'_eq⟩ := ih h_fuel'
@@ -4403,7 +4403,7 @@ private theorem insertSorted_split (u : FallingUnit) (sorted : List FallingUnit)
             by simp [hk'_eq, List.take_succ_cons, List.drop_succ_cons]⟩
     | case5 fuel v rest h_not_spb_uv h_not_spb_vu h_tb =>
         -- tied, u.tb ≤ v.tb → u :: v :: rest, k = 0
-        simp only [insertSorted, h_not_spb_uv, ite_false, h_not_spb_vu, ite_false, h_tb, ite_true]
+        simp only [insertSorted, h_not_spb_uv, h_not_spb_vu, h_tb, ite_true]
         exact ⟨0, by omega, rfl⟩
     | case6 fuel v rest h_not_spb_uv h_not_spb_vu h_not_tb ih =>
         -- tied, u.tb > v.tb → v :: insertSorted u rest fuel
@@ -4473,7 +4473,7 @@ private theorem foldl_cond_add_ge_init {α : Type*} (l : List α) (p : α → Bo
       · simp only [hp, ite_true]
         have := ih (init + 1)
         omega
-      · simp only [Bool.eq_false_iff.mpr (by simpa using hp), ite_false]
+      · simp only [Bool.eq_false_iff.mpr (by simpa using hp)]
         exact ih init
 
 /-- foldl 条件付き加算 = 0 → リストの全要素が条件を満たさない -/
@@ -4491,14 +4491,14 @@ private theorem foldl_cond_add_zero {α : Type*} (l : List α) (p : α → Bool)
         simp only [Nat.zero_add] at h_fold
         omega
       · have hp_false : p hd = false := by simpa using hp
-        simp only [hp_false, ite_false] at h_fold
+        simp only [hp_false] at h_fold
         intro x hx
         cases hx with
         | head => exact hp_false
         | tail _ hx => exact ih h_fold x hx
 
 /-- posIn は NoDup リスト上で単射 -/
-private theorem posIn_injective (l : List FallingUnit) (h_nodup : l.Nodup)
+private theorem posIn_injective (l : List FallingUnit) (_h_nodup : l.Nodup)
         (x y : FallingUnit) (hx : x ∈ l) (hy : y ∈ l)
         (h_eq : posIn x l = posIn y l) : x = y := by
     have hx_get := getElem_posIn x l hx
@@ -4525,7 +4525,7 @@ private theorem foldl_mono_ge_init {α : Type*} (l : List α) (f : Nat → α �
 /-- 単調非減少関数の foldl = 0 → x ∈ l で f 0 x ≥ 1 なら矛盾 -/
 private theorem foldl_mono_zero_imp {α : Type*} (l : List α) (f : Nat → α → Nat)
         (h_mono : ∀ acc x, f acc x ≥ acc)
-        (h_mono_add : ∀ acc₁ acc₂ x, acc₁ ≤ acc₂ → f acc₁ x ≤ f acc₂ x)
+        (_h_mono_add : ∀ acc₁ acc₂ x, acc₁ ≤ acc₂ → f acc₁ x ≤ f acc₂ x)
         (h_fold : l.foldl f 0 = 0) :
         ∀ x ∈ l, f 0 x = 0 := by
     induction l with
@@ -4729,8 +4729,8 @@ private theorem foldl_mono_all_zero {α : Type*} (l : List α) (f : Nat → α �
 
 /-- 単調 foldl > 0 → 寄与する要素が存在する -/
 private theorem foldl_mono_pos_exists {α : Type*} (l : List α) (f : Nat → α → Nat)
-        (h_mono : ∀ acc x, f acc x ≥ acc)
-        (h_mono_add : ∀ acc₁ acc₂ x, acc₁ ≤ acc₂ → f acc₁ x ≤ f acc₂ x)
+        (_h_mono : ∀ acc x, f acc x ≥ acc)
+        (_h_mono_add : ∀ acc₁ acc₂ x, acc₁ ≤ acc₂ → f acc₁ x ≤ f acc₂ x)
         (h_pos : l.foldl f 0 > 0) :
         ∃ x ∈ l, f 0 x > 0 := by
     by_contra h_all
@@ -5166,7 +5166,7 @@ private theorem getElem_swap_σ_ic (l : List FallingUnit) (k m : Nat)
         exact h2 ▸ this
       · by_cases h3 : m = k + 1
         · have hσ : σ_ic k m = k := by
-              simp [σ_ic, show m ≠ k from h2, h3]
+              simp [σ_ic, h3]
           simp only [hσ]
           have := getElem_swap_eq_succ_ic l k hk
           exact h3 ▸ this
@@ -5183,7 +5183,7 @@ private theorem getElem_swap_σ_ic (l : List FallingUnit) (k m : Nat)
     - (i,j) = (k,k+1) → 反転から非反転へ (寄与 -1)
     合計: invCount(l1') = invCount(l1) - 1 -/
 private theorem invCount_adj_swap_lt (l1 l2 : List FallingUnit)
-        (h_perm : l1.Perm l2) (h_nodup : l1.Nodup)
+        (_h_perm : l1.Perm l2) (_h_nodup : l1.Nodup)
         (k : Nat) (hk : k + 1 < l1.length)
         (h_inv_k : posIn (l1[k]'(by omega)) l2 > posIn (l1[k + 1]'hk) l2) :
         invCount (l1.take k ++ l1[k + 1]'hk :: l1[k]'(by omega) :: l1.drop (k + 2)) l2 <
@@ -5229,7 +5229,7 @@ private theorem invCount_adj_swap_lt (l1 l2 : List FallingUnit)
                   show (σ_ic k p.2) < l1.length from σ_ic_lt_of_lt k p.2 n hk hp_in.2.1,
                   h_eq1, h_eq2]
       -- bound proof の proof irrelevance で残るゴールを閉じる
-      congr 1 <;> (congr 1 <;> exact rfl)
+      congr 1
 
 /-- 反転数 > 0 → 隣接反転ペアが存在し、そのスワップで反転数が減少する -/
 private theorem exists_adj_inv_swap (l1 l2 : List FallingUnit)

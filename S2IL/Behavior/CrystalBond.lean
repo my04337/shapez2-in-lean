@@ -156,7 +156,7 @@ def allCrystalClusters (s : Shape) : List (Finset QuarterPos) :=
     -- 各結晶位置についてクラスタを算出し、重複を除去する
     crystalPositions.foldl (fun clusters pos =>
         -- この位置が既存のクラスタに含まれているか確認
-        if clusters.any (fun cluster => (crystalClusterList s pos).any (· == pos)) then
+        if clusters.any (fun _cluster => (crystalClusterList s pos).any (· == pos)) then
             clusters
         else
             let cluster := crystalCluster s pos
