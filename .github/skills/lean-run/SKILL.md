@@ -1,7 +1,8 @@
 ---
 name: lean-run
 description: 'Lean 4 プロジェクトの実行ファイルを lake exe で実行し、出力結果を検証する。Use when: run lean executable, execute lean program, lake exe, verify output, check program result.'
-argument-hint: 'Lean プロジェクトを実行して結果を確認します'
+metadata:
+  argument-hint: 'Lean プロジェクトを実行して結果を確認します'
 ---
 
 # Lean プロジェクトの実行と検証

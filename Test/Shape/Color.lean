@@ -51,3 +51,93 @@ import S2IL.Shape.Color
 
 -- all: 全バリアントが含まれていること
 #guard Color.all.length == 8
+
+-- ============================================================
+-- mix: 混色テスト (全 64 パターン)
+-- ============================================================
+
+-- Red × 各色
+#guard Color.red.mix Color.red == Color.red
+#guard Color.red.mix Color.green == Color.yellow
+#guard Color.red.mix Color.blue == Color.magenta
+#guard Color.red.mix Color.yellow == Color.red
+#guard Color.red.mix Color.cyan == Color.red
+#guard Color.red.mix Color.magenta == Color.red
+#guard Color.red.mix Color.white == Color.red
+#guard Color.red.mix Color.uncolored == Color.red
+
+-- Green × 各色
+#guard Color.green.mix Color.red == Color.yellow
+#guard Color.green.mix Color.green == Color.green
+#guard Color.green.mix Color.blue == Color.cyan
+#guard Color.green.mix Color.yellow == Color.green
+#guard Color.green.mix Color.cyan == Color.green
+#guard Color.green.mix Color.magenta == Color.green
+#guard Color.green.mix Color.white == Color.green
+#guard Color.green.mix Color.uncolored == Color.green
+
+-- Blue × 各色
+#guard Color.blue.mix Color.red == Color.magenta
+#guard Color.blue.mix Color.green == Color.cyan
+#guard Color.blue.mix Color.blue == Color.blue
+#guard Color.blue.mix Color.yellow == Color.blue
+#guard Color.blue.mix Color.cyan == Color.blue
+#guard Color.blue.mix Color.magenta == Color.blue
+#guard Color.blue.mix Color.white == Color.blue
+#guard Color.blue.mix Color.uncolored == Color.blue
+
+-- Yellow × 各色
+#guard Color.yellow.mix Color.red == Color.red
+#guard Color.yellow.mix Color.green == Color.green
+#guard Color.yellow.mix Color.blue == Color.blue
+#guard Color.yellow.mix Color.yellow == Color.yellow
+#guard Color.yellow.mix Color.cyan == Color.green
+#guard Color.yellow.mix Color.magenta == Color.red
+#guard Color.yellow.mix Color.white == Color.yellow
+#guard Color.yellow.mix Color.uncolored == Color.uncolored
+
+-- Cyan × 各色
+#guard Color.cyan.mix Color.red == Color.red
+#guard Color.cyan.mix Color.green == Color.green
+#guard Color.cyan.mix Color.blue == Color.blue
+#guard Color.cyan.mix Color.yellow == Color.green
+#guard Color.cyan.mix Color.cyan == Color.cyan
+#guard Color.cyan.mix Color.magenta == Color.blue
+#guard Color.cyan.mix Color.white == Color.cyan
+#guard Color.cyan.mix Color.uncolored == Color.uncolored
+
+-- Magenta × 各色
+#guard Color.magenta.mix Color.red == Color.red
+#guard Color.magenta.mix Color.green == Color.green
+#guard Color.magenta.mix Color.blue == Color.blue
+#guard Color.magenta.mix Color.yellow == Color.red
+#guard Color.magenta.mix Color.cyan == Color.blue
+#guard Color.magenta.mix Color.magenta == Color.magenta
+#guard Color.magenta.mix Color.white == Color.magenta
+#guard Color.magenta.mix Color.uncolored == Color.uncolored
+
+-- White × 各色
+#guard Color.white.mix Color.red == Color.red
+#guard Color.white.mix Color.green == Color.green
+#guard Color.white.mix Color.blue == Color.blue
+#guard Color.white.mix Color.yellow == Color.yellow
+#guard Color.white.mix Color.cyan == Color.cyan
+#guard Color.white.mix Color.magenta == Color.magenta
+#guard Color.white.mix Color.white == Color.white
+#guard Color.white.mix Color.uncolored == Color.uncolored
+
+-- Uncolored × 各色
+#guard Color.uncolored.mix Color.red == Color.red
+#guard Color.uncolored.mix Color.green == Color.green
+#guard Color.uncolored.mix Color.blue == Color.blue
+#guard Color.uncolored.mix Color.yellow == Color.uncolored
+#guard Color.uncolored.mix Color.cyan == Color.uncolored
+#guard Color.uncolored.mix Color.magenta == Color.uncolored
+#guard Color.uncolored.mix Color.white == Color.uncolored
+#guard Color.uncolored.mix Color.uncolored == Color.uncolored
+
+-- 可換性のスポットチェック
+#guard Color.red.mix Color.green == Color.green.mix Color.red
+#guard Color.blue.mix Color.yellow == Color.yellow.mix Color.blue
+#guard Color.cyan.mix Color.magenta == Color.magenta.mix Color.cyan
+#guard Color.white.mix Color.uncolored == Color.uncolored.mix Color.white

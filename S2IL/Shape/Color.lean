@@ -75,4 +75,154 @@ def all : List Color :=
 instance : ToString Color where
     toString c := c.toChar.toString
 
+/-!
+## 混色 (Color Mixing)
+
+2つの色を等体積で混合した結果を返す。
+
+### 混色モデル
+
+各色を RGB 原色の重み付き成分で表し、等体積混合後に
+各原色成分が閾値 (≥ 2/3) を超えるかで結果の色を判定する。
+
+| 色 | R 成分 | G 成分 | B 成分 |
+|---|---|---|---|
+| Red       | 1   | 0   | 0   |
+| Green     | 0   | 1   | 0   |
+| Blue      | 0   | 0   | 1   |
+| Yellow    | 1/2 | 1/2 | 0   |
+| Cyan      | 0   | 1/2 | 1/2 |
+| Magenta   | 1/2 | 0   | 1/2 |
+| White     | 1/3 | 1/3 | 1/3 |
+| Uncolored | 0   | 0   | 0   |
+
+等体積混合: 各成分を平均し、≥ 1/3 なら原色ありと判定する。
+
+**注意**: `uncolored` の液剤はゲーム上存在しないため、`uncolored` を含む
+混色はゲーム上未定義である。ここでは数学的な拡張としてモデルに基づく値を定義する。
+-/
+
+/-- 2つの色を等体積で混合した結果を返す。
+    ゲーム上の混色機 (Color Mixer) の動作に対応する。
+    `uncolored` を含む混色はゲーム上未定義だが、数学的拡張として定義する。 -/
+def mix : Color → Color → Color
+    -- Red × 各色
+    | red,       red       => red
+    | red,       green     => yellow
+    | red,       blue      => magenta
+    | red,       yellow    => red
+    | red,       cyan      => red
+    | red,       magenta   => red
+    | red,       white     => red
+    | red,       uncolored => red
+    -- Green × 各色
+    | green,     red       => yellow
+    | green,     green     => green
+    | green,     blue      => cyan
+    | green,     yellow    => green
+    | green,     cyan      => green
+    | green,     magenta   => green
+    | green,     white     => green
+    | green,     uncolored => green
+    -- Blue × 各色
+    | blue,      red       => magenta
+    | blue,      green     => cyan
+    | blue,      blue      => blue
+    | blue,      yellow    => blue
+    | blue,      cyan      => blue
+    | blue,      magenta   => blue
+    | blue,      white     => blue
+    | blue,      uncolored => blue
+    -- Yellow × 各色
+    | yellow,    red       => red
+    | yellow,    green     => green
+    | yellow,    blue      => blue
+    | yellow,    yellow    => yellow
+    | yellow,    cyan      => green
+    | yellow,    magenta   => red
+    | yellow,    white     => yellow
+    | yellow,    uncolored => uncolored
+    -- Cyan × 各色
+    | cyan,      red       => red
+    | cyan,      green     => green
+    | cyan,      blue      => blue
+    | cyan,      yellow    => green
+    | cyan,      cyan      => cyan
+    | cyan,      magenta   => blue
+    | cyan,      white     => cyan
+    | cyan,      uncolored => uncolored
+    -- Magenta × 各色
+    | magenta,   red       => red
+    | magenta,   green     => green
+    | magenta,   blue      => blue
+    | magenta,   yellow    => red
+    | magenta,   cyan      => blue
+    | magenta,   magenta   => magenta
+    | magenta,   white     => magenta
+    | magenta,   uncolored => uncolored
+    -- White × 各色
+    | white,     red       => red
+    | white,     green     => green
+    | white,     blue      => blue
+    | white,     yellow    => yellow
+    | white,     cyan      => cyan
+    | white,     magenta   => magenta
+    | white,     white     => white
+    | white,     uncolored => uncolored
+    -- Uncolored × 各色
+    | uncolored, red       => red
+    | uncolored, green     => green
+    | uncolored, blue      => blue
+    | uncolored, yellow    => uncolored
+    | uncolored, cyan      => uncolored
+    | uncolored, magenta   => uncolored
+    | uncolored, white     => uncolored
+    | uncolored, uncolored => uncolored
+
+/-!
+## 混色の代数的性質
+-/
+
+/-- 混色の可換性: `mix a b = mix b a` -/
+theorem mix_comm (a b : Color) : mix a b = mix b a := by
+    cases a <;> cases b <;> rfl
+
+/-- 混色の冪等性: `mix a a = a` -/
+theorem mix_self (a : Color) : mix a a = a := by
+    cases a <;> rfl
+
+/-- White は混色の左恒等元: `mix white a = a` -/
+theorem mix_white_left (a : Color) : mix white a = a := by
+    cases a <;> rfl
+
+/-- White は混色の右恒等元: `mix a white = a` -/
+theorem mix_white_right (a : Color) : mix a white = a := by
+    cases a <;> rfl
+
+/-!
+## 型クラスインスタンス
+
+混色の代数的性質を `Std` の型クラスとして登録する。
+これにより `Std.Commutative.comm`、`Std.IdempotentOp.idempotent`、
+`Std.LawfulLeftIdentity.left_id` 等が型クラス推論で自動的に利用可能になる。
+-/
+
+instance : Std.Commutative Color.mix where
+    comm := mix_comm
+
+instance : Std.IdempotentOp Color.mix where
+    idempotent := mix_self
+
+instance : Std.LeftIdentity Color.mix Color.white := ⟨⟩
+instance : Std.LawfulLeftIdentity Color.mix Color.white where
+    left_id := mix_white_left
+
+instance : Std.RightIdentity Color.mix Color.white := ⟨⟩
+instance : Std.LawfulRightIdentity Color.mix Color.white where
+    right_id := mix_white_right
+
+/-- 混色は結合的でない: `mix (mix red green) blue ≠ mix red (mix green blue)` の反例 -/
+theorem mix_not_assoc : mix (mix red green) blue ≠ mix red (mix green blue) := by
+    decide
+
 end Color

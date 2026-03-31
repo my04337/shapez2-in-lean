@@ -130,6 +130,18 @@ Shapez2 で使用される主要な用語をナレッジパネルのカテゴリ
 | 浮遊 (Floating) | 非空象限またはその集合が接地していない状態。落下の対象となる。 |
 | 落下単位 (Falling Unit) | 落下処理の対象となる最小単位。浮遊している構造クラスタまたは浮遊しているピン。 |
 
+### 安定状態 (Settled State)
+
+シェイプが安定状態にあるとは、浮遊する落下単位が一つも存在しない状態を指す。
+すなわち、全ての非空象限が接地しているか、接地している構造クラスタに属している状態である。
+
+ゲーム上、**ベルト** で搬送されるシェイプおよび各 **加工装置** の入出力は常に安定状態であることが保証されている。不安定状態は加工装置の内部処理（切断後の落下、積層後の落下、ピン押し後の落下など）においてのみ一時的に発生し、落下処理 (Gravity) によって安定状態に復帰した後に出力される。
+
+| 名称 | 説明 |
+|---|---|
+| 安定状態 (Settled) | シェイプに浮遊する落下単位が存在しない状態。全ての非空象限が直接的または間接的に接地している。 |
+| 安定化 (Settling) | 不安定状態のシェイプに落下処理を適用し、安定状態に復帰させること。切断・積層・ピン押しの内部プロセスとして使用される。 |
+
 ---
 
 ## 産出 (Production)
@@ -220,7 +232,7 @@ Shapez2 で使用される主要な用語をナレッジパネルのカテゴリ
 | 積層機 (Stacker) | 2つのフロアからシェイプを受け取る建物。上のシェイプが下のシェイプの上に落とされ、切断されたパーツは固い面に当たるまで落下する。 |
 
 ### 落下 (Falling / Gravity)
-シェイプの浮遊している塊が、支えを得るまで下方に移動する物理的挙動。積み重ね・切断・ピン押しの結果として発生する。全ての落下単位の目標位置を独立に算出し一括で適用するため、処理順序によらず同一の結果が得られる。  
+シェイプの浮遊している塊が、支えを得るまで下方に移動する物理的挙動。積み重ね・切断・ピン押しの結果として発生する。落下単位を下位から順に処理し、着地した単位を逐次障害物に追加することで後続の単位が先着した単位の上へ正しく着地できる。方角列を共有しない落下単位同士は互いの着地位置に影響しないため、有効なトポロジカルソート順であれば同一の結果が得られる。  
 落下に際して脆弱な結晶が含まれる場合は、先に **砕け散り (Shatter)** が発生する。  
 詳細は [`falling.md`](falling.md) を参照。
 
@@ -263,36 +275,23 @@ Shapez2 での色の分類は以下の通り。
 
 #### 混色のルール (Mixing Rules)
 混色の基本的なルールは以下の通り。
-両者に共通の原色が無い場合、混色の結果は両方の色を含む色になる。例えば、RedとGreenを混ぜるとYellowになる。
-両者に共通の原色がある場合、混色の結果は両方の色から共通の原色を除いた色になる。例えば、Cyan と Magenta を混ぜると Blue になる。
+各色を RGB 原色成分の重み付き表現で解釈し、等体積混合後の各原色成分の比率が閾値以上であれば当該原色を含む色として判定する。
+両者に共通の原色が無い場合、混色の結果は両方の原色を合わせた色になる。例えば、Red と Green を混ぜると Yellow になる。
+両者に共通の原色がある場合、混色の結果は共通部分の原色が結果に残る。例えば、Cyan (G+B) と Magenta (R+B) を混ぜると共通の Blue が結果になる。
 
-| 色1 | 色2 | 結果の色 |
-|---|---|---|
-| Red | Red | Red |
-| Red | Green | Yellow |
-| Red | Blue | Magenta |
-| Green | Red | Yellow |
-| Green | Green | Green |
-| Green | Blue | Cyan |
-| Blue | Red | Magenta |
-| Blue | Green | Cyan |
-| Blue | Blue | Blue |
-| Yellow | Red | Red |
-| Yellow | Green | Green |
-| Yellow | Blue | Blue |
-| Cyan | Red | Red |
-| Cyan | Green | Green |
-| Cyan | Blue | Blue |
-| Magenta | Red | Red |
-| Magenta | Green | Green |
-| Magenta | Blue | Blue |
-| White | Red | Red |
-| White | Green | Green |
-| White | Blue | Blue |
-| White | Yellow | Yellow |
-| White | Cyan | Cyan |
-| White | Magenta | Magenta |
-| White | White | White |
+> **注記**: Uncolored の液剤はゲーム上存在しないため、Uncolored を含む混色はゲーム上未定義である。
+> 以下のテーブルでは数学的な拡張として重み付きモデルに基づく値を記載している。
+
+| 色1 \ 色2 | Red | Green | Blue | Yellow | Cyan | Magenta | White | Uncolored |
+|---|---|---|---|---|---|---|---|---|
+| **Red** | Red | Yellow | Magenta | Red | Red | Red | Red | Red |
+| **Green** | Yellow | Green | Cyan | Green | Green | Green | Green | Green |
+| **Blue** | Magenta | Cyan | Blue | Blue | Blue | Blue | Blue | Blue |
+| **Yellow** | Red | Green | Blue | Yellow | Green | Red | Yellow | Uncolored |
+| **Cyan** | Red | Green | Blue | Green | Cyan | Blue | Cyan | Uncolored |
+| **Magenta** | Red | Green | Blue | Red | Blue | Magenta | Magenta | Uncolored |
+| **White** | Red | Green | Blue | Yellow | Cyan | Magenta | White | Uncolored |
+| **Uncolored** | Red | Green | Blue | Uncolored | Uncolored | Uncolored | Uncolored | Uncolored |
 
 ### ピン押し (Pin Pushing)
 シェイプを支持するためのピンを押し込む操作。

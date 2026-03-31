@@ -1,5 +1,10 @@
 # 文字列ラウンドトリップ定理の証明パターン
 
+> **注意**: 本文書は Shape 型が帰納型（`single`/`double`/`triple`/`quadruple`）だった
+> 時期に作成された。Shape は構造体 `{ layers : List Layer, layers_ne : layers ≠ [] }`
+> にリファクタリング済みだが、`List Char` レベルでの証明戦略や
+> `String` カーネル関数の回避パターンは引き続き有効である。
+
 `ofString? (toString x) = some x` 形式のラウンドトリップ定理を Lean 4 で証明する際のノウハウ。
 本プロジェクトの `Shape.ofString_toString` 定理の実装過程で得られた知見をまとめる。
 

@@ -21,7 +21,43 @@ Note: Part of the development of this project uses generative AI (GitHub Copilot
 
 - [VS Code](https://code.visualstudio.com/)
 - [elan](https://github.com/leanprover/elan#installation) (Lean 4 バージョンマネージャー)
-  - インストール後、`lean-toolchain` の指定バージョンが自動で取得されます
+  - **Windows**: `winget install leanprover.elan` またはインストーラを[リリースページ](https://github.com/leanprover/elan/releases)から取得
+  - **macOS / Linux**: `curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh`
+  - インストール後、シェルを再起動して `elan` / `lake` コマンドを有効化してください
+  - `lean-toolchain` に記載されたバージョンの Lean が elan によって自動でダウンロードされます
+
+## 初回セットアップ（クリーンビルド）
+
+リポジトリをクローン・チェックアウトした直後、または `.lake/` ディレクトリを削除した後は以下の手順でビルド環境を整えます。
+
+```powershell
+# 1. 依存パッケージ（Mathlib 等）をダウンロード
+#    lean-toolchain に指定された Lean バージョンも elan が自動取得します
+lake update
+
+# 2. Mathlib の prebuilt olean キャッシュをダウンロード
+#    この手順でキャッシュが ~/.cache/mathlib/ に保存され、ビルド時間を大幅に短縮できます
+#    （Mathlib をソースからコンパイルすると 30〜60 分以上かかる部分が約 3 分になります）
+lake exe cache get
+
+# 3. プロジェクトをビルド
+lake build
+```
+
+> **`lake update` でエラーになる場合**: `package not found on Reservoir` と表示される場合、
+> `lakefile.toml` の `scope` 指定を `git` URL に変更してください。
+>
+> ```toml
+> [[require]]
+> name = "mathlib"
+> git = "https://github.com/leanprover-community/mathlib4"
+> ```
+>
+> 変更後、再度 `lake update` を実行してください。
+
+> **Windows での注意**: 手順 2 は VS Code を閉じた状態で実行するのが確実です。
+> VS Code の Lean 拡張がファイルをメモリマップで保持していると `os error 1224` でキャッシュの書き込みに失敗しますが、
+> `~/.cache/mathlib/` に既存の `.ltar` ファイルがある場合はエラーが出ても手順 3 のビルドは問題なく動作します。
 
 ## ビルド・実行
 
@@ -38,6 +74,86 @@ pwsh.exe -File .github/skills/lean-run/scripts/run.ps1
 # macOS / Linux
 bash .github/skills/lean-run/scripts/setup.sh
 ```
+
+## バージョンアップとビルド高速化
+
+### バージョン管理の方針
+
+このプロジェクトは `lakefile.toml` の `rev` で Mathlib のバージョンを**タグで明示的に固定**しています。
+
+```toml
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "v4.29.0-rc8"   ← Mathlib のリリースタグ
+```
+
+また `lean-toolchain` は Mathlib が要求する Lean バージョンと**常に一致させる**必要があります。
+
+```
+leanprover/lean4:v4.29.0-rc8   ← lean-toolchain の内容
+```
+
+> **注意**: Lean の最新安定版（例: `v4.29.0`）が存在していても、Mathlib 側のタグがその版に対応するまでは
+> Lean のバージョンを先行して上げることはできません。必ず Mathlib のリリースタグを確認してから更新してください。
+
+### Lean / Mathlib のバージョンアップ手順
+
+新しい Mathlib リリースタグ（例: `v4.30.0-rc1`）が出たときの更新手順です。
+
+**1. `lakefile.toml` の `rev` を新しいタグに変更する**
+
+```toml
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "v4.30.0-rc1"   ← 新しいタグに書き換え
+```
+
+**2. `lake update` を実行して `lake-manifest.json` を更新する**
+
+```powershell
+lake update
+```
+
+**3. Mathlib が要求する Lean バージョンを確認して `lean-toolchain` を更新する**
+
+```powershell
+Get-Content .lake/packages/mathlib/lean-toolchain   # Windows
+cat .lake/packages/mathlib/lean-toolchain           # macOS / Linux
+```
+
+表示されたバージョン（例: `leanprover/lean4:v4.30.0-rc1`）を `lean-toolchain` に書き込みます。
+elan が自動的に新しい Lean バージョンをダウンロードします。
+
+**4. prebuilt olean キャッシュを取得して再ビルドする**（後述）
+
+### Mathlib prebuilt olean キャッシュの取得
+
+`lean-toolchain` と Mathlib の要求バージョンが一致している場合、prebuilt olean キャッシュを利用して
+Mathlib のローカルコンパイルを回避できます（数十分 → 約3分）。
+
+```powershell
+# Windows (PowerShell)
+lake exe cache get
+```
+
+```bash
+# macOS / Linux
+lake exe cache get
+```
+
+> **Windows 注意**: VS Code の Lean 拡張が起動中だと `os error 1224` でキャッシュ書き込みに失敗することがあります。
+> 既存の `.ltar` ファイルが正しいバージョンであれば、エラーが出ても `lake build` は問題なく動作します。
+> 初回インストール直後など `~/.cache/mathlib/` が空の場合は、VS Code を閉じてから実行してください。
+
+### ビルド時間の目安 (16 コアマシン)
+
+| 状況 | ビルド時間 |
+|---|---|
+| キャッシュなし（Mathlib をソースからコンパイル） | 30〜60 分以上 |
+| キャッシュ有り・初回（prebuilt olean を展開） | 約 3 分 |
+| キャッシュ有り・増分（変更なし） | 約 1〜2 秒 |
 
 ## 免責事項
 

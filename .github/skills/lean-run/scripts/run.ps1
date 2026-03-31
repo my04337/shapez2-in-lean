@@ -13,6 +13,7 @@ param(
     [string]$Expected
 )
 
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
