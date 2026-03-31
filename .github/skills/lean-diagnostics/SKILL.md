@@ -121,6 +121,52 @@ grep "declaration uses 'sorry'" .lake/build-log.txt
 - **lean-proof-progress**: sorry の進捗管理と撤退判断
 - **lean-depgraph**: sorry 間の依存関係の可視化
 
+## タスク完了前の必須確認
+
+`.lean` ファイルを変更するタスクが一通り終わった後は、**必ず以下の手順で warning を整理すること**。
+整理せずに終了しようとすると Stop Hook が自動的にブロックする。
+
+### 手順
+
+1. **ビルドを実行** して最新の診断を取得する:
+   ```powershell
+   .github/skills/lean-build/scripts/build.ps1
+   ```
+
+2. **診断ファイルを確認** して非 sorry warning をリストアップ:
+   ```powershell
+   Get-Content .lake/build-diagnostics.jsonl |
+       ConvertFrom-Json |
+       Where-Object { $_.severity -eq "warning" -and $_.isSorry -ne $true } |
+       Select-Object file, line, col, message
+   ```
+
+3. **各 warning を修正** する（下表参照）
+
+4. ビルドで warning が消えたことを確認して終了
+
+### sorry 由来の warning を見分ける
+
+Stop Hook は `isSorry: true` フラグで sorry 由来 warning を自動除外する。
+手動確認する場合:
+- JSONL に `"isSorry":true` が含まれる行 → **修正不要（sorry 解決が必要なため）**
+- その他の `"severity":"warning"` 行 → **修正必須**
+
+### 代表的な actionable warning と修正パターン
+
+| warning | 原因 | 修正 |
+|---|---|---|
+| `unused variable \`x\`` | 変数が宣言されたが使われていない | `_x` にリネームするか削除 |
+| `This simp argument is unused` | simp の引数が効いていない | その引数を `simp only [...]` から削除 |
+| `this tactic is never executed` | 到達不可能な tactic | その tactic を削除 |
+| `'tactic' tactic does nothing` | tactic が何も変更しない | その tactic を削除 |
+
+### Stop Hook のブロック動作
+
+- **非 sorry warning あり** → `decision: "block"` でエージェントの終了を阻止する
+- **sorry のみ** → `continue: true` で通過し、進捗記録を促す
+- `stop_hook_active: true`（再入）の場合は無条件に通過する（無限ループ防止）
+
 ## sorry の依存関係分析
 
 証明作業では sorry 間の依存関係が重要。以下の手順で分析する。

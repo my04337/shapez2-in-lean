@@ -1,22 +1,25 @@
 #!/usr/bin/env bash
-# Stop Hook: セッション終了前の sorry 残存チェック
-# sorry が残っている場合に警告メッセージを出し、進捗記録を促す
+# Stop Hook: セッション終了前の warning チェック
+# 非 sorry warning が残っている場合はエージェントをブロックする。
+# sorry に起因する warning はブロック対象外とし、進捗記録を促すのみとする。
 #
 # 入力 (stdin JSON): { "hookEventName": "Stop", "cwd": "...", "stop_hook_active": false, ... }
-# 出力 (stdout JSON): { "systemMessage": "...", "continue": true }
+# 出力 (stdout JSON):
+#   ブロック時: { "hookSpecificOutput": { "hookEventName": "Stop", "decision": "block", "reason": "..." } }
+#   通過時:     { "continue": true } または { "continue": true, "systemMessage": "..." }
 
 set -euo pipefail
 
 INPUT_JSON=$(cat)
 
-# cwd の取得
+# cwd・stop_active の取得
 CWD=""
+STOP_ACTIVE="false"
 if command -v jq &>/dev/null; then
     CWD=$(echo "$INPUT_JSON" | jq -r '.cwd // ""')
     STOP_ACTIVE=$(echo "$INPUT_JSON" | jq -r '.stop_hook_active // false')
 else
     CWD="$(pwd)"
-    STOP_ACTIVE="false"
 fi
 
 # 無限ループ防止
@@ -29,7 +32,53 @@ if [ -z "$CWD" ]; then
     CWD="$(pwd)"
 fi
 
-# .lean ファイルの sorry を高速スキャン
+# ======================================================================
+# 1. build-diagnostics.jsonl から非 sorry warning を検出してブロック判定
+# ======================================================================
+DIAG_FILE="$CWD/.lake/build-diagnostics.jsonl"
+NON_SORRY_COUNT=0
+NON_SORRY_LIST=""
+
+if [ -f "$DIAG_FILE" ]; then
+    if command -v jq &>/dev/null; then
+        # jq が利用可能: 正確なフィルタリング
+        while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            SEVERITY=$(echo "$line" | jq -r '.severity // ""' 2>/dev/null || echo "")
+            IS_SORRY=$(echo "$line" | jq -r '.isSorry // false' 2>/dev/null || echo "false")
+            if [ "$SEVERITY" = "warning" ] && [ "$IS_SORRY" != "true" ]; then
+                F=$(echo "$line" | jq -r '.file // ""')
+                L=$(echo "$line" | jq -r '.line // ""')
+                C=$(echo "$line" | jq -r '.col // ""')
+                M=$(echo "$line" | jq -r '.message // ""')
+                NON_SORRY_LIST="${NON_SORRY_LIST}  [${F}:${L}:${C}] ${M}\n"
+                NON_SORRY_COUNT=$((NON_SORRY_COUNT + 1))
+            fi
+        done < "$DIAG_FILE"
+    else
+        # jq なし: grep による近似カウント
+        WARN_COUNT=$(grep -c '"warning"' "$DIAG_FILE" 2>/dev/null || echo "0")
+        SORRY_COUNT=$(grep -c '"isSorry":true' "$DIAG_FILE" 2>/dev/null || echo "0")
+        NON_SORRY_COUNT=$((WARN_COUNT - SORRY_COUNT))
+        [ "$NON_SORRY_COUNT" -lt 0 ] && NON_SORRY_COUNT=0
+    fi
+fi
+
+if [ "$NON_SORRY_COUNT" -gt 0 ]; then
+    if command -v jq &>/dev/null; then
+        REASON=$(printf '[Stop Hook] 前回ビルドで未解消の warning が %d 件あります。\nsorry に起因する warning は除外済みです。\n以下の warning を解消してから終了してください。\n\n%s' \
+            "$NON_SORRY_COUNT" "$(printf '%b' "$NON_SORRY_LIST")")
+        REASON_JSON=$(printf '%s' "$REASON" | jq -Rs .)
+        echo "{\"hookSpecificOutput\":{\"hookEventName\":\"Stop\",\"decision\":\"block\",\"reason\":${REASON_JSON}}}"
+    else
+        echo "{\"hookSpecificOutput\":{\"hookEventName\":\"Stop\",\"decision\":\"block\",\"reason\":\"warning ${NON_SORRY_COUNT} 件未解消 (sorry 由来除外済み)\"}}"
+    fi
+    exit 0
+fi
+
+# ======================================================================
+# 2. sorry の残存チェック (情報通知のみ、ブロックしない)
+# ======================================================================
 SORRY_INFO=""
 TOTAL_SORRIES=0
 
