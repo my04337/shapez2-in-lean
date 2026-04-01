@@ -5,7 +5,12 @@ defaultTargets = ["s2il", "Test"]
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4"
-rev = "v4.29.0-rc8"
+rev = "v4.29.0"
+
+[[require]]
+name = "repl"
+git = "https://github.com/leanprover-community/repl"
+rev = "v4.29.0"
 
 [[lean_lib]]
 name = "S2IL"

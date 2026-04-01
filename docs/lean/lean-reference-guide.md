@@ -1,7 +1,7 @@
 # The Lean Language Reference — エージェント向けリファレンス索引
 
 > **出典**: [The Lean Language Reference](https://lean-lang.org/doc/reference/latest/)
-> Lean バージョン: 4.29.0-rc6
+> Lean バージョン: 4.29.0
 
 本ドキュメントは、Lean 4 の文法・機能を正確に調べる必要があるエージェントのための **リファレンスマニュアル索引** です。
 各機能がマニュアルのどこに記載されているかを素早く特定するための手引きとして活用してください。

@@ -2,7 +2,7 @@
 
 > **出典**: [Mathlib4 Documentation](https://leanprover-community.github.io/mathlib4_docs/)
 > **Mathlib 概要**: [Mathlib Overview](https://leanprover-community.github.io/mathlib-overview.html)
-> Lean バージョン: 4.29.0-rc8
+> Lean バージョン: 4.29.0
 
 本ドキュメントは、Lean 4 用数学ライブラリ **Mathlib** の主要機能・モジュール構成・タクティクをエージェント向けに索引化したリファレンスです。
 Mathlib のどこに何があるかを素早く特定し、適切な API ページを参照するための手引きとして活用してください。

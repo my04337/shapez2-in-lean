@@ -228,7 +228,7 @@ cases hm with
 
 ## `Finset.any` の不在と `decide (∃ ...)` パターン
 
-Lean 4 v4.29.0-rc8 / Mathlib に `Finset.any` は存在しない。
+Lean 4 v4.29.0 / Mathlib に `Finset.any` は存在しない。
 `List.any` を Finset 上の操作に置き換える場合は `decide (∃ q ∈ cc, P q)` を使う。
 
 ```lean
@@ -385,3 +385,35 @@ induction n with
 | zero => simp
 | succ k ih => omega  -- succ k の形で線形式が閉じる場合
 ```
+
+---
+
+## v4.29.0 での注目変更点（補足）
+
+### `lean4checker` が Lean 4 本体に統合
+
+v4.29.0 より、これまで独立リポジトリだった `lean4checker` が Lean 4 本体に統合された。
+`lean4checker` は import されたモジュールの証明が `sorry` に依存していないことを
+カーネルレベルで再確認するツール。
+
+```
+# lake を使ったビルド実行例
+lake exe lean4checker Mathlib
+```
+
+本プロジェクトでは大きな変更なし。今後 `lean4checker` を別途インストールする必要はない。
+
+### Lake: Git 依存パッケージ更新後の `.hash` ファイル自動クリーン
+
+`lake update` でパッケージの revision を変更すると、以前は古い `.hash` ファイルが残留し、
+ビルドトレースが不正になることがあった（[関連 Zulip スレッド](https://leanprover.zulipchat.com/#narrow/channel/113488-general/topic/ProofWidgets.20not.20up-to-date)）。
+
+v4.29.0 では `updateGitPkg` が `git clean -xf` をチェックアウト後に実行するようになり修正された。
+**`lake update` 後にビルドが正常に通らない場合は `.lake` ディレクトリを手動で削除する必要は原則なくなった。**
+
+### `inferInstanceAs` のドキュメント改善
+
+`inferInstanceAs` の内部実装が `InstanceNormalForm` → `WrapInstance` にリネームされた（内部変更のみ）。
+ユーザー向けには、ドキュメントの表現が
+「instance normal form に正規化する」→「expected type に合わせてインスタンスをラップする」
+と改善された。動作は実質的に変わらない。

@@ -70,7 +70,7 @@ instance : Std.LawfulLeftIdentity Color.mix Color.white where
 
 | 補題 | 理由 |
 |------|------|
-| `set_ne_nil_of_ne_nil` | `List.set_eq_nil` が現バージョン (Lean 4.29.0-rc8) で "Unknown constant" |
+| `set_ne_nil_of_ne_nil` | `List.set_eq_nil` が現バージョン (Lean 4.29.0) で "Unknown constant" |
 | 各ファイルの `list_any_map_rotate180` | `List.any_map` で一部簡素化可能だが、ドメイン固有の `beq_rotate180` との組み合わせが必要 |
 | BFS 関連補題群 (`bfs_vis_subset` 等) | ドメイン固有の不変条件。汎用ライブラリに対応なし |
 
