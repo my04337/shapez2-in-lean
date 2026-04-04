@@ -93,17 +93,18 @@ $infoCount    = @($diagnostics | Where-Object { $_.severity -eq "info" }).Count
 if ($buildExitCode -eq 0) { $status = "success" } else { $status = "failure" }
 
 # --- 構造化サマリー出力 ---
-Write-Host ""
-Write-Host "=== BUILD DIAGNOSTICS ==="
-Write-Host "status: $status"
-Write-Host "exit_code: $buildExitCode"
-Write-Host "errors: $errorCount"
-Write-Host "sorries: $sorryCount"
-Write-Host "warnings: $warningCount"
-Write-Host "info: $infoCount"
-Write-Host "log: $logPath"
-Write-Host "diagnostics: $jsonlPath"
-Write-Host ""
+# Write-Output でパイプライン / 変数キャプチャ可能にする
+Write-Output ""
+Write-Output "=== BUILD DIAGNOSTICS ==="
+Write-Output "status: $status"
+Write-Output "exit_code: $buildExitCode"
+Write-Output "errors: $errorCount"
+Write-Output "sorries: $sorryCount"
+Write-Output "warnings: $warningCount"
+Write-Output "info: $infoCount"
+Write-Output "log: $logPath"
+Write-Output "diagnostics: $jsonlPath"
+Write-Output ""
 
 # トリアージ順: error > sorry > warning > info (最大20件)
 $shown = 0
@@ -111,33 +112,33 @@ $maxShow = 20
 
 # errors
 foreach ($d in ($diagnostics | Where-Object { $_.severity -eq "error" })) {
-    if ($shown -ge $maxShow) { Write-Host "... (以降省略、全件は $jsonlPath を参照)"; break }
-    Write-Host "[ERROR] $($d.file):$($d.line):$($d.col): $($d.message)"
+    if ($shown -ge $maxShow) { Write-Output "... (以降省略、全件は $jsonlPath を参照)"; break }
+    Write-Output "[ERROR] $($d.file):$($d.line):$($d.col): $($d.message)"
     $shown++
 }
 
 # sorries (warning の中で sorry を含むもの)
 foreach ($d in ($diagnostics | Where-Object { $_.isSorry -eq $true })) {
-    if ($shown -ge $maxShow) { Write-Host "... (以降省略、全件は $jsonlPath を参照)"; break }
-    Write-Host "[SORRY] $($d.file):$($d.line):$($d.col): $($d.message)"
+    if ($shown -ge $maxShow) { Write-Output "... (以降省略、全件は $jsonlPath を参照)"; break }
+    Write-Output "[SORRY] $($d.file):$($d.line):$($d.col): $($d.message)"
     $shown++
 }
 
 # warnings (sorry 以外)
 foreach ($d in ($diagnostics | Where-Object { $_.severity -eq "warning" -and $_.isSorry -ne $true })) {
-    if ($shown -ge $maxShow) { Write-Host "... (以降省略、全件は $jsonlPath を参照)"; break }
-    Write-Host "[WARNING] $($d.file):$($d.line):$($d.col): $($d.message)"
+    if ($shown -ge $maxShow) { Write-Output "... (以降省略、全件は $jsonlPath を参照)"; break }
+    Write-Output "[WARNING] $($d.file):$($d.line):$($d.col): $($d.message)"
     $shown++
 }
 
 # info
 foreach ($d in ($diagnostics | Where-Object { $_.severity -eq "info" })) {
-    if ($shown -ge $maxShow) { Write-Host "... (以降省略、全件は $jsonlPath を参照)"; break }
-    Write-Host "[INFO] $($d.file):$($d.line):$($d.col): $($d.message)"
+    if ($shown -ge $maxShow) { Write-Output "... (以降省略、全件は $jsonlPath を参照)"; break }
+    Write-Output "[INFO] $($d.file):$($d.line):$($d.col): $($d.message)"
     $shown++
 }
 
-Write-Host "=== END DIAGNOSTICS ==="
+Write-Output "=== END DIAGNOSTICS ==="
 
 # ビルド失敗時は非ゼロで終了
 if ($buildExitCode -ne 0) {

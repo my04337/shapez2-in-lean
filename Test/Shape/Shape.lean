@@ -188,8 +188,8 @@ private def crystalLayer : Layer := Layer.mk
 -- vanilla5 (Insane)
 #guard GameConfig.vanilla5.maxLayers == 5
 
--- stress16 プリセット
-#guard GameConfig.stress16.maxLayers == 16
+-- stress8 プリセット
+#guard GameConfig.stress8.maxLayers == 8
 
 -- ============================================================
 -- truncate: 基本テスト (vanilla4)
@@ -221,10 +221,10 @@ private def fiveLayers : Shape :=
 #guard (fiveLayers.truncate GameConfig.vanilla5).layerCount == 5
 
 -- ============================================================
--- truncate: 16レイヤ (stress16) — 層当たり不可能な規模
+-- truncate: 8レイヤ (stress8) — 層当たり不可能な規模
 -- ============================================================
 
--- 16レイヤのシェイプを構築
+-- 8レイヤのシェイプを構築
 private def layer0  : Layer := Layer.mk (.colored .circle .red) (.colored .circle .green) (.colored .circle .blue) (.colored .circle .white)
 private def layer1  : Layer := Layer.mk (.colored .rectangle .red) (.colored .rectangle .green) (.colored .rectangle .blue) (.colored .rectangle .white)
 private def layer2  : Layer := Layer.mk (.colored .star .red) (.colored .star .green) (.colored .star .blue) (.colored .star .white)
@@ -232,52 +232,43 @@ private def layer3  : Layer := Layer.mk (.colored .windmill .red) (.colored .win
 private def layer4  : Layer := Layer.mk (.crystal .red) (.crystal .green) (.crystal .blue) (.crystal .white)
 private def layer5  : Layer := Layer.mk .pin .pin .pin .pin
 private def layer6  : Layer := Layer.mk (.colored .circle .yellow) (.colored .rectangle .yellow) (.colored .star .yellow) (.colored .windmill .yellow)
-private def layer7  : Layer := Layer.mk (.colored .circle .cyan) (.colored .rectangle .cyan) (.colored .star .cyan) (.colored .windmill .cyan)
-private def layer8  : Layer := Layer.mk (.colored .circle .magenta) (.colored .rectangle .magenta) (.colored .star .magenta) (.colored .windmill .magenta)
-private def layer9  : Layer := Layer.mk (.colored .circle .uncolored) (.colored .rectangle .uncolored) (.colored .star .uncolored) (.colored .windmill .uncolored)
-private def layer10 : Layer := Layer.mk (.crystal .yellow) (.crystal .cyan) (.crystal .magenta) (.crystal .white)
-private def layer11 : Layer := Layer.mk .pin (.colored .circle .red) .empty .pin
-private def layer12 : Layer := Layer.mk (.colored .rectangle .green) .empty (.crystal .blue) .pin
-private def layer13 : Layer := Layer.mk .empty (.colored .star .white) .pin (.crystal .red)
-private def layer14 : Layer := Layer.mk (.colored .windmill .blue) (.crystal .green) (.colored .circle .yellow) .empty
-private def layer15 : Layer := Layer.mk (.colored .circle .red) (.colored .circle .red) (.colored .circle .red) (.colored .circle .red)
+private def layer7 : Layer := Layer.mk (.colored .circle .cyan) (.colored .rectangle .cyan) (.colored .star .cyan) (.colored .windmill .cyan)
 
-private def shape16 : Shape :=
-    ⟨[layer0, layer1, layer2, layer3, layer4, layer5, layer6, layer7,
-      layer8, layer9, layer10, layer11, layer12, layer13, layer14, layer15], by simp⟩
+private def shape8 : Shape :=
+    ⟨[layer0, layer1, layer2, layer3, layer4, layer5, layer6, layer7], by simp⟩
 
--- 16レイヤの基本性質
-#guard shape16.layerCount == 16
-#guard shape16.bottomLayer == layer0
-#guard shape16.topLayer == layer15
+-- 8レイヤの基本性質
+#guard shape8.layerCount == 8
+#guard shape8.bottomLayer == layer0
+#guard shape8.topLayer == layer7
 
 -- ラウンドトリップ: toString → ofString?
-#guard Shape.ofString? shape16.toString == some shape16
+#guard Shape.ofString? shape8.toString == some shape8
 
--- stress16 での truncate はノーオプ
-#guard (shape16.truncate GameConfig.stress16) == shape16
-#guard (shape16.truncate GameConfig.stress16).layerCount == 16
+-- stress8 での truncate はノーオプ
+#guard (shape8.truncate GameConfig.stress8) == shape8
+#guard (shape8.truncate GameConfig.stress8).layerCount == 8
 
 -- vanilla4 で切り詰め → 4レイヤ
-#guard (shape16.truncate GameConfig.vanilla4).layerCount == 4
-#guard (shape16.truncate GameConfig.vanilla4).bottomLayer == layer0
-#guard (shape16.truncate GameConfig.vanilla4).topLayer == layer3
+#guard (shape8.truncate GameConfig.vanilla4).layerCount == 4
+#guard (shape8.truncate GameConfig.vanilla4).bottomLayer == layer0
+#guard (shape8.truncate GameConfig.vanilla4).topLayer == layer3
 
 -- vanilla5 で切り詰め → 5レイヤ
-#guard (shape16.truncate GameConfig.vanilla5).layerCount == 5
+#guard (shape8.truncate GameConfig.vanilla5).layerCount == 5
 
--- truncate 冪等性 (16層 → 4層 → 4層)
-#guard (shape16.truncate GameConfig.vanilla4).truncate GameConfig.vanilla4
-    == shape16.truncate GameConfig.vanilla4
+-- truncate 冪等性 (8層 → 4層 → 4層)
+#guard (shape8.truncate GameConfig.vanilla4).truncate GameConfig.vanilla4
+    == shape8.truncate GameConfig.vanilla4
 
--- truncate 冪等性 (16層 → stress16 → stress16)
-#guard (shape16.truncate GameConfig.stress16).truncate GameConfig.stress16
-    == shape16.truncate GameConfig.stress16
+-- truncate 冪等性 (8層 → stress8 → stress8)
+#guard (shape8.truncate GameConfig.stress8).truncate GameConfig.stress8
+    == shape8.truncate GameConfig.stress8
 
--- truncate の異なる config での合成: min(4, 16) = 4
-#guard (shape16.truncate GameConfig.stress16).truncate GameConfig.vanilla4
-    == shape16.truncate GameConfig.vanilla4
+-- truncate の異なる config での合成: min(4, 8) = 4
+#guard (shape8.truncate GameConfig.stress8).truncate GameConfig.vanilla4
+    == shape8.truncate GameConfig.vanilla4
 
--- truncate の異なる config での合成: min(16, 4) = 4
-#guard (shape16.truncate GameConfig.vanilla4).truncate GameConfig.stress16
-    == shape16.truncate GameConfig.vanilla4
+-- truncate の異なる config での合成: min(8, 4) = 4
+#guard (shape8.truncate GameConfig.vanilla4).truncate GameConfig.stress8
+    == shape8.truncate GameConfig.vanilla4

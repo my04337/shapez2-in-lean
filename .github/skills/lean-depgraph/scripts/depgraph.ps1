@@ -14,7 +14,8 @@ param(
     [switch]$TheoremsOnly,
     [string]$Output,
     [string]$Root,
-    [switch]$RootReverse
+    [switch]$RootReverse,
+    [switch]$SorryOnly
 )
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -31,13 +32,13 @@ $buildOutput = & lake build depgraph --no-ansi 2>&1 | ForEach-Object { $_.ToStri
 $buildExitCode = $LASTEXITCODE
 
 if ($buildExitCode -ne 0) {
-    Write-Host ""
-    Write-Host "=== DEPGRAPH RESULT ==="
-    Write-Host "status: failed"
-    Write-Host "reason: build_failed"
-    Write-Host "exit_code: $buildExitCode"
-    foreach ($line in $buildOutput) { Write-Host $line }
-    Write-Host "=== END DEPGRAPH ==="
+    Write-Output ""
+    Write-Output "=== DEPGRAPH RESULT ==="
+    Write-Output "status: failed"
+    Write-Output "reason: build_failed"
+    Write-Output "exit_code: $buildExitCode"
+    foreach ($line in $buildOutput) { Write-Output $line }
+    Write-Output "=== END DEPGRAPH ==="
     exit $buildExitCode
 }
 
@@ -63,6 +64,7 @@ if ($Namespace) { $depArgs += "--ns"; $depArgs += $Namespace }
 if ($TheoremsOnly) { $depArgs += "--theorems-only" }
 if ($Root) { $depArgs += "--root"; $depArgs += $Root }
 if ($RootReverse) { $depArgs += "--root-reverse" }
+if ($SorryOnly) { $depArgs += "--sorry-only" }
 $depArgs += "--output"
 $depArgs += $outputPath
 
@@ -72,26 +74,26 @@ $runOutput = & lake exe depgraph @depArgs 2>&1 | ForEach-Object { $_.ToString() 
 $runExitCode = $LASTEXITCODE
 
 # --- 結果サマリー ---
-Write-Host ""
-Write-Host "=== DEPGRAPH RESULT ==="
+Write-Output ""
+Write-Output "=== DEPGRAPH RESULT ==="
 
 if ($runExitCode -eq 0) {
-    Write-Host "status: success"
+    Write-Output "status: success"
 } else {
-    Write-Host "status: failed"
+    Write-Output "status: failed"
 }
-Write-Host "exit_code: $runExitCode"
-Write-Host "output: $outputPath"
+Write-Output "exit_code: $runExitCode"
+Write-Output "output: $outputPath"
 
 # 統計情報の表示（lake exe の stderr 出力から抽出）
 $inStats = $false
 foreach ($line in $runOutput) {
     if ($line -match "=== DEPGRAPH STATISTICS ===") { $inStats = $true }
-    if ($inStats) { Write-Host $line }
+    if ($inStats) { Write-Output $line }
     if ($line -match "=== END STATISTICS ===") { $inStats = $false }
 }
 
-Write-Host "=== END DEPGRAPH ==="
+Write-Output "=== END DEPGRAPH ==="
 
 if ($runExitCode -ne 0) {
     exit $runExitCode

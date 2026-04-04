@@ -1,1 +1,4 @@
 /.lake
+/.repl
+# REPL 一時 JSONL ファイル
+Scratch/*.jsonl

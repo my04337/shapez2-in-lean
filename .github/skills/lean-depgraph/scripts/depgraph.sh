@@ -17,6 +17,7 @@ THEOREMS_ONLY=""
 OUTPUT=""
 ROOT=""
 ROOT_REVERSE=""
+SORRY_ONLY=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -27,6 +28,7 @@ while [[ $# -gt 0 ]]; do
         --output) OUTPUT="$2"; shift 2 ;;
         --root) ROOT="$2"; shift 2 ;;
         --root-reverse) ROOT_REVERSE="--root-reverse"; shift ;;
+        --sorry-only) SORRY_ONLY="--sorry-only"; shift ;;
         *) shift ;;
     esac
 done
@@ -72,6 +74,7 @@ DEP_ARGS=()
 [[ -n "$THEOREMS_ONLY" ]] && DEP_ARGS+=("--theorems-only")
 [[ -n "$ROOT" ]] && DEP_ARGS+=("--root" "$ROOT")
 [[ -n "$ROOT_REVERSE" ]] && DEP_ARGS+=("--root-reverse")
+[[ -n "$SORRY_ONLY" ]] && DEP_ARGS+=("--sorry-only")
 DEP_ARGS+=("--output" "$OUTPUT_PATH")
 
 # 実行

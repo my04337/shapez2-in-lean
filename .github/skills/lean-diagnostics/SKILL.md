@@ -5,178 +5,84 @@ metadata:
   argument-hint: 'ビルド結果の診断とトリアージを行います'
 ---
 
-# ビルド診断の解析とトリアージ
+# ビルド診断スキル
 
-**lean-build** / **lean-run** スクリプトが出力する診断情報を解析し、
-修正すべき問題を優先順位付けする。
+**lean-build** の出力を解析し、修正すべき問題を優先順位付けする。
 
-## 診断出力の構造
+## クイックリファレンス
 
-### マーカー区切りサマリー (stdout)
+```powershell
+.github/skills/lean-build/scripts/build.ps1
 
-ビルドスクリプトは以下の形式で構造化サマリーを標準出力に書き出す:
-
-```
-=== BUILD DIAGNOSTICS ===
-total_errors: 2
-total_warnings: 5
-total_sorries: 1
-build_status: failure
-exit_code: 1
-
-[error] S2IL/Shape/Color.lean:42:0: unknown identifier 'Foo'
-[sorry] S2IL/Shape/Layer.lean:10:4: declaration uses 'sorry'
-[warning] S2IL/Processing/Cutter.lean:88:0: unused variable 'x'
-...
-=== END DIAGNOSTICS ===
+$diags = Get-Content .lake/build-diagnostics.jsonl | ConvertFrom-Json
+$diags | Where-Object { $_.severity -eq "error" }                    # 修正必須
+$diags | Where-Object { $_.isSorry -eq $true }                       # 証明未完了
+$diags | Where-Object { $_.severity -eq "warning" -and !$_.isSorry } # 非sorry warning
 ```
 
-run スクリプトはビルド診断に加えて実行結果を出力する:
+## 状態判断フロー
 
 ```
-=== RUN RESULT ===
-status: success
-exit_code: 0
-target: s2il
-log: .lake/run-log.txt
-output_lines: 12
-=== END RUN ===
+ビルド実行 → "status: success" か?
+  ├─ No  → errors を修正
+  └─ Yes → 非sorry warning あり? → 修正（Stop Hook がブロック）
+              └─ sorry のみ      → 証明作業へ
 ```
-
-### 出力ファイル
-
-| ファイル | 内容 |
-|---|---|
-| `.lake/build-log.txt` | `lake build` の全出力（stdout + stderr） |
-| `.lake/build-diagnostics.jsonl` | 診断メッセージの JSONL（1行1JSON） |
-| `.lake/run-log.txt` | `lake exe` の実行出力 |
-
-### JSONL フォーマット
-
-`.lake/build-diagnostics.jsonl` の各行は以下の形式:
-
-```json
-{"file":"S2IL/Shape/Color.lean","line":42,"col":0,"severity":"error","message":"unknown identifier 'Foo'"}
-```
-
-`severity` は `error`, `warning`, `info` のいずれか。
-`sorry` は `warning` レベルだが、メッセージに `` declaration uses `sorry` `` を含む。
 
 ## トリアージ優先順位
 
-診断メッセージは以下の優先順位で対応する:
-
-| 優先度 | レベル | 対応方針 |
+| 優先度 | レベル | 対応 |
 |---|---|---|
-| 1 (最高) | **error** | ビルドを阻害する。必ず修正する |
-| 2 | **sorry** | 未証明の定理。機能は動作するが証明が不完全 |
-| 3 | **warning** | 未使用変数・非推奨 API 等。品質改善として対応 |
-| 4 (最低) | **info** | 情報メッセージ。通常は対応不要 |
-
-### sorry の検出方法
-
-`sorry` は Lake の出力では `warning` として報告されるが、
-メッセージ本文に `declaration uses 'sorry'` を含む。
-スクリプトはこれを自動的に `[sorry]` カテゴリに分類する。
-
-## 診断ファイルの参照方法
-
-### JSONL を読み込む
-
-エージェントは `read_file` で `.lake/build-diagnostics.jsonl` を読み込み、
-JSON をパースして構造的に解析できる。
-
-### 全ログからフィルタ
-
-全ログから特定レベルの診断だけを抽出する例:
-
-**PowerShell**:
-```powershell
-Select-String -Path .lake/build-log.txt -Pattern ':\s*error:'
-Select-String -Path .lake/build-log.txt -Pattern "declaration uses 'sorry'"
-```
-
-**bash / zsh**:
-```bash
-grep ': error:' .lake/build-log.txt
-grep "declaration uses 'sorry'" .lake/build-log.txt
-```
-
-## Lake の診断関連オプション
-
-ビルドスクリプトに渡す前に Lake のオプションを理解しておくと便利:
-
-| オプション | 説明 |
-|---|---|
-| `--no-ansi` | ANSI エスケープシーケンスを無効化（スクリプトでは既定で使用） |
-| `--log-level=<LV>` | ログレベル: `trace`, `info`, `warning`, `error` |
-| `--wfail` | 警告をエラーとして扱う（CI 向け） |
-| `--fail-level=<LV>` | 指定レベル以上でビルド失敗扱い |
-
-## 関連スキル
-
-- **lean-build**: ビルドの実行
-- **lean-run**: ビルド＋実行
-- **lean-setup**: ツールチェインの PATH 解決
-- **lean-proof-progress**: sorry の進捗管理と撤退判断
-- **lean-depgraph**: sorry 間の依存関係の可視化
+| 1 | **error** | ビルドを阻害。必ず修正 |
+| 2 | **sorry** | 未証明定理。`isSorry: true` で自動識別 |
+| 3 | **warning** | 未使用変数・非推奨 API 等 |
+| 4 | **info** | 情報。通常対応不要 |
 
 ## タスク完了前の必須確認
 
-`.lean` ファイルを変更するタスクが一通り終わった後は、**必ず以下の手順で warning を整理すること**。
-整理せずに終了しようとすると Stop Hook が自動的にブロックする。
+`.lean` ファイル変更後は非sorry warning を整理すること。Stop Hook が自動ブロックする。
 
-### 手順
+```powershell
+# 非sorry warning をリストアップ
+Get-Content .lake/build-diagnostics.jsonl | ConvertFrom-Json |
+    Where-Object { $_.severity -eq "warning" -and !$_.isSorry } |
+    Select-Object file, line, message
+```
 
-1. **ビルドを実行** して最新の診断を取得する:
-   ```powershell
-   .github/skills/lean-build/scripts/build.ps1
-   ```
+### 代表的な actionable warning
 
-2. **診断ファイルを確認** して非 sorry warning をリストアップ:
-   ```powershell
-   Get-Content .lake/build-diagnostics.jsonl |
-       ConvertFrom-Json |
-       Where-Object { $_.severity -eq "warning" -and $_.isSorry -ne $true } |
-       Select-Object file, line, col, message
-   ```
+| warning | 修正 |
+|---|---|
+| `unused variable` | `_x` にリネームまたは削除 |
+| `This simp argument is unused` | `simp only [...]` から削除 |
+| `this tactic is never executed` | tactic を削除 |
 
-3. **各 warning を修正** する（下表参照）
+### Stop Hook の動作
 
-4. ビルドで warning が消えたことを確認して終了
-
-### sorry 由来の warning を見分ける
-
-Stop Hook は `isSorry: true` フラグで sorry 由来 warning を自動除外する。
-手動確認する場合:
-- JSONL に `"isSorry":true` が含まれる行 → **修正不要（sorry 解決が必要なため）**
-- その他の `"severity":"warning"` 行 → **修正必須**
-
-### 代表的な actionable warning と修正パターン
-
-| warning | 原因 | 修正 |
-|---|---|---|
-| `unused variable \`x\`` | 変数が宣言されたが使われていない | `_x` にリネームするか削除 |
-| `This simp argument is unused` | simp の引数が効いていない | その引数を `simp only [...]` から削除 |
-| `this tactic is never executed` | 到達不可能な tactic | その tactic を削除 |
-| `'tactic' tactic does nothing` | tactic が何も変更しない | その tactic を削除 |
-
-### Stop Hook のブロック動作
-
-- **非 sorry warning あり** → `decision: "block"` でエージェントの終了を阻止する
-- **sorry のみ** → `continue: true` で通過し、進捗記録を促す
-- `stop_hook_active: true`（再入）の場合は無条件に通過する（無限ループ防止）
+- 非sorry warning あり → `decision: "block"` で終了を阻止
+- sorry のみ → `continue: true` で通過（進捗記録を促す）
+- `stop_hook_active: true`（再入）→ 無条件通過（無限ループ防止）
 
 ## sorry の依存関係分析
 
-証明作業では sorry 間の依存関係が重要。以下の手順で分析する。
+`lean-sorry-snapshot` サブエージェントでビルド→sorry 抽出→depgraph→依存分類を一括実行可能。
+
+## 関連スキル
+
+**lean-build** / **lean-depgraph** / **lean-proof-progress**
+> ビルド・sorry 抽出・depgraph 生成・依存分類をすべて実行し、構造化された sorry テーブルが返される。
+> 手動で次の手順を実行する必要がなくなる。
 
 ### sorry 依存グラフの取得
 
 **lean-depgraph** を使って sorry を含む宣言の依存関係を可視化する:
 
 ```powershell
-# sorry を含むノードが赤色で強調される
+.github/skills/lean-depgraph/scripts/depgraph.ps1 -SorryOnly -Json
+```
+
+sorry ノードのみ抽出した依存グラフが `.lake/depgraph.json` に生成される。  
+`lean-sorry-snapshot` サブエージェントでビルド→sorry 抽出→depgraph を一括実行できる。
 .github/skills/lean-depgraph/scripts/depgraph.ps1
 ```
 

@@ -32,6 +32,25 @@ String.toList_ofList : (String.ofList l).toList = l
 
 ## タクティクの使い分け
 
+### `simp only` 原則 — 裸 `simp` を使わない
+
+最終証明では**裸 `simp` を禁止**し、`simp only [...]` を使う。Mathlib の `@[simp]` DB は更新のたびに変わるため、裸 `simp` に依存する証明は将来壊れうる。
+
+**安定化ワークフロー**:
+1. 探索時に `simp` / `simp_all` で閉じることを確認
+2. `simp?` / `simp_all?` に置き換えて `Try this:` から補題リストを取得
+3. `simp only [lemma1, lemma2, ...]` に置換
+
+**REPL での確認**:
+```jsonl
+{"cmd": "theorem foo : ... := by simp?", "env": 0}
+```
+→ 出力の `Try this: simp only [...]` をそのまま使用
+
+**`simp_all` の扱い**: `simp_all only [...]` に置換するか、仮定を明示した手動証明に書き換える。Mathlib 補題が不足して `simp_all only` に変換できない場合は据え置き可（実例: QuarterPos.lean の 1 箇所）。
+
+**`lean-simp-stabilizer` サブエージェント**: ファイル単位の自動安定化が可能。ファイルパスと行番号を渡すと REPL で `simp?` を実行し、`simp only [...]` への書き換えを生成する。
+
 ### `decide` — 有限型の全パターン網羅
 
 有限の列挙型に関する命題は `decide` で自動証明できる。`cases` で分解した後の個別ケースにも有効。

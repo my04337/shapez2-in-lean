@@ -31,11 +31,11 @@ if (Test-Path $BuildScript) {
 
 # ビルド失敗時は実行をスキップ
 if ($buildFailed) {
-    Write-Host ""
-    Write-Host "=== RUN RESULT ==="
-    Write-Host "status: skipped"
-    Write-Host "reason: build_failed"
-    Write-Host "=== END RUN ==="
+    Write-Output ""
+    Write-Output "=== RUN RESULT ==="
+    Write-Output "status: skipped"
+    Write-Output "reason: build_failed"
+    Write-Output "=== END RUN ==="
     exit 1
 }
 
@@ -56,41 +56,41 @@ $runOutput | Out-File -FilePath $runLogPath -Encoding utf8
 # --- 実行結果サマリー ---
 if ($runExitCode -eq 0) { $runStatus = "success" } else { $runStatus = "failure" }
 
-Write-Host ""
-Write-Host "=== RUN RESULT ==="
-Write-Host "status: $runStatus"
-Write-Host "exit_code: $runExitCode"
-Write-Host "target: $Target"
-Write-Host "log: $runLogPath"
+Write-Output ""
+Write-Output "=== RUN RESULT ==="
+Write-Output "status: $runStatus"
+Write-Output "exit_code: $runExitCode"
+Write-Output "target: $Target"
+Write-Output "log: $runLogPath"
 
 # stdout 出力（最大50行に制限）
 $outputLines = $runOutput
 if ($outputLines.Count -gt 50) {
-    Write-Host "output_lines: $($outputLines.Count) (先頭50行を表示)"
-    Write-Host "---"
-    $outputLines | Select-Object -First 50 | ForEach-Object { Write-Host $_ }
-    Write-Host "... (以降省略、全件は $runLogPath を参照)"
+    Write-Output "output_lines: $($outputLines.Count) (先頭50行を表示)"
+    Write-Output "---"
+    $outputLines | Select-Object -First 50 | ForEach-Object { Write-Output $_ }
+    Write-Output "... (以降省略、全件は $runLogPath を参照)"
 } elseif ($outputLines.Count -gt 0) {
-    Write-Host "output_lines: $($outputLines.Count)"
-    Write-Host "---"
-    $outputLines | ForEach-Object { Write-Host $_ }
+    Write-Output "output_lines: $($outputLines.Count)"
+    Write-Output "---"
+    $outputLines | ForEach-Object { Write-Output $_ }
 } else {
-    Write-Host "output_lines: 0"
+    Write-Output "output_lines: 0"
 }
 
 # 出力検証 (期待値が指定された場合)
 if ($Expected) {
     $actualJoined = ($runOutput -join "`n").Trim()
     if ($actualJoined -eq $Expected) {
-        Write-Host "verification: pass"
+        Write-Output "verification: pass"
     } else {
-        Write-Host "verification: fail"
-        Write-Host "expected: $Expected"
-        Write-Host "actual: $actualJoined"
+        Write-Output "verification: fail"
+        Write-Output "expected: $Expected"
+        Write-Output "actual: $actualJoined"
     }
 }
 
-Write-Host "=== END RUN ==="
+Write-Output "=== END RUN ==="
 
 # 実行失敗時は非ゼロで終了
 if ($runExitCode -ne 0) {

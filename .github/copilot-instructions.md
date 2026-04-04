@@ -3,6 +3,9 @@
 ## 応答言語
 - 質問への回答・最終的な応答は日本語で行う
 - 内部思考・サブエージェント内の応答や指示はトークン数削減のため英語可
+- 日時・時刻を記載する場合は、実行中の PC のローカル時刻（UTC ではなく）を用いること
+  - 日付: `YYYY-MM-DD` 形式（例: `2026-04-04`）
+  - 時刻: `hh:mm:ss` 形式（例: `14:30:00`）
 
 ## プロジェクト概要
 - **正式名称**: Shapez2 in Lean（略称: **S2IL**）
@@ -19,11 +22,19 @@
 | 計画・マイルストーン | [`docs/plans/README.md`](../docs/plans/README.md) | マイルストーン更新・証明計画策定時 |
 | エージェントカスタマイズ | [`docs/agent/README.md`](../docs/agent/README.md) | Skills / Hooks 設定の追加・変更時 |
 
+### 証明チートシート（必読）
+
+**証明作業を開始する場合は、まず該当する証明チートシートを通読し、証明の全容把握に努めること。**
+
+| チートシート | 対象 |
+|---|---|
+| [`docs/plans/gravity-proof-cheatsheet.md`](../docs/plans/gravity-proof-cheatsheet.md) | `process_rotate180`（Gravity 等変性）。sorry 状態・禁止パターン・作業計画を集約 |
+
 ### 作業別のナビゲーション
 
 | 作業 | 参照フロー |
 |---|---|
-| 新しい証明に着手 | knowledge → lean → 対象の仕様ドキュメント |
+| 新しい証明に着手 | **証明チートシート** → knowledge → lean → 対象の仕様ドキュメント |
 | ゲーム仕様の実装・変更 | shapez2 → knowledge |
 | マイルストーン・計画の更新 | plans |
 | 考察・ナレッジの追記 | 対象カテゴリの README.md の編集ガイダンスに従う |
@@ -143,6 +154,13 @@ theorem map_natCast : ...
 | `s`, `t` | リスト・集合 |
 | `f`, `g` | 関数 |
 
+### Lean 4 証明スタイル
+
+- **裸 `simp` 禁止**: 最終証明では `simp only [...]` を使う。裸 `simp` は Mathlib 更新で壊れうる
+  - 探索時: `simp` → 成功したら `simp?` で補題リスト取得 → `simp only [...]` に置換
+  - `simp_all` も同様に `simp_all only [...]` を推奨
+  - 詳細: `.github/skills/lean-simp-guide/SKILL.md`
+
 ### 外部ライブラリのライセンス方針
 - **利用可**: パブリックドメイン、MIT-0 等（義務なし）
 - **要確認**: MIT, BSD-2, BSD-3, MPL 2.0 等（著作権・許諾表示が必要）
@@ -168,7 +186,7 @@ Shape.stack bottom top  -- config を省略しない
 |---|---|---|
 | `GameConfig.vanilla4` | 4 | 通常モード (Normal / Hard) |
 | `GameConfig.vanilla5` | 5 | 高難度モード (Insane) |
-| `GameConfig.stress16` | 16 | ストレステスト専用 |
+| `GameConfig.stress8` | 8 | ストレステスト専用 |
 
 カスタム設定は `GameConfig.mk n proof` で自由に構築できる。
 
@@ -179,10 +197,23 @@ Shape.stack bottom top  -- config を省略しない
 | レベル | 対象 config | 方針 |
 |---|---|---|
 | **標準テスト** | `vanilla4`, `vanilla5` | 全操作で網羅的にテスト |
-| **ストレステスト** | 16レイヤ等の大規模 config | ボトルネック性質（truncate 冪等性等）のみ |
+| **ストレステスト** | 8レイヤ等の大規模 config | ボトルネック性質（truncate 冪等性等）のみ |
 
 - テストヘルパーには使用する `GameConfig` を明示する（例: `stackTest` は vanilla4 使用）
-- 16レイヤ等のストレステストは `Test/Shape/Shape.lean` に配置し、層ごとの力業 (`cases`) が不可能な規模で性質を検証する
+- 8レイヤ等のストレステストは `Test/Shape/Shape.lean` に配置し、層ごとの力業 (`cases`) が不可能な規模で性質を検証する
+
+## 一時ファイル・実験作業
+
+実験・検証用の一時的な `.lean` ファイルは **`Scratch/`** ディレクトリに作成する。
+
+- **トップレベルへの一時ファイル作成は禁止**（`check_*.lean`・`tmp_*.lean` 等）
+- ファイル名は `UpperCamelCase`（例: `Scratch/GravityCheck.lean`）
+- 型チェック / `#eval`: `lake env lean Scratch/MyFile.lean`（`lakefile.toml` への登録不要）
+- `def main` 実行: `lake env lean --run Scratch/MyFile.lean`（**`--run` はファイル名より前**。後ろに置くとエラー）
+- 数行の即時確認は REPL を優先。複数定義・10 行以上は `Scratch/` を使う
+- 証明骨格・仮説メモは Markdown（`/memories/session/` 等）に書く
+
+**詳細な使い分け指針**: [`.github/skills/lean-repl/references/repl-guide.md`](skills/lean-repl/references/repl-guide.md)（REPL・一時ファイル・Markdown の使い分け章）
 
 ## 動作環境・シェル
 
@@ -211,3 +242,21 @@ bash .github/skills/lean-build/scripts/build.sh
 - Windows: `.ps1` ファイルは PowerShell で自動的に実行される
 - macOS / Linux: `.sh` ファイルは shebang (`#!/usr/bin/env bash`) により適切なシェルで実行される
   - 初回実行時に `chmod +x` が必要な場合がある
+
+## Lean REPL
+
+`lake exe repl` による対話的 Lean 評価が利用可能（`leanprover-community/repl` 導入済み）。
+フルビルドなしで `#eval`・タクティク・sorry ゴール確認が行える（起動 ~11-20s）。
+
+```powershell
+# JSONL ファイルを渡して実行（stdout は 1 行 JSON のみ、デフォルトで import S2IL + Mathlib.Tactic を自動プレペンド）
+.github/skills/lean-repl/scripts/repl.ps1 -InputFile Scratch/commands.jsonl
+# S2IL ソース変更後に pickle を再生成する場合
+.github/skills/lean-repl/scripts/repl.ps1 -RebuildPickle
+```
+
+- **stdout**: 各応答が 1 行 JSON。終了コード 0=正常, 1=エラーあり, 2=クラッシュ
+- クラッシュ時は最終行に `{"error":"repl_crashed",...}` が出力される
+
+**詳細・ユースケース集**: [`.github/skills/lean-repl/references/repl-guide.md`](skills/lean-repl/references/repl-guide.md)
+**スキル**: `lean-repl`（反例チェック・タクティク探索・sorry ゴール確認）
