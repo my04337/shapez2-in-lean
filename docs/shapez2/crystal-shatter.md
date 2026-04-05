@@ -185,10 +185,10 @@ Quarter.isFragile : Quarter → Bool
 | 本仕様での用語 | glossary.md での用語 | Lean コード上の対応 |
 |---|---|---|
 | 結晶 (Crystal) | クリスタル (Crystal) | `Quarter.crystal color` |
-| 脆弱 (Fragile) | 脆弱 (Fragile) | `Quarter.isFragile`（未実装） |
-| 砕け散り (Shatter) | 砕け散り (Shatter) | `Shape.shatter`（未実装） |
-| 結合 (Bond) | — | 新規定義（未実装） |
-| 結合クラスタ (Bonded Cluster) | — | 新規定義（未実装） |
+| 脆弱 (Fragile) | 脆弱 (Fragile) | `Quarter.isFragile` |
+| 砕け散り (Shatter) | 砕け散り (Shatter) | `Shape.shatterOnCut`, `Shape.shatterOnFall`, `Shape.shatterOnTruncate` |
+| 結合 (Bond) | — | `CrystalBond.isBonded` |
+| 結合クラスタ (Bonded Cluster) | — | `CrystalBond.crystalClusterList` |
 | 落下 (Fall) | 落下 | — |
 | 切断 (Cutting) | 切断 (Cutting) | — |
 | 西側の半分 (West Half) | 西側の半分 (West Half) | `{NW, SW}` |

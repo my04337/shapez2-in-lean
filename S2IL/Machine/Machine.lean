@@ -25,6 +25,15 @@ import S2IL.Behavior.ColorMixer
 
 このモジュールでは、コア処理関数（`Shape.paint` 等）を `Option` で包み、
 入力の存在/不在をハンドリングするラッパー関数を提供する。
+
+## 安定状態 (Settled State) の方針
+
+ゲーム規定により、ベルトで搬送されるシェイプおよび各加工装置の入出力は
+常に安定状態 (`Shape.IsSettled`) であることが保証されている。
+現在の定義では安定状態を前提条件として含めていないが、
+将来的に安定状態保存定理を定理（theorem）レベルで追加する予定。
+定義（def）自体に前提を追加するのではなく、
+定理の仮定として `IsSettled` を使用するアプローチを取る。
 -/
 
 namespace Machine
@@ -71,12 +80,7 @@ def rotate180 (shape : Option Shape) : Option Shape :=
 
 /-- ピン押し機を適用する。シェイプが存在する場合のみ出力を生成する -/
 def pinPush (shape : Option Shape) (config : GameConfig) : Option Shape :=
-    match shape with
-    | some s =>
-        if h : s.layerCount ≤ config.maxLayers then
-          s.pinPush config h
-        else none
-    | none => none
+    shape.bind (·.pinPush config)
 
 -- ============================================================
 -- 積層機 (Stacker)
@@ -85,12 +89,7 @@ def pinPush (shape : Option Shape) (config : GameConfig) : Option Shape :=
 /-- 積層機を適用する。下側・上側の両シェイプが存在する場合のみ出力を生成する -/
 def stack (bottom top : Option Shape) (config : GameConfig) : Option Shape :=
     match bottom, top with
-    | some b, some t =>
-        if h1 : b.layerCount ≤ config.maxLayers then
-          if h2 : t.layerCount ≤ config.maxLayers then
-            b.stack t config h1 h2
-          else none
-        else none
+    | some b, some t => b.stack t config
     | _, _ => none
 
 -- ============================================================

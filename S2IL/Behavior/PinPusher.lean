@@ -63,10 +63,8 @@ namespace Shape
 -- ============================================================
 
 /-- ピン押し機を適用する。
-    結果が全空の場合は `none` を返す。
-    前提: `s` のレイヤ数が `config.maxLayers` 以内であること。 -/
-def pinPush (s : Shape) (config : GameConfig)
-        (_h_s : s.layerCount ≤ config.maxLayers) : Option Shape := do
+    結果が全空の場合は `none` を返す。 -/
+def pinPush (s : Shape) (config : GameConfig) : Option Shape := do
     -- 1. レイヤ持ち上げ
     let lifted := PinPusher.liftUp s
     -- 2. ピン生成

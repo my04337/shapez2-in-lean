@@ -27,8 +27,6 @@ import S2IL.Shape.GameConfig
 - 下側シェイプは落下や砕け散りの影響を受けない
 - 上側シェイプの結晶は積み重ねにより **すべて** 砕け散る
 - レイヤ数制限は引数で渡される `GameConfig` の `maxLayers` に従う
-- **前提**: `bottom` および `top` はそれぞれレイヤ数が `config.maxLayers` 以内であること
-
 仕様の詳細は `docs/shapez2/falling.md` セクション 8 を参照。
 -/
 
@@ -74,11 +72,8 @@ namespace Shape
 /-- 2つのシェイプを積み重ねる。
     `bottom` の上に `top` を配置し、砕け散り・落下・レイヤ制限を適用する。
     結果が全空の場合は `none` を返す。
-    前提: `bottom` および `top` はそれぞれレイヤ数が `config.maxLayers` 以内であること。
     超過レイヤには工程2により結晶が存在しないため、truncate 前の shatter は不要。 -/
-def stack (bottom top : Shape) (config : GameConfig)
-        (_h_bottom : bottom.layerCount ≤ config.maxLayers)
-        (_h_top : top.layerCount ≤ config.maxLayers) : Option Shape := do
+def stack (bottom top : Shape) (config : GameConfig) : Option Shape := do
     -- 1. 単純配置
     let combined := Stacker.placeAbove bottom top
     -- 2. 上側結晶の砕け散り（下側は影響されない）
