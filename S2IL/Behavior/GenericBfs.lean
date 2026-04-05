@@ -52,6 +52,32 @@ theorem GenericReachable.symm {edge : α → α → Bool}
         exact ih.trans (.step (h_symm _ _ ▸ h_edge) .refl)
 
 -- ============================================================
+-- BFS エッジ合同
+-- ============================================================
+
+/-- エッジ述語が等しければ genericBfs の結果も等しい -/
+theorem genericBfs_edge_congr [BEq α] [LawfulBEq α]
+        (edge1 edge2 : α → α → Bool)
+        (h_eq : ∀ a b, edge1 a b = edge2 a b)
+        (allNodes vis queue : List α) (fuel : Nat) :
+        genericBfs edge1 allNodes vis queue fuel =
+        genericBfs edge2 allNodes vis queue fuel := by
+    induction fuel generalizing vis queue with
+    | zero => rfl
+    | succ n ih =>
+        cases queue with
+        | nil => simp only [genericBfs]
+        | cons pos rest =>
+            simp only [genericBfs]
+            split
+            · exact ih vis rest
+            · have : allNodes.filter (fun p => edge1 pos p && !((pos :: vis).any (· == p))) =
+                     allNodes.filter (fun p => edge2 pos p && !((pos :: vis).any (· == p))) := by
+                  congr 1; ext p; rw [h_eq]
+              rw [this]
+              exact ih (pos :: vis) (rest ++ _)
+
+-- ============================================================
 -- BFS 基本補題
 -- ============================================================
 

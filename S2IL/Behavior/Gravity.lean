@@ -857,7 +857,7 @@ private theorem sortFallingUnits_any_positions (units : List FallingUnit) (p : Q
 -- ============================================================
 
 /-- structuralBfs は genericBfs (isStructurallyBonded s) と等しい -/
-private theorem structuralBfs_eq_generic (s : Shape)
+theorem structuralBfs_eq_generic (s : Shape)
         (allPos vis queue : List QuarterPos) (fuel : Nat) :
         structuralBfs s allPos vis queue fuel =
         genericBfs (isStructurallyBonded s) allPos vis queue fuel := by
@@ -871,7 +871,7 @@ private theorem structuralBfs_eq_generic (s : Shape)
             split <;> exact ih ..
 
 /-- groundingBfs は genericBfs (isGroundingContact s) と等しい -/
-private theorem groundingBfs_eq_generic (s : Shape)
+theorem groundingBfs_eq_generic (s : Shape)
         (allPos vis queue : List QuarterPos) (fuel : Nat) :
         groundingBfs s allPos vis queue fuel =
         genericBfs (isGroundingContact s) allPos vis queue fuel := by
