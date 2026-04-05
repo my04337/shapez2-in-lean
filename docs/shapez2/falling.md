@@ -563,9 +563,58 @@ d({L3:SE, L3:SW}):
 
 ---
 
-## 10. 今後の Lean 実装方針
+## 10. 安定状態 (Settled State) と落下処理
 
-### 10.1 追加予定の定義
+### 10.1 安定状態の定義
+
+**安定状態 (Settled State)** とは、シェイプ内に浮遊する落下単位が存在しない状態を指す。
+すなわち、全ての構造クラスタが接地している状態である。
+
+Lean での定義:
+
+```lean
+-- S2IL/Behavior/Gravity.lean
+def Shape.IsSettled (s : Shape) : Prop := Gravity.floatingUnits s = []
+def Shape.isSettled (s : Shape) : Bool := (Gravity.floatingUnits s).isEmpty
+```
+
+空シェイプ（`Shape`は非空リストなので存在しない）、および単一レイヤのみのシェイプは自明に安定状態である。
+
+### 10.2 ゲーム規定
+
+ゲーム上、**ベルトで搬送されるシェイプおよび各加工装置の入出力は常に安定状態であることが保証されている**（[glossary.md](glossary.md) 参照）。
+
+不安定状態は加工装置の **内部処理** においてのみ一時的に発生する:
+
+| 内部処理 | 不安定状態が発生する場面 |
+|---|---|
+| **切断 (Cut)** | 切断により支えを失った象限が浮遊する |
+| **積み重ね (Stack)** | 上側シェイプの一部が下側の空象限上に浮遊する |
+| **ピン押し (PinPush)** | レイヤ上限超過による truncate 後に浮遊部分が生じる |
+
+これらの内部処理では、最終出力前に必ず落下処理 (`Gravity.process`) が適用され、安定状態に復帰する。
+
+### 10.3 安定状態を保存する操作
+
+以下の操作は安定状態のシェイプに適用しても安定状態を保つ:
+
+| 操作 | 関数 | 安定状態保存の理由 |
+|---|---|---|
+| 着色 (Paint) | `Shape.paint` | 象限の有無を変えない |
+| 結晶化 (Crystallize) | `Shape.crystallize` | 象限の有無を変えない |
+| 回転 (Rotate) | `Shape.rotateCW` 等 | 構造クラスタの位置関係を保存 |
+| 180° 回転 | `Shape.rotate180` | `IsSettled_rotate180` として証明済み |
+
+### 10.4 落下処理の保証
+
+落下処理 `Gravity.process` の出力は（空でない限り）常に安定状態である。
+これは落下アルゴリズムの終了条件そのものであり、全ての浮遊落下単位が着地するまで処理が繰り返される。
+
+---
+
+## 11. 今後の Lean 実装方針
+
+### 11.1 追加予定の定義
 
 **`S2IL/Shape/Quarter.lean`**:
 
@@ -579,7 +628,7 @@ def Quarter.canFormBond : Quarter → Bool
     | colored _ _ => true
 ```
 
-### 10.2 新規ファイル
+### 11.2 新規ファイル
 
 **`S2IL/Processing/Gravity.lean`**:
 
@@ -599,7 +648,7 @@ def Quarter.canFormBond : Quarter → Bool
 
 ---
 
-## 11. 用語対応表
+## 12. 用語対応表
 
 | 本仕様での用語 | glossary.md での用語 | Lean コード上の対応 |
 |---|---|---|
@@ -611,6 +660,7 @@ def Quarter.canFormBond : Quarter → Bool
 | 浮遊 (Floating) | — | `floatingUnits`（未実装） |
 | 落下単位 (Falling Unit) | — | `floatingUnits` の各要素（未実装） |
 | 落下 (Falling / Gravity) | 落下 | `gravity`（未実装） |
+| 安定状態 (Settled State) | 安定状態 (Settled State) | `Shape.IsSettled`, `Shape.isSettled` |
 | 結合凍結 (Bond Freezing) | — | アルゴリズムの設計原則として反映 |
 | 結晶結合 (Crystal Bond) | — | `CrystalBond.isBonded` |
 | 砕け散り (Shatter) | 砕け散り (Shatter) | `Shape.shatterOnFall` |

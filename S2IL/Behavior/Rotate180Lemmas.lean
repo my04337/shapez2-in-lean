@@ -43,7 +43,7 @@ namespace Shape
 /-- Shape.layers と rotate180 の関係 -/
 theorem layers_rotate180 (s : Shape) :
         s.rotate180.layers = s.layers.map Layer.rotate180 := by
-    simp [Shape.rotate180, Shape.mapLayers]
+    simp only [Shape.rotate180, Shape.mapLayers]
 
 end Shape
 
@@ -60,7 +60,7 @@ theorem getQuarter_rotate180 (s : Shape) (pos : QuarterPos) :
     rw [List.getElem?_map]
     cases s.layers[pos.layer]? with
     | none => rfl
-    | some l => simp [getDir_rotate180]
+    | some l => simp only [Option.map_some, getDir_rotate180]
 
 /-- getQuarter の rotate180 逆方向: p から s.r180 へのアクセス = p.r180 から s へのアクセス -/
 theorem getQuarter_rotate180_inv (s : Shape) (p : QuarterPos) :
@@ -78,7 +78,7 @@ private theorem set_ne_nil_of_ne_nil {α : Type} {l : List α} (h : l ≠ []) (i
         l.set i a ≠ [] := by
     cases l with
     | nil => exact absurd rfl h
-    | cons x xs => cases i <;> simp [List.set]
+    | cons x xs => cases i <;> simp only [List.set, ne_eq, reduceCtorEq, not_false_eq_true]
 
 /-- setQuarter のレイヤが存在する場合、.layers は List.set の結果に等しい -/
 theorem setQuarter_layers_eq (s : Shape) (pos : QuarterPos) (q : Quarter) (l : Layer)

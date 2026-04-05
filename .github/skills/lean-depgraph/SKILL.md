@@ -5,116 +5,105 @@ metadata:
   argument-hint: '証明間の依存関係グラフを生成します'
 ---
 
-# 証明依存グラフの生成 (DepGraph)
+# 証明依存グラフスキル
 
-Lean の `Environment` API を使用して、プロジェクト内の定理・定義間の依存関係を有向グラフとして出力する。
-ソースコードの全文検索ではなく、コンパイル済み環境からメタプログラミングで依存を抽出するため高精度・低コスト。
+`Environment` API でコンパイル済み環境から定理・定義間の依存を高精度に抽出し、Mermaid / JSON で出力する。
 
-## 前提条件
+## スクリプト
 
-- **lean-setup** スキルでツールチェインが利用可能であること
-- プロジェクトがビルド可能であること（`lake build` が成功する状態）
-
-## 依存関係
-
+```powershell
+.github/skills/lean-depgraph/scripts/depgraph.ps1    # Windows
+.github/skills/lean-depgraph/scripts/depgraph.sh      # macOS / Linux
 ```
-lean-setup → lean-depgraph (内部で lake build depgraph → S2IL も自動ビルド)
-```
-
-## 手順
-
-### 1. スクリプトの実行
-
-シェル名を前置せず、スクリプトを直接実行すること。
-
-- **Windows**: `.github/skills/lean-depgraph/scripts/depgraph.ps1`
-- **macOS / Linux**: `.github/skills/lean-depgraph/scripts/depgraph.sh`
-
-### 2. オプション
 
 | オプション | デフォルト | 説明 |
 |---|---|---|
-| `-Private` / `--private` | off | **private 宣言を含める**（詳細把握用） |
+| `-Private` / `--private` | off | private 宣言を含める |
 | `-Json` / `--json` | off | JSON 形式で出力（デフォルト: Mermaid） |
 | `-Namespace <name>` / `--ns <name>` | `S2IL` | 対象モジュールプレフィックス |
-| `-TheoremsOnly` / `--theorems-only` | off | **定理のみ表示**（全容把握用、コンテキスト節約） |
+| `-TheoremsOnly` / `--theorems-only` | off | 定理のみ表示 |
 | `-Output <path>` / `--output <path>` | `.lake/depgraph.md` | 出力ファイルパス |
-| `-Root <name>` / `--root <name>` | （全体） | **起点宣言を指定**し、そこを含む部分グラフのみ出力 |
-| `-RootReverse` / `--root-reverse` | off | `--root` と併用。逆方向に辿る（依存元を追跟） |
-### 3. 使い分けの指針
+| `-Root <name>` / `--root <name>` | 全体 | 起点宣言を指定（部分グラフ） |
+| `-RootReverse` / `--root-reverse` | off | `-Root` と併用。依存元を逆方向に辿る |
+| `-SorryOnly` / `--sorry-only` | off | sorry 宣言のみ表示（sorry 間依存分析用） |
 
-| 目的 | 推奨オプション | 説明 |
-|---|---|---|
-| 全容の俯瞰 | `-TheoremsOnly` | 定理のみで依存関係をコンパクトに把握 |
-| 詳細な依存分析 | (デフォルト) | 定義も含めた完全な依存グラフ |
-| private を含む完全グラフ | `-Private` | 内部実装の依存も可視化 |
-| 後続の自動解析 | `-Json` | JSON 形式でプログラム的に処理 |
-| 特定モジュール限定 | `-Namespace S2IL.Behavior` | サブモジュールに絞り込み |
-| 定理が依存するものを追跟 | `-Root S2IL.Behavior.Rotate.Layer.rotateCW_four` | 指定宣言から依存先をBFSで辿る |
-| 定理を使う宣言を追跟 | `-Root S2IL.Behavior.Rotate.Layer.rotateCW -RootReverse` | 指定宣言に依存する宣言をBFSで辿る |
-### 4. 直接実行（lake exe）
+## サブエージェント向けレシピ
 
-スクリプトを介さず直接実行することも可能:
+### sorry 依存スナップショット（lean-sorry-snapshot の Step 3）
 
-```shell
-lake exe depgraph --theorems-only --output .lake/depgraph.md
-lake exe depgraph --json --output .lake/depgraph.json
-lake exe depgraph --private --ns S2IL.Behavior
-
-# 特定の定理を起点として依存先を辿る（この定理が何を使っているか）
-lake exe depgraph --root S2IL.Behavior.Rotate.Layer.rotateCW_four
-
-# 特定の定義を起点として依存元を辿る（この定義を誰が使っているか）
-lake exe depgraph --root S2IL.Behavior.Rotate.Layer.rotateCW --root-reverse
+```powershell
+.github/skills/lean-depgraph/scripts/depgraph.ps1 -SorryOnly -Json
 ```
 
-## 出力形式
+### 特定宣言の依存先追跡
 
-### Mermaid 形式（デフォルト）
-
-モジュールごとにサブグラフとしてグループ化された有向グラフ:
-
-```mermaid
-graph TD
-    subgraph S2IL.Behavior.Rotate
-        Layer_rotateCW["Layer.rotateCW  def"]
-        Layer_rotateCW_four["Layer.rotateCW_four  theorem"]
-    end
-    Layer_rotateCW_four --> Layer_rotateCW
+```powershell
+.github/skills/lean-depgraph/scripts/depgraph.ps1 -Root "S2IL.Foo.myThm" -Json
 ```
 
-- ノードラベル: `宣言名  種別`
-- sorry を含む宣言: 赤系スタイルで強調
-- エッジ: `A --> B` は「A が B に依存」を意味
+### 特定宣言の依存元追跡
+
+```powershell
+.github/skills/lean-depgraph/scripts/depgraph.ps1 -Root "S2IL.Foo.myDef" -RootReverse -Json
+```
+
+## 出力仕様
+
+**stdout** にサマリーブロック、ファイルにグラフ本体を出力する。
+
+```
+=== DEPGRAPH RESULT ===
+status: success|failed
+exit_code: 0
+output: .lake/depgraph.json
+=== DEPGRAPH STATISTICS ===
+  nodes: 42 (theorems: 15, other: 27)
+  edges: 87
+  sorry: 5 (independent: 2)
+=== END STATISTICS ===
+=== END DEPGRAPH ===
+```
 
 ### JSON 形式
 
 ```json
 {
-  "nodes": [
-    {"name": "Layer.rotateCW", "kind": "def", "module": "S2IL.Behavior.Rotate", "sorry": false, "private": false}
-  ],
-  "edges": [
-    {"from": "Layer.rotateCW_four", "to": "Layer.rotateCW"}
-  ]
+  "nodes": [{"name": "Layer.rotateCW", "kind": "def", "module": "S2IL.Behavior.Rotate", "sorry": false, "private": false}],
+  "edges": [{"from": "Layer.rotateCW_four", "to": "Layer.rotateCW"}]
 }
 ```
 
-## 構造化出力
+### パイプラインキャプチャ（PowerShell）
 
-スクリプトは結果を以下の形式で出力する:
+```powershell
+$output = .github/skills/lean-depgraph/scripts/depgraph.ps1 -SorryOnly -Json
+$text   = $output -join "`n"                           # 配列→文字列（$Matches を使うために必要）
+if ($text -match 'nodes: (\d+)')  { $nodes      = $Matches[1] }
+if ($text -match 'sorry: (\d+)')  { $sorryCount = $Matches[1] }
+# グラフ本体は stdout に含まれない → .lake/depgraph.json を読む
+$graph = Get-Content .lake/depgraph.json | ConvertFrom-Json
+```
 
-- **グラフ本体**: 指定パスまたは `.lake/depgraph.md` (`.json`)
-- **サマリー** (stdout): `=== DEPGRAPH RESULT ===` 〜 `=== END DEPGRAPH ===`
-- **統計情報**: ノード数・エッジ数・sorry 数
+▶ 注意: stdout はサマリー (~10行) のみ。`-Json` を省略すると出力先は `.lake/depgraph.md`（Mermaid 形式）になる。
 
-## 技術的な仕組み
+▶ 注意: stdout はサマリー (~10行) のみ。`-Json` を省略すると出力先は `.lake/depgraph.md`（Mermaid 形式）になる。
+```powershell
+$stats = .github/skills/lean-depgraph/scripts/depgraph.ps1 -SorryOnly -Json
+$g = Get-Content .lake/depgraph.json | ConvertFrom-Json
 
-1. `DepGraph.lean` が `import S2IL` により S2IL ライブラリの全モジュールを読み込む
-2. 実行時に `Lean.importModules` で `Environment` をロード
-3. `env.header.moduleData` からモジュール単位で宣言を走査（全文検索不要）
-4. `Expr.foldConsts` で各宣言の型・値に現れる定数参照を収集
-5. 対象モジュール内の宣言間のエッジのみを出力
+# 独立 sorry（出辺がないノード — 他 sorry に依存しない）
+$fromNames = $g.edges | Select-Object -ExpandProperty from -Unique
+$g.nodes | Where-Object { $fromNames -notcontains $_.name }
+```
+
+## 使い分け
+
+| 目的 | 推奨オプション |
+|---|---|
+| 全容の俯瞰 | `-TheoremsOnly` |
+| sorry 間依存の確認 | `-SorryOnly -Json` |
+| 特定定理の依存先 | `-Root <name>` |
+| 特定定義の利用箇所 | `-Root <name> -RootReverse` |
 
 ## トラブルシューティング
 

@@ -56,7 +56,7 @@ theorem paintQuarter_crystal (c color : Color) :
 /-- paintLayer は冪等である -/
 @[simp] theorem paintLayer_idempotent (l : Layer) (color : Color) :
         paintLayer (paintLayer l color) color = paintLayer l color := by
-    simp [paintLayer]
+    simp only [paintLayer, paintQuarter_idempotent]
 
 end Painter
 
@@ -66,7 +66,8 @@ namespace Shape
 def paint (s : Shape) (color : Color) : Shape :=
     let initLayers := s.layers.dropLast
     let topLyr := s.layers.getLast s.layers_ne
-    ⟨initLayers ++ [Painter.paintLayer topLyr color], by simp⟩
+    ⟨initLayers ++ [Painter.paintLayer topLyr color],
+        by simp only [ne_eq, List.append_eq_nil_iff, List.cons_ne_self, and_false, not_false_eq_true]⟩
 
 -- ============================================================
 -- 定理
@@ -75,6 +76,8 @@ def paint (s : Shape) (color : Color) : Shape :=
 /-- paint は冪等である -/
 @[simp] theorem paint_idempotent (s : Shape) (color : Color) :
         (s.paint color).paint color = s.paint color := by
-    ext1; simp [paint, Painter.paintLayer_idempotent]
+    ext1; simp only [paint, ne_eq, List.cons_ne_self, not_false_eq_true,
+        List.dropLast_append_of_ne_nil, List.dropLast_singleton, List.append_nil,
+        List.getLast_append_of_ne_nil, List.getLast_singleton, Painter.paintLayer_idempotent]
 
 end Shape

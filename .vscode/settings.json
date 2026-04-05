@@ -4,25 +4,23 @@
     "editor.insertSpaces": true,
     "editor.tabSize": 4,
     "files.exclude": {
-        "**/.lake": true
+        "**/.lake": true,
     },
     "search.exclude": {
-        "**/.lake": true
+        "**/.lake": true,
     },
     "chat.tools.terminal.enableAutoApprove": true,
     "chat.tools.terminal.autoApprove": {
         ".github/skills/lean-setup/scripts/setup.ps1": true,
         ".github/skills/lean-setup/scripts/setup.sh": true,
         ".github/skills/lean-build/scripts/build.ps1": true,
-        ".github/skills/lean-build/scripts/build.ps1 -Clean": true,
-        ".github/skills/lean-build/scripts/build.ps1 -Update": true,
         ".github/skills/lean-build/scripts/build.sh": true,
-        ".github/skills/lean-build/scripts/build.sh --clean": true,
-        ".github/skills/lean-build/scripts/build.sh --update": true,
         ".github/skills/lean-run/scripts/run.ps1": true,
         ".github/skills/lean-run/scripts/run.sh": true,
         ".github/skills/lean-depgraph/scripts/depgraph.ps1": true,
         ".github/skills/lean-depgraph/scripts/depgraph.sh": true,
+        ".github/skills/lean-repl/scripts/repl.ps1": true,
+        ".github/skills/lean-repl/scripts/repl.sh": true,
         "lean --print-decl": true,
         "ConvertFrom-Json": true,
         "ConvertTo-Json": true,

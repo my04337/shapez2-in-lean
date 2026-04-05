@@ -32,6 +32,25 @@ String.toList_ofList : (String.ofList l).toList = l
 
 ## タクティクの使い分け
 
+### `simp only` 原則 — 裸 `simp` を使わない
+
+最終証明では**裸 `simp` を禁止**し、`simp only [...]` を使う。Mathlib の `@[simp]` DB は更新のたびに変わるため、裸 `simp` に依存する証明は将来壊れうる。
+
+**安定化ワークフロー**:
+1. 探索時に `simp` / `simp_all` で閉じることを確認
+2. `simp?` / `simp_all?` に置き換えて `Try this:` から補題リストを取得
+3. `simp only [lemma1, lemma2, ...]` に置換
+
+**REPL での確認**:
+```jsonl
+{"cmd": "theorem foo : ... := by simp?", "env": 0}
+```
+→ 出力の `Try this: simp only [...]` をそのまま使用
+
+**`simp_all` の扱い**: `simp_all only [...]` に置換するか、仮定を明示した手動証明に書き換える。Mathlib 補題が不足して `simp_all only` に変換できない場合は据え置き可（実例: QuarterPos.lean の 1 箇所）。
+
+**`lean-simp-stabilizer` サブエージェント**: ファイル単位の自動安定化が可能。ファイルパスと行番号を渡すと REPL で `simp?` を実行し、`simp only [...]` への書き換えを生成する。
+
 ### `decide` — 有限型の全パターン網羅
 
 有限の列挙型に関する命題は `decide` で自動証明できる。`cases` で分解した後の個別ケースにも有効。
@@ -228,7 +247,7 @@ cases hm with
 
 ## `Finset.any` の不在と `decide (∃ ...)` パターン
 
-Lean 4 v4.29.0-rc8 / Mathlib に `Finset.any` は存在しない。
+Lean 4 v4.29.0 / Mathlib に `Finset.any` は存在しない。
 `List.any` を Finset 上の操作に置き換える場合は `decide (∃ q ∈ cc, P q)` を使う。
 
 ```lean
@@ -385,3 +404,35 @@ induction n with
 | zero => simp
 | succ k ih => omega  -- succ k の形で線形式が閉じる場合
 ```
+
+---
+
+## v4.29.0 での注目変更点（補足）
+
+### `lean4checker` が Lean 4 本体に統合
+
+v4.29.0 より、これまで独立リポジトリだった `lean4checker` が Lean 4 本体に統合された。
+`lean4checker` は import されたモジュールの証明が `sorry` に依存していないことを
+カーネルレベルで再確認するツール。
+
+```
+# lake を使ったビルド実行例
+lake exe lean4checker Mathlib
+```
+
+本プロジェクトでは大きな変更なし。今後 `lean4checker` を別途インストールする必要はない。
+
+### Lake: Git 依存パッケージ更新後の `.hash` ファイル自動クリーン
+
+`lake update` でパッケージの revision を変更すると、以前は古い `.hash` ファイルが残留し、
+ビルドトレースが不正になることがあった（[関連 Zulip スレッド](https://leanprover.zulipchat.com/#narrow/channel/113488-general/topic/ProofWidgets.20not.20up-to-date)）。
+
+v4.29.0 では `updateGitPkg` が `git clean -xf` をチェックアウト後に実行するようになり修正された。
+**`lake update` 後にビルドが正常に通らない場合は `.lake` ディレクトリを手動で削除する必要は原則なくなった。**
+
+### `inferInstanceAs` のドキュメント改善
+
+`inferInstanceAs` の内部実装が `InstanceNormalForm` → `WrapInstance` にリネームされた（内部変更のみ）。
+ユーザー向けには、ドキュメントの表現が
+「instance normal form に正規化する」→「expected type に合わせてインスタンスをラップする」
+と改善された。動作は実質的に変わらない。

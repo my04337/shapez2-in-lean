@@ -20,7 +20,8 @@ private def pinPushTest (inputCode expected : String) : Bool :=
 /-- ピン押し結果が none になることを検証するヘルパー（vanilla4）-/
 private def pinPushNone (inputCode : String) : Bool :=
     match Shape.ofString? inputCode with
-    | some s => (s.pinPush GameConfig.vanilla4).isNone
+    | some s =>
+        (s.pinPush GameConfig.vanilla4).isNone
     | none => false
 
 -- ============================================================
@@ -110,6 +111,10 @@ private def pinPushNone (inputCode : String) : Bool :=
 -- 最上位が結晶 → 砕け散り後にtruncate
 -- CrCrCrCr:RgRgRgRg:SbSbSbSb:crcrcrcr → P-P-P-P-:CrCrCrCr:RgRgRgRg:SbSbSbSb
 #guard pinPushTest "CrCrCrCr:RgRgRgRg:SbSbSbSb:crcrcrcr" "P-P-P-P-:CrCrCrCr:RgRgRgRg:SbSbSbSb"
+
+-- 全4レイヤ結晶 → ピン押し後に全て砕け散る → ピンのみの1レイヤに → P-P-P-P-
+-- crcrcrcr:cgcgcgcg:cbcbcbcb:cwcwcwcw → P-P-P-P-
+#guard pinPushTest "crcrcrcr:cgcgcgcg:cbcbcbcb:cwcwcwcw" "P-P-P-P-"
 
 -- ============================================================
 -- 結晶のクロスレイヤ結合 + truncation

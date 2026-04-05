@@ -1,1 +1,5 @@
 /.lake
+/.repl
+# Scratch/ 配下の一時ファイル（.lean, .jsonl はバージョン管理対象外）
+Scratch/*.lean
+Scratch/*.jsonl

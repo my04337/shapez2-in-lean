@@ -9,152 +9,165 @@ metadata:
   argument-hint: '定理の反例チェックを体系的に行います'
 ---
 
-# 反例の体系的チェック
+# 反例チェックスキル
 
-定理や補題の真偽を、コーディング着手前に体系的な反例探索で確認する。
-偽定理への投資を早期に打ち切るための防御的プロセス。
+定理の真偽をコーディング着手前に体系的な反例探索で確認し、偽定理への投資を早期に打ち切る。
 
-## 動機
+## GameConfig 層数の指針
 
-過去の証明作業で、偽定理の早期発見が繰り返し遅れた。
-`shouldProcessBefore` の非反対称性も、構造クラスタ上の反対称性も、
-体系的な反例チェックを行えば早期に特性を把握できた。
+反例チェックの層数は **速度と網羅性のトレードオフ** で選択する。
+
+| ティア | GameConfig | 層数 | 想定 Shape 数 | 所要時間目安 | 用途 |
+|--------|------------|------|---------------|-------------|------|
+| **デフォルト** | `vanilla4` | 4 | ~6,500–65,000 | **2–25 s** | 試行錯誤フェーズの高速チェック |
+| **拡張** | `vanilla5` | 5 | ~59,000–1M+ | **30–60 s** | 最終確認・コミット前検証 |
+| **ストレス** | 8L カスタム | 8 | ~65,000 | **~17 s** | 複雑な性質の最終砦（最小ジェネレータ使用） |
+
+### 使い分けルール
+
+1. **通常の反例探索**: `vanilla4` (4L) をデフォルトで使用
+2. **最終確認**: 証明を sorry → 定理に昇格させる前に `vanilla5` (5L) で再検証
+3. **高リスク性質**: ソート順序・3 要素相互作用など複雑な不変量は `vanilla5` + 8L ストレスも実施
+4. `stress8` (8L) は大規模だが 4^n ジェネレータなら 65,536 shapes / ~17s で現実的
+
+### ジェネレータの選択
+
+| ジェネレータ | Shape 数 (4L) | Shape 数 (5L) | 特徴 |
+|-------------|---------------|---------------|------|
+| 2方角×2パターン (4^n) | 256 | 1,024 | 最も高速・ストレス向き |
+| 2方角×3パターン (9^n) | 6,561 | 59,049 | 色付き Quarter を含む標準的な検証 |
+| 4方角×2パターン (16^n) | 65,536 | 1,048,576 | 方角の網羅性が高いがコスト大 |
+
+> **ベンチマーク根拠** (2025-06-07 測定):
+> 4L/9^4=2.5s, 5L/9^5=31s, 4L/16^4=25s, 8L/4^8=17s
 
 ## 手順
 
 ### 1. 量化変数の特定
 
-定理のシグネチャから量化された変数を特定する。
-
-```lean
--- 例: theorem foo (l : Layer) (q : QuarterPos) : P l q
--- 量化変数: l : Layer, q : QuarterPos
-```
+定理のシグネチャから量化された変数・仮定・結論を明確にする。
 
 ### 2. テストケースの列挙
-
-変数の型ごとに境界値・退化ケースを列挙する:
 
 | 型 | テストケース |
 |---|---|
 | `List α` | `[]`, `[x]`, `[x, y]` |
 | `Layer` | 各方角の組み合わせ（最大 16 パターン） |
-| `Shape` | 空シェイプ、1レイヤ、2レイヤ、3レイヤ |
+| `Shape` | 空、1〜4 レイヤ（デフォルト vanilla4） |
 | `QuarterPos` | `.ne`, `.nw`, `.se`, `.sw` (全4値) |
 | `Nat` | `0`, `1`, `2`, 大きい値 |
-| `Bool` | `true`, `false` |
 | `Option α` | `none`, `some x` |
 
 有限型は全探索が望ましい。
 
-### 3. 機械検証
+### 2a. 有限型の高速パス
 
-#### `#eval` による検証（計算可能な場合）
+量化された変数が **有限型**（`Bool`, `Fin n`, カスタム `inductive` で `[DecidableEq]`/`[Fintype]` あり等）の場合、`decide` による全探索を第一選択とする。
+
+**判定基準**: 型が以下のいずれかに該当すれば有限型として全探索可能:
+- `Fin n` (`n` が小さい — 目安 `n ≤ 256`)
+- `Bool`, `Unit`, `Empty`
+- `Decidable` インスタンスを持つ `Prop`
+- カスタム `inductive` で要素数が有限（`[Fintype]` あり）
+- 上記の `Prod` / `Sum` / `Option`
 
 ```lean
--- Bool を返す関数で検証
+-- 全探索: decide で一発
+example : ∀ b : Bool, b || !b = true := by decide
+
+-- Fintype.elems で列挙 → #eval で全パターンテスト
+#eval (Fintype.elems : Finset (Fin 4)).toList.all fun i =>
+  i.val + 0 == i.val
+```
+
+**無限型の場合**: `decide` は使えないので既存の `#eval` 具体値テスト（下記 Step 3）にフォールバックする。
+
+### 3. 機械検証
+
+#### 【推奨】REPL による高速検証（~11-20s 初回起動）
+
+```jsonl
+{"cmd": "#eval Direction.all.map Direction.rotate180", "env": 0}
+```
+
+```powershell
+.github/skills/lean-repl/scripts/repl.ps1 -InputFile Scratch/commands.jsonl
+```
+
+▶ stdout 例（`data` に結果リスト）:
+
+```
+{"env":0}
+{"messages":[{"severity":"info","data":"[Direction.sw, Direction.nw, Direction.ne, Direction.se]"}],"env":1}
+```
+
+`data` フィールドが期待値と異なれば反例あり。
+
+#### `#eval` による検証
+
+```lean
 #eval do
     let cases := [case1, case2, case3]
     for c in cases do
         if !(checkProperty c) then
             IO.println s!"反例発見: {c}"
-            return
-    IO.println "全ケース通過"
 ```
 
-#### `decide` による全探索（有限型の場合）
+#### `decide` による全探索（有限型）
 
 ```lean
--- 有限型なら Decidable で全探索
 example : ∀ q : QuarterPos, P q := by decide
 ```
 
-#### テスト用スクラッチファイル
+#### Scratch ファイル（大規模チェック用 fallback）
 
-検証コードが大きい場合:
+複数定義・10 行超の検証コードは `Scratch/` に配置して `lake env lean` で実行:
 
-1. 一時ファイル `Test/Scratch.lean` に検証コードを書く
-2. 実行:
-   - **Windows**: `lake env lean Test/Scratch.lean`
-   - **macOS / Linux**: `lake env lean Test/Scratch.lean`
-3. エラーがなければ反例なし（探索範囲内で）
+```lean
+-- Scratch/FooCheck.lean
+import S2IL
+open Direction
+#eval Direction.all.all (fun d => d.rotate180.rotate180 == d)
+-- true なら全ケース OK、false なら反例あり（個別出力で特定する）
+```
+
+```powershell
+lake env lean Scratch/FooCheck.lean
+```
+
+### 4. 結果の判定
+
+| 結果 | 意味 |
+|---|---|
+| `#eval` が期待値と一致 | その入力では成立（反例なし） |
+| `#eval` が予期しない値を返す | **反例発見** → シグネチャを修正 |
+| `decide` が `true` | 有限全探索で成立を確認 |
+| `decide` が `false` または `Decidable` インスタンスなし | 反例あり / 全探索不可 → `#eval` で個別探索 |
+| REPL の `messages[].severity == "error"` | 型エラー等 → コードを修正してから再テスト |
+
+```powershell
+lake env lean Scratch/FooCheck.lean
+```
 
 ### 4. 反例発見時の対応
 
-反例が見つかった場合:
+1. **最小化**: 不要な変数を除去
+2. **修正案**: 仮定の追加 / 結論の弱化 / 撤回
+3. **修正後の再チェック**
 
-1. **反例の最小化**: 不要な変数を除去し、最小の反例を特定
-2. **定理の修正案を検討**:
-   - 仮定の追加（`h : condition →` を前提に加える）
-   - 結論の弱化（等式を不等式にする等）
-   - 定理自体の撤回（偽なら証明しない）
-3. **修正後の定理を再度反例チェック**
+### 5. N 要素の相互作用チェック（3-cycle 検出）
 
-### 5. 反例が見つからない場合
+ペアワイズ検証だけでは不十分。3 要素以上の組み合わせも確認する。
 
-- 「探索範囲内では反例なし」と報告
-- 探索範囲の記録: どの変数でどの範囲を試したか
-- 証明着手の判断材料とする（保証ではない）
-
-## このプロジェクトでの具体例
-
-### Shape / Layer の検証
-
-```lean
--- Layer は Quarter × 4 の構造
--- 全 QuarterPos を列挙して検証
-#eval do
-    let positions : List QuarterPos := [.ne, .nw, .se, .sw]
-    for p in positions do
-        -- 各方角での性質を検証
-        ...
-```
-
-### 操作の可換性チェック
-
-```lean
--- rotate と cut が可換かチェック
-#eval do
-    let layers := generateTestLayers  -- テスト用レイヤ一覧
-    for l in layers do
-        if rotate (cut l) ≠ cut (rotate l) then
-            IO.println s!"反例: {l}"
-```
-
-### N 要素の相互作用チェック（3-cycle 検出パターン）
-
-ペアワイズな性質（2 要素間の反例チェック）だけでは不十分なことがある。
-**3 要素以上の相互作用** も体系的にチェックすべき。
-
-典型パターン: 2-cycle 禁止だが 3-cycle が存在する場合
-
-```lean
--- shouldProcessBefore の 3-cycle 検出
--- ペアワイズな 2-cycle チェックでは見逃す
-#eval do
-    let units := [a, b, w]  -- テスト用 FallingUnit
-    -- 全順列で sortFallingUnits の結果を検証
-    for perm in units.permutations do
-        let sorted := sortFallingUnits perm
-        -- 期待される順序と比較
-        ...
-```
-
-**教訓 (2026-06 sortFU_preserves_spb_order)**:
-- 定理の仮定が「ペアワイズ」の条件しか要求しない場合、3 要素以上の組み合わせで反例が出る
-- グリーディアルゴリズム（最初のマッチで停止する）の定理では、
-  第三者が処理を遮るケースを必ずチェックする
-- 反例: `l = [w, a, b]` where spb: a→b→w→a (3-cycle) → insertSorted が期待通り動かない
+**教訓**: `shouldProcessBefore` の 3-cycle（`l = [w, a, b]`）はペアワイズでは見抜けない。
+グリーディアルゴリズムの定理では第三者による遮断ケースを必ずチェックする。
 
 ## Gotchas
 
-- `#eval` は `Decidable` でない `Prop` には使えない。`Bool` 値を返す関数に変換する
-- `BEq` と `DecidableEq` は異なる。`BEq` は計算的等価性、`DecidableEq` は命題的等価性
-- 全探索は型のカーディナリティが大きいと実用的でない。
-  `Layer` は 4方角 × 各方角の取り得る値なので、現実的な範囲で抽出する
+- `#eval` は `Decidable` でない `Prop` には使えない → `Bool` 関数に変換
 - `sorry` を含むコードの `#eval` 結果は信頼できない
+- `BEq` ≠ `DecidableEq`（計算的等価性 vs 命題的等価性）
 
-## 関連スキル
+## 関連
 
-- **lean-proof-planning**: 反例チェックを含む証明戦略の全体フロー
-- **lean-proof-progress**: 反例チャックの結果を進捗管理に反映
+**lean-proof-planning**（証明戦略の全体フロー） / **lean-theorem-checker** サブエージェント（自動反例チェック）

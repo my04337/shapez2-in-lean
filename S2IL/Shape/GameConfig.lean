@@ -29,7 +29,7 @@ Shapez2 ではゲームモードによってシェイプのレイヤ数上限が
 |---|---|---|
 | `GameConfig.vanilla4` | 4 | 通常モード (Normal / Hard) |
 | `GameConfig.vanilla5` | 5 | 高難度モード (Insane) |
-| `GameConfig.stress16` | 16 | ストレステスト専用 |
+| `GameConfig.stress8` | 8 | ストレステスト専用 |
 
 ## 使い方
 
@@ -65,10 +65,10 @@ def vanilla5 : GameConfig where
     maxLayers := 5
     maxLayers_pos := by omega
 
-/-- ストレステスト用の 16 レイヤ設定
+/-- ストレステスト用の 8 レイヤ設定
     層ごとの力業 (`cases`) が不可能な規模で性質を検証するために使用する -/
-def stress16 : GameConfig where
-    maxLayers := 16
+def stress8 : GameConfig where
+    maxLayers := 8
     maxLayers_pos := by omega
 
 end GameConfig
@@ -104,8 +104,8 @@ theorem truncate_of_le (s : Shape) (config : GameConfig)
     exact List.take_of_length_le h
 
 /-- truncate は冪等である -/
-theorem truncate_idempotent (s : Shape) (config : GameConfig) :
+@[simp] theorem truncate_idempotent (s : Shape) (config : GameConfig) :
         (s.truncate config).truncate config = s.truncate config := by
-    ext1; simp [truncate, List.take_take]
+    ext1; simp only [truncate, List.take_take, Std.le_refl, Nat.min_eq_left]
 
 end Shape

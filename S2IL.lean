@@ -19,6 +19,7 @@ import S2IL.Behavior.CrystalGenerator
 import S2IL.Behavior.Painter
 import S2IL.Behavior.Cutter
 import S2IL.Behavior.ColorMixer
+import S2IL.Behavior.SettledState
 
 -- Machine: 加工装置
 import S2IL.Machine.Machine

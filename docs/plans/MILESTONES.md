@@ -40,7 +40,7 @@ Shapez2 in Lean (S2IL) の開発マイルストーンと達成状況を管理す
 | 1-2-1 | **Half-Destroyer** (切断処理機): West Half を削除する関数 | ✅ 完了 | |
 | 1-2-2 | **Cutter** (切断機): West Half と East Half に分割する関数 | ✅ 完了 | |
 | 1-2-3 | **Swapper** (スワップ機): 2 つのシェイプの West Half を入れ替える関数 | ✅ 完了 | |
-| 1-2-4 | 切断系操作の基本性質の証明 | 🔄 進行中 | `eastHalf_westHalf_combine` ✅, `swap_self` ✅, `combineHalves_self` ✅, `cut_rotate180_comm` sorry (Gravity 等変性に依存) |
+| 1-2-4 | 切断系操作の基本性質の証明 | 🔄 進行中 | `eastHalf_westHalf_combine` ✅, `swap_self` ✅, `combineHalves_self` ✅, `cut_rotate180_comm` sorry（`process_rotate180` の sorry 1件に依存。証明チェーン再構築中。詳細: [gravity-proof-execution-plan.md](gravity-proof-execution-plan.md) Wave 3〜5） |
 
 #### 回転 (Rotating)
 
@@ -55,7 +55,7 @@ Shapez2 in Lean (S2IL) の開発マイルストーンと達成状況を管理す
 
 | # | タスク | 状態 |
 |---|---|---|
-| 1-2-9 | **Stacker** (積層機): 2 つのシェイプを積み重ねる関数 (レイヤ上限の切り捨てを含む) | ✅ 完了 |
+| 1-2-9 | **Stacker** (積層機): 2 つのシェイプを積み重ねる関数 (レイヤ上限の切り捨てを含む) | ✅ 完了 | レイヤ数上限制約 (`h_bottom`, `h_top`) 追加済み。工程5a (`shatterOnTruncate`) 削除済み |
 | 1-2-10 | 積み重ね時の落下ルールの形式化 (空象限・欠落パーツの落下挙動) | ✅ 完了 |
 
 #### 着色 (Painting)
@@ -70,7 +70,7 @@ Shapez2 in Lean (S2IL) の開発マイルストーンと達成状況を管理す
 
 | # | タスク | 状態 | 備考 |
 |---|---|---|---|
-| 1-2-14 | **Pin Pusher** (ピン押し機): 第 1 レイヤの非空象限の下にピンを追加する関数 | ✅ 完了 | |
+| 1-2-14 | **Pin Pusher** (ピン押し機): 第 1 レイヤの非空象限の下にピンを追加する関数 | ✅ 完了 | レイヤ数上限制約 (`h_s`) 追加済み |
 | 1-2-15 | **Crystal Generator** (結晶製造機): 液剤でギャップ・ピンを結晶に充填する関数 | ✅ 完了 | |
 | 1-2-16 | 結晶の **Fragile** 性 (落下・切断による Shatter) の形式化 | ✅ 完了 | `isFragile`, `QuarterPos`, `CrystalBond`, `Shatter` 全実装済み。回転等変性の証明完了（BFS 完全性をポテンシャル関数で証明、sorry 0件） |
 
@@ -149,3 +149,31 @@ Shapez2 in Lean (S2IL) の開発マイルストーンと達成状況を管理す
 | 🔄 進行中 | 現在作業中 |
 | ⬜ 未着手 | まだ開始していない |
 | ⏸ 保留 | 依存関係・方針待ちなどで一時停止中 |
+
+---
+
+## Appendix ツールチェイン整備計画
+
+証明計画とは独立した、エージェント支援・開発基盤の整備項目。
+
+| # | 整備項目 | 優先 | 概要 |
+|---|---|---|---|
+| T-1 | `lean-mathlib-search` スキルの新設 | ✅ 完了 | SKILL.md・`lean-lemma-finder` エージェント・`references/` (mathlib-search-guide.md, batteries-catalog.md) を整備済み。`#leansearch` / `#loogle` / `exact?` / `apply?` の4段階パイプライン・命名規則予測・Fin/Iff ゴールパターンを収録。 |
+| T-2 | S2IL 補題インデックスの整備 | 中→**高** | `docs/lean/s2il-lemma-index.md` を新設。`gravity-proof-cheatsheet.md` 廃止に伴いその内容を吸収。詳細: [gravity-proof-execution-plan.md](gravity-proof-execution-plan.md) Wave 0 (0-1〜0-5) |
+| T-3 | 等変性・交換則証明パターン集の拡充 | 中→**高** | `docs/knowledge/equivariance-proof-patterns.md` を新設し、既存の個別 knowledge を統合。詳細: [gravity-proof-execution-plan.md](gravity-proof-execution-plan.md) Wave 0 (0-6〜0-9) |
+| T-4 | `lean-mathlib-search` — `lean-lsp-mcp` 統合評価 | 低 | MCP ツール `lean_state_search` 等を用いた REPL 不要の補題検索と既存フローの比較・移行判断。REPL は現在デフォルトモードで全 Mathlib タクティク・検索操作が利用可能（`-NoPickle` ~60s の制約は解消済み）なので優先度は低い（要 MCP サーバー導入評価）。 |
+| T-5 | `batteries-catalog.md` の継続的更新フロー整備 | 低 | `lean-lemma-finder` で新補題を発見した際に `batteries-catalog.md` へ追記する運用を定着させる。Phase 2 以降で `List`・`Finset` 系補題が増えた時点で特に有効。`lean-proof-progress` スキルとの連携セッション終了チェックリストへの組み込みを検討。 |
+
+
+### T-1 詳細: `lean-mathlib-search` スキル
+
+> 旧 `docs/lean/repl-guide.md` の `[IDEA-1]` より移管。
+
+現在 UC-8 として `#leansearch` / `#loogle` / `exact?` / `apply?` の使い方を `repl-guide.md` に収録しているが、
+Mathlib 補題の探索が証明作業の主要ボトルネックになる段階（`stack_rotate180_comm` 等、`List`・`Finset`・`Nat` 系補題を大量に必要とするフェーズ）では、
+専用スキル `.github/skills/lean-mathlib-search/SKILL.md` を設けて以下を体系化することを検討する。
+
+- クエリ生成ガイド（ゴール状態 → 自然言語クエリへの変換パターン）
+- `#leansearch` / `#loogle` / `exact?` / `apply?` の優先順位と使い分けフロー
+- `mathlib-reference-guide.md` との連携（分野別 API 索引の活用方法）
+- 外部 MCP（`lean-lsp-mcp` の `lean_state_search` 等）との機能比較と移行基準

@@ -5,74 +5,53 @@ metadata:
   argument-hint: 'Lean プロジェクトを実行して結果を確認します'
 ---
 
-# Lean プロジェクトの実行と検証
+# Lean Run スキル
 
-`lake exe` でビルド済み実行ファイルを起動し、出力を確認・検証する。
+> ⚠️ **このスキルは `lake exe <target>` 専用**。  
+> `Scratch/` ファイルを直接実行したい場合は **`lake env lean --run Scratch/MyFile.lean`** を使うこと（`--run` はファイル名より前）。  
+> 本スキルを `Scratch/` 実行に使っても動作しない。
 
-## 前提条件
+`lean-build` → `lake exe` の順にビルド＋実行し、出力を検証する。
+証明作業や lint チェックが目的なら **lean-build** で十分。本スキルは `Main.lean` の出力確認用。
 
-- **lean-build** スキルでプロジェクトがビルド済みであること
-- `lakefile.toml` に `[[lean_exe]]` が定義されていること
+## スクリプト
 
-## 依存関係
-
+```powershell
+.github/skills/lean-run/scripts/run.ps1          # Windows
+.github/skills/lean-run/scripts/run.sh            # macOS / Linux
 ```
-lean-setup → lean-build → lean-run
-```
-
-スクリプトは内部で lean-build (→ lean-setup) を自動呼び出しするため、
-通常は lean-run のスクリプトだけ実行すれば PATH 解決からビルド・実行まで一括で行われる。
-
-## 手順
-
-### 1. 実行スクリプトの実行
-
-ビルド → 実行 → (任意) 出力検証をまとめて行う。
-シェル名を前置せず、スクリプトを直接実行すること。
-
-- **Windows**: `.github/skills/lean-run/scripts/run.ps1`
-- **macOS / Linux**: `.github/skills/lean-run/scripts/run.sh`
-
-オプション:
 
 | オプション | デフォルト | 説明 |
 |---|---|---|
 | `-Target <name>` / `--target <name>` | `s2il` | 実行ターゲット名 |
-| `-Expected <string>` / `--expected <string>` | *(なし)* | 期待する出力文字列 (指定時のみ検証) |
+| `-Expected <string>` / `--expected <string>` | — | 期待する出力文字列（検証用） |
 
-### 2. 実行ターゲットの確認
+## 出力仕様
 
-`lakefile.toml` の `[[lean_exe]]` セクション:
+**stdout** にビルド診断サマリー + 実行結果サマリーを出力する。
 
-```toml
-[[lean_exe]]
-name = "s2il"
-root = "Main"
+```
+=== BUILD DIAGNOSTICS ===
+...（lean-build と同形式）
+=== END DIAGNOSTICS ===
+
+=== RUN RESULT ===
+status: success|failure|skipped
+exit_code: 0
+target: s2il
+log: .lake/run-log.txt
+output_lines: 12
+---
+<実行出力 (先頭50行)>
+=== END RUN ===
 ```
 
-### 3. 手動実行
+| フィールド | 内容 |
+|---|---|
+| `status: skipped` | ビルド失敗のため実行せずスキップ |
+| `status: success` | 実行成功（exit 0） |
+| `status: failure` | 実行失敗（非ゼロ終了） |
+| `output_lines` | 総行数（50行超は先頭50行のみ表示） |
+| `verification` | `-Expected` 指定時のみ: `pass` / `fail` |
 
-```shell
-lake exe s2il
-```
-
-`lake exe` は必要に応じて自動でビルドも行うため、単独での実行も可能。
-
-## 構造化出力
-
-スクリプトはビルド診断サマリーに加え、実行結果を以下の形式で出力する:
-
-- **ビルド診断**: `=== BUILD DIAGNOSTICS ===` 〜 `=== END DIAGNOSTICS ===`
-- **実行結果**: `=== RUN RESULT ===` 〜 `=== END RUN ===`
-- **実行ログ**: `.lake/run-log.txt`
-
-ビルド失敗時は実行がスキップされ、`status: skipped` が報告される。
-
-診断の詳細な分析・トリアージは **lean-diagnostics** スキルを参照。
-
-## トラブルシューティング
-
-- 実行ファイルが見つからない → `lakefile.toml` の `[[lean_exe]]` 定義を確認
-- 実行時エラー → `.lake/run-log.txt` で詳細を確認
-- `lake` が見つからない → **lean-setup** スキルを参照
-- ビルドエラー → サマリーの `[error]` 行を確認、**lean-build** スキルを参照
+実行ログ全体は `.lake/run-log.txt` に保存される。

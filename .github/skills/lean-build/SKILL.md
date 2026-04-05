@@ -5,26 +5,16 @@ metadata:
   argument-hint: 'Lean プロジェクトのビルドを実行します'
 ---
 
-# Lean プロジェクトのビルド
+# Lean Build スキル
 
-Lake を使用して Lean 4 プロジェクトをビルドする。
+PATH 解決・ビルド・診断 JSONL 生成を 1 コマンドで実行する。
 
-## 前提条件
+## スクリプト
 
-- **lean-setup** スキルでツールチェインが利用可能であること
-- プロジェクトルートに `lakefile.toml` (または `lakefile.lean`) が存在すること
-
-## 手順
-
-### 1. ビルドスクリプトの実行
-
-PATH 解決 → ビルドをまとめて行う。
-シェル名を前置せず、スクリプトを直接実行すること。
-
-- **Windows**: `.github/skills/lean-build/scripts/build.ps1`
-- **macOS / Linux**: `.github/skills/lean-build/scripts/build.sh`
-
-オプション:
+```powershell
+.github/skills/lean-build/scripts/build.ps1          # Windows
+.github/skills/lean-build/scripts/build.sh            # macOS / Linux
+```
 
 | オプション | 説明 |
 |---|---|
@@ -32,79 +22,76 @@ PATH 解決 → ビルドをまとめて行う。
 | `-Update` / `--update` | `lake update` 後にビルド |
 | `-Target <name>` / `--target <name>` | 特定ターゲットのみビルド |
 
-### 2. ビルドターゲットの確認
+## 出力仕様
 
-`lakefile.toml` の `defaultTargets` でデフォルト対象が定義されている:
+**stdout** にマーカー区切りサマリー、ファイルに詳細を出力する。
 
-```toml
-defaultTargets = ["s2il"]
+| 出力先 | 内容 |
+|---|---|
+| stdout | `=== BUILD DIAGNOSTICS ===` 〜 `=== END DIAGNOSTICS ===` |
+| `.lake/build-log.txt` | `lake build` の全ログ |
+| `.lake/build-diagnostics.jsonl` | 診断メッセージ（1行1JSON） |
 
-[[lean_lib]]
-name = "S2IL"
+### サマリーブロック
 
-[[lean_exe]]
-name = "s2il"
-root = "Main"
+```
+=== BUILD DIAGNOSTICS ===
+status: success|failure
+exit_code: 0
+errors: 0    sorries: 3    warnings: 0    info: 12
+log: .lake/build-log.txt
+diagnostics: .lake/build-diagnostics.jsonl
+
+[SORRY] S2IL/Behavior/Gravity.lean:5019:16: declaration uses `sorry`
+=== END DIAGNOSTICS ===
 ```
 
-### 3. VS Code からのビルド
+### JSONL フィールド
 
-Ctrl+Shift+B で `lake build` タスクが実行される (`.vscode/tasks.json` で設定済み)。
+```json
+{"file":"S2IL/Behavior/Gravity.lean","line":5019,"col":16,"severity":"warning","message":"declaration uses `sorry`","isSorry":true}
+```
 
-## 構造化出力
+| フィールド | 内容 |
+|---|---|
+| `file` | ソースファイルの相対パス |
+| `line` / `col` | 行・列番号 |
+| `severity` | `"error"` / `"warning"` / `"info"` |
+| `message` | 診断メッセージ本文 |
+| `isSorry` | `true` = sorry 由来の warning |
 
-スクリプトはビルド結果を以下の形式で出力する:
-
-- **マーカー区切りサマリー** (stdout): `=== BUILD DIAGNOSTICS ===` 〜 `=== END DIAGNOSTICS ===`
-- **全ログ**: `.lake/build-log.txt`
-- **診断 JSONL**: `.lake/build-diagnostics.jsonl`（1行1JSON）
-
-サマリーにはエラー・sorry・警告の件数と、優先度順の診断メッセージ（最大20件）が含まれる。
-
-診断の詳細な分析・トリアージは **lean-diagnostics** スキルを参照。
-
-## 単一ファイルの高速ビルド
-
-証明作業中は特定ファイル 1 つだけの高速フィードバックが必要な場合がある。
-プロジェクト全体のビルドは時間がかかるため、単一ファイルのチェックが有効。
-
-### lake env lean による単一ファイルチェック
+### パイプラインキャプチャ（PowerShell）
 
 ```powershell
-# Windows
-lake env lean S2IL/Behavior/Gravity.lean 2>&1 | Select-String -Pattern "error|sorry"
+$output = .github/skills/lean-build/scripts/build.ps1
+$text   = $output -join "`n"                                  # 配列→文字列（$Matches を使うために必要）
+if ($text -match 'status: (\w+)')  { $status  = $Matches[1] }
+if ($text -match 'errors: (\d+)')  { $errors  = [int]$Matches[1] }
+if ($text -match 'sorries: (\d+)') { $sorries = [int]$Matches[1] }
+# $status  → "success" / "failure"
+# $errors  → 0 ならビルド成功、>0 なら修正必要
+# $sorries → 残り sorry 数（証明進捗の指標）
 ```
 
-```bash
-# macOS / Linux
-lake env lean S2IL/Behavior/Gravity.lean 2>&1 | grep -E 'error|sorry'
+▶ 注意: サマリーは stdout のみ。`Write-Host` では取得できないため `$output = script` 形式で使う。
+$status = ($output | Select-String "^status:").Line
+
+$diags = Get-Content .lake/build-diagnostics.jsonl | ConvertFrom-Json
+$diags | Where-Object { $_.severity -eq "error" }                          # エラー
+$diags | Where-Object { $_.isSorry -eq $true }                             # sorry
+$diags | Where-Object { $_.severity -eq "warning" -and !$_.isSorry }       # 非sorry warning
 ```
 
-### sorry 行番号と周辺コンテキストの確認
+## 単一ファイルの高速チェック
 
 ```powershell
-# Windows: sorry の位置を行番号付きで表示
-Select-String -Pattern '\bsorry\b' -Path S2IL/Behavior/Gravity.lean | Format-Table LineNumber, Line
+lake env lean S2IL/Behavior/Gravity.lean 2>&1 | Select-String "error|sorry"
 ```
-
-```bash
-# macOS / Linux
-grep -n '\bsorry\b' S2IL/Behavior/Gravity.lean
-```
-
-### 使い分けの指針
 
 | 状況 | 推奨方法 |
 |---|---|
 | 証明作業中の頻繁なチェック | `lake env lean <file>` |
-| 全体の整合性確認 | ビルドスクリプト（通常ビルド） |
+| 全体の整合性確認 | ビルドスクリプト |
 | CI / リリース前 | ビルドスクリプト + `--update` |
 
-## トラブルシューティング
-
-- `lake` が見つからない → **lean-setup** スキルを参照
-- ビルドエラー → サマリーの `[error]` 行を確認、詳細は `.lake/build-log.txt` を参照
-- sorry 検出 → サマリーの `[sorry]` 行で未証明箇所を特定
-- 依存解決エラー → `--update` オプションで再ビルド
-- toolchain バージョン不一致 → `lean-toolchain` の内容を確認
-- Mathlib のビルドが遅い → README.md の「バージョンアップとビルド高速化」セクションを参照
+詳細な診断分析・トリアージは **lean-diagnostics** スキルを参照。

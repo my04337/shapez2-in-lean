@@ -19,16 +19,14 @@ import S2IL.Shape.GameConfig
 2. **上側結晶の砕け散り**: 上側の全結晶を除去する（クラスタ伝播なし、下側は影響されない）
 3. **落下**: 浮遊している落下単位を下方に移動させる
 4. **レイヤ上限超過時の処理**:
-   a. 超過レイヤの脆弱結晶クラスタを砕け散らせる
-   b. レイヤ数を上限に切り詰める
-   c. 再度落下処理を実行する
+   a. レイヤ数を上限に切り詰める
+   b. 再度落下処理を実行する
 
 ## 積層 (Stacking) との連携
 
 - 下側シェイプは落下や砕け散りの影響を受けない
 - 上側シェイプの結晶は積み重ねにより **すべて** 砕け散る
 - レイヤ数制限は引数で渡される `GameConfig` の `maxLayers` に従う
-
 仕様の詳細は `docs/shapez2/falling.md` セクション 8 を参照。
 -/
 
@@ -41,12 +39,13 @@ namespace Stacker
 /-- 上側シェイプを下側シェイプの直上に単純配置する。
     結果のレイヤは `bottom.layers ++ top.layers` -/
 def placeAbove (bottom top : Shape) : Shape :=
-    ⟨bottom.layers ++ top.layers, by simp [bottom.layers_ne]⟩
+    ⟨bottom.layers ++ top.layers,
+        by simp only [ne_eq, List.append_eq_nil_iff, bottom.layers_ne, false_and, not_false_eq_true]⟩
 
 /-- placeAbove 後のレイヤ数は下側と上側のレイヤ数の和 -/
 theorem placeAbove_layerCount (bottom top : Shape) :
         (placeAbove bottom top).layerCount = bottom.layerCount + top.layerCount := by
-    simp [placeAbove, Shape.layerCount, List.length_append]
+    simp only [Shape.layerCount, placeAbove, List.length_append]
 
 -- ============================================================
 -- ステップ 2: 上側結晶の砕け散り
@@ -73,7 +72,8 @@ namespace Shape
 
 /-- 2つのシェイプを積み重ねる。
     `bottom` の上に `top` を配置し、砕け散り・落下・レイヤ制限を適用する。
-    結果が全空の場合は `none` を返す -/
+    結果が全空の場合は `none` を返す。
+    超過レイヤには工程2により結晶が存在しないため、truncate 前の shatter は不要。 -/
 def stack (bottom top : Shape) (config : GameConfig) : Option Shape := do
     -- 1. 単純配置
     let combined := Stacker.placeAbove bottom top
@@ -86,11 +86,10 @@ def stack (bottom top : Shape) (config : GameConfig) : Option Shape := do
         return afterGravity
     else
         -- 5. レイヤ上限超過時の処理
-        -- 5a. 超過レイヤの結晶クラスタを砕け散らせる
-        let afterTruncShatter := afterGravity.shatterOnTruncate config.maxLayers
-        -- 5b. レイヤ数を上限に切り詰める
-        let truncated := afterTruncShatter.truncate config
-        -- 5c. 再落下
+        -- 超過レイヤは上側シェイプの一部だが、工程2で結晶は砕け散り済みのため shatter 不要
+        -- 5a. レイヤ数を上限に切り詰める
+        let truncated := afterGravity.truncate config
+        -- 5b. 再落下
         truncated.gravity
 
 end Shape

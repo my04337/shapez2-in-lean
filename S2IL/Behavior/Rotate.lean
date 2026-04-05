@@ -83,22 +83,22 @@ theorem rotate180_eq_rotateCW_rotateCW (l : Layer) :
 /-- 反時計回り回転の後に時計回り回転を適用すると元に戻る -/
 @[simp] theorem rotateCCW_rotateCW (l : Layer) :
         l.rotateCCW.rotateCW = l := by
-    simp [rotateCCW, rotateCW_four]
+    simp only [rotateCCW, rotateCW_four]
 
 /-- 時計回り回転の後に反時計回り回転を適用すると元に戻る -/
 @[simp] theorem rotateCW_rotateCCW (l : Layer) :
         l.rotateCW.rotateCCW = l := by
-    simp [rotateCCW, rotateCW_four]
+    simp only [rotateCCW, rotateCW_four]
 
 /-- 180° 回転を 2 回適用すると元に戻る -/
 @[simp] theorem rotate180_rotate180 (l : Layer) :
         l.rotate180.rotate180 = l := by
-    simp [rotate180, rotateCW_four]
+    simp only [rotate180, rotateCW_four]
 
 /-- 反時計回り 90° 回転を 4 回適用すると元に戻る -/
 @[simp] theorem rotateCCW_four (l : Layer) :
         l.rotateCCW.rotateCCW.rotateCCW.rotateCCW = l := by
-    simp [rotateCCW]
+    simp only [rotateCCW, rotateCW_four]
 
 /-- 時計回り回転と 180° 回転は可換である -/
 @[simp] theorem rotateCW_rotate180_comm (l : Layer) :
@@ -111,9 +111,9 @@ theorem rotate180_eq_rotateCW_rotateCW (l : Layer) :
     cases l; rfl
 
 /-- 時計回り回転と反時計回り回転は可換である -/
-@[simp] theorem rotateCW_rotateCCW_comm (l : Layer) :
+theorem rotateCW_rotateCCW_comm (l : Layer) :
         l.rotateCW.rotateCCW = l.rotateCCW.rotateCW := by
-    simp [rotateCCW]
+    simp only [rotateCCW, rotateCW_four]
 
 /-- 180° 回転は反時計回り 90° 回転の 2 回適用と等しい -/
 theorem rotate180_eq_rotateCCW_rotateCCW (l : Layer) :
@@ -128,17 +128,17 @@ theorem rotateCW_three_eq_rotateCCW (l : Layer) :
 /-- 回転しても空レイヤの空性は保存される -/
 @[simp] theorem isEmpty_rotateCW (l : Layer) :
         l.rotateCW.isEmpty = l.isEmpty := by
-    simp [rotateCW, isEmpty, Bool.and_comm, Bool.and_assoc, Bool.and_left_comm]
+    simp only [isEmpty, rotateCW, Bool.and_comm, Bool.and_left_comm, Bool.and_assoc]
 
 /-- 反時計回り回転しても空レイヤの空性は保存される -/
 @[simp] theorem isEmpty_rotateCCW (l : Layer) :
         l.rotateCCW.isEmpty = l.isEmpty := by
-    simp [rotateCCW, isEmpty_rotateCW]
+    simp only [rotateCCW, isEmpty_rotateCW]
 
 /-- 180° 回転しても空レイヤの空性は保存される -/
 @[simp] theorem isEmpty_rotate180 (l : Layer) :
         l.rotate180.isEmpty = l.isEmpty := by
-    simp [rotate180, isEmpty_rotateCW]
+    simp only [rotate180, isEmpty_rotateCW]
 
 end Layer
 
@@ -170,51 +170,58 @@ def rotate180 (s : Shape) : Shape := s.mapLayers Layer.rotate180
 /-- 時計回り 90° 回転を 4 回適用すると元に戻る -/
 @[simp] theorem rotateCW_four (s : Shape) :
         s.rotateCW.rotateCW.rotateCW.rotateCW = s := by
-    ext; simp [rotateCW, mapLayers, List.map_map]
+    ext; simp only [rotateCW, mapLayers, List.map_map, List.getElem?_map,
+      Option.map_eq_some_iff, Function.comp_apply, Layer.rotateCW_four, exists_eq_right]
 
 /-- 反時計回り回転の後に時計回り回転を適用すると元に戻る -/
 @[simp] theorem rotateCCW_rotateCW (s : Shape) :
         s.rotateCCW.rotateCW = s := by
-    ext; simp [rotateCCW, rotateCW, mapLayers, List.map_map]
+    ext; simp only [rotateCW, mapLayers, rotateCCW, List.map_map, List.getElem?_map,
+      Option.map_eq_some_iff, Function.comp_apply, Layer.rotateCCW_rotateCW, exists_eq_right]
 
 /-- 時計回り回転の後に反時計回り回転を適用すると元に戻る -/
 @[simp] theorem rotateCW_rotateCCW (s : Shape) :
         s.rotateCW.rotateCCW = s := by
-    ext; simp [rotateCW, rotateCCW, mapLayers, List.map_map]
+    ext; simp only [rotateCCW, mapLayers, rotateCW, List.map_map, List.getElem?_map,
+      Option.map_eq_some_iff, Function.comp_apply, Layer.rotateCW_rotateCCW, exists_eq_right]
 
 /-- 180° 回転を 2 回適用すると元に戻る -/
 @[simp] theorem rotate180_rotate180 (s : Shape) :
         s.rotate180.rotate180 = s := by
-    ext; simp [rotate180, mapLayers, List.map_map]
+    ext; simp only [rotate180, mapLayers, List.map_map, List.getElem?_map,
+      Option.map_eq_some_iff, Function.comp_apply, Layer.rotate180_rotate180, exists_eq_right]
 
 /-- 反時計回り 90° 回転を 4 回適用すると元に戻る -/
 @[simp] theorem rotateCCW_four (s : Shape) :
         s.rotateCCW.rotateCCW.rotateCCW.rotateCCW = s := by
-    ext; simp [rotateCCW, mapLayers, List.map_map]
+    ext; simp only [rotateCCW, mapLayers, List.map_map, List.getElem?_map,
+      Option.map_eq_some_iff, Function.comp_apply, Layer.rotateCCW_four, exists_eq_right]
 
 /-- 時計回り回転と 180° 回転は可換である -/
 @[simp] theorem rotateCW_rotate180_comm (s : Shape) :
         s.rotateCW.rotate180 = s.rotate180.rotateCW := by
-    ext; simp [rotateCW, rotate180, mapLayers, List.map_map]
+    ext; simp only [rotate180, mapLayers, rotateCW, List.map_map, List.getElem?_map,
+      Option.map_eq_some_iff, Function.comp_apply, Layer.rotateCW_rotate180_comm]
 
 /-- 反時計回り回転と 180° 回転は可換である -/
 @[simp] theorem rotateCCW_rotate180_comm (s : Shape) :
         s.rotateCCW.rotate180 = s.rotate180.rotateCCW := by
-    ext; simp [rotateCCW, rotate180, mapLayers, List.map_map]
+    ext; simp only [rotate180, mapLayers, rotateCCW, List.map_map, List.getElem?_map,
+      Option.map_eq_some_iff, Function.comp_apply, Layer.rotateCCW_rotate180_comm]
 
 /-- 回転してもレイヤ数は変わらない -/
 @[simp] theorem layerCount_rotateCW (s : Shape) :
         s.rotateCW.layerCount = s.layerCount := by
-    simp [layerCount, rotateCW, mapLayers]
+    simp only [layerCount, rotateCW, mapLayers, List.length_map]
 
 /-- 反時計回り回転してもレイヤ数は変わらない -/
 @[simp] theorem layerCount_rotateCCW (s : Shape) :
         s.rotateCCW.layerCount = s.layerCount := by
-    simp [layerCount, rotateCCW, mapLayers]
+    simp only [layerCount, rotateCCW, mapLayers, List.length_map]
 
 /-- 180° 回転してもレイヤ数は変わらない -/
 @[simp] theorem layerCount_rotate180 (s : Shape) :
         s.rotate180.layerCount = s.layerCount := by
-    simp [layerCount, rotate180, mapLayers]
+    simp only [layerCount, rotate180, mapLayers, List.length_map]
 
 end Shape

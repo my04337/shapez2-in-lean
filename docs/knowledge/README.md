@@ -13,7 +13,7 @@
 | ファイル | 概要 |
 |---|---|
 | [lean-proof-tips.md](lean-proof-tips.md) | Lean 4 証明の実践的 Tips。タクティク使い分け（`rw` vs `simp only`、`decide`、`<;>`）・`List.mapM` 回避・`String` 証明の注意点・帰納法パターン・`rcases` など |
-| [mathlib-batteries-tips.md](mathlib-batteries-tips.md) | Mathlib / Batteries 活用ノウハウ。利用実績のある補題（`List.map_set`・`BEq.comm` 等）・型クラス（`Std.Commutative` 等）・置換パターン・`simp` 最適化・`List.Perm` |
+| [mathlib-batteries-tips.md](mathlib-batteries-tips.md) | Mathlib / Batteries 活用の設計知識・制約。`simp` 最適化・`List.Perm`・`decide`/`omega` の注意事項・`Std.Commutative` 等の型クラスインスタンス登録パターン・`Finset` 設計制約。補題カタログ・置換パターンは [`.github/skills/lean-mathlib-search/references/batteries-catalog.md`](../../.github/skills/lean-mathlib-search/references/batteries-catalog.md) を参照 |
 | [string-roundtrip-proof.md](string-roundtrip-proof.md) | `ofString? (toString x) = some x` 形式のラウンドトリップ定理の証明パターン。`String.splitOn` / `intercalate` の展開不可問題、`List Char` レベルの完全自前実装戦略 |
 
 ### ドメイン固有の証明分析（特定機能の証明に取り組む際に参照）
@@ -33,7 +33,8 @@
 | 知見の種類 | 追記先 |
 |---|---|
 | Lean 4 のタクティク・構文・型クラスに関する一般的な使い分けや落とし穴 | `lean-proof-tips.md` |
-| Mathlib / Batteries の具体的な補題名・型クラス・置換パターン | `mathlib-batteries-tips.md` |
+| Mathlib / Batteries の具体的な補題名・置換パターン（新規発見） | `.github/skills/lean-mathlib-search/references/batteries-catalog.md` |
+| Mathlib 型クラス・`simp`・`Finset` に関する設計判断・制約 | `mathlib-batteries-tips.md` |
 | `String` ↔ `List Char` ブリッジや `ofString?/toString` ラウンドトリップの実装戦略 | `string-roundtrip-proof.md` |
 | BFS/クリスタル結合の等変性に関するパターン・アンチパターン | `bfs-equivariance-proof.md` |
 | Gravity の `process_rotate180` 証明・`shouldProcessBefore`・`sortFU`・`foldl` 等変性 | `gravity-equivariance-analysis.md` |
@@ -63,4 +64,5 @@
 ## 関連リンク
 
 - [docs/plans/gravity-rotate180-proof-plan.md](../plans/gravity-rotate180-proof-plan.md) — `process_rotate180` 証明の現在の計画
+- [.github/skills/lean-mathlib-search/references/batteries-catalog.md](../../.github/skills/lean-mathlib-search/references/batteries-catalog.md) — 発見済み補題カタログ・手動定義との置換パターン
 - [.github/skills/](../../.github/skills/) — 証明ワークフロー支援 Skills（lean-proof-planning、lean-proof-progress 等）

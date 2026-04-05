@@ -144,7 +144,7 @@ private def zipLayersWithPad (eastLayers westLayers : List Layer) : List Layer :
 def combineHalves (east west : Shape) : Shape :=
     let combined := zipLayersWithPad east.layers west.layers
     match combined with
-    | []      => ⟨[Layer.empty], by simp⟩  -- ありえないが安全策
+    | []      => ⟨[Layer.empty], by simp only [ne_eq, List.cons_ne_self, not_false_eq_true]⟩  -- ありえないが安全策
     | b :: us => ⟨b :: us, List.cons_ne_nil b us⟩
 
 -- ============================================================
@@ -233,7 +233,7 @@ def swap (s1 s2 : Shape) : Option Shape × Option Shape :=
 private theorem zipLayersWithPad_go_eastWest (ls : List Layer) :
         zipLayersWithPad.go (ls.map Layer.eastHalf) (ls.map Layer.westHalf) = ls := by
     induction ls with
-    | nil => simp [zipLayersWithPad.go]
+    | nil => simp only [List.map_nil, zipLayersWithPad.go]
     | cons l rest ih =>
         simp only [List.map, zipLayersWithPad.go, Layer.combineEastWest_eastHalf_westHalf, ih]
 
@@ -249,13 +249,13 @@ theorem eastHalf_westHalf_combine (s : Shape) :
 /-- halfDestroy の結果は cut の東側出力と一致する -/
 theorem halfDestroy_eq_cut_east (s : Shape) :
         s.halfDestroy = s.cut.1 := by
-    simp [halfDestroy, cut]
+    simp only [halfDestroy, cut]
 
 /-- 同一リストに zipLayersWithPad.go を適用すると元のリストに戻る -/
 private theorem zipLayersWithPad_go_self (ls : List Layer) :
         zipLayersWithPad.go ls ls = ls := by
     induction ls with
-    | nil => simp [zipLayersWithPad.go]
+    | nil => simp only [zipLayersWithPad.go]
     | cons l rest ih =>
         simp only [zipLayersWithPad.go, ih]
         cases l; rfl
@@ -279,14 +279,16 @@ private theorem normalize_rotate180 (s : Shape) :
 /-- Shape.eastHalf と rotate180 は westHalf に変換される -/
 theorem eastHalf_rotate180 (s : Shape) :
         s.eastHalf.rotate180 = s.rotate180.westHalf := by
-    ext; simp [eastHalf, rotate180, westHalf, mapLayers, List.map_map,
-              Layer.eastHalf_rotate180]
+    ext; simp only [rotate180, mapLayers, eastHalf, List.map_map,
+              List.getElem?_map, Option.map_eq_some_iff, Function.comp_apply,
+              Layer.eastHalf_rotate180, westHalf]
 
 /-- Shape.westHalf と rotate180 は eastHalf に変換される -/
 theorem westHalf_rotate180 (s : Shape) :
         s.westHalf.rotate180 = s.rotate180.eastHalf := by
-    ext; simp [westHalf, rotate180, eastHalf, mapLayers, List.map_map,
-              Layer.westHalf_rotate180]
+    ext; simp only [rotate180, mapLayers, westHalf, List.map_map,
+              List.getElem?_map, Option.map_eq_some_iff, Function.comp_apply,
+              Layer.westHalf_rotate180, eastHalf]
 
 /-- settleAfterCut と rotate180 は可換 -/
 private theorem settleAfterCut_rotate180 (s : Shape) :
@@ -328,6 +330,7 @@ theorem swap_self (s : Shape) :
         s.swap s = (s.shatterOnCut.settleAfterCut.bind normalize,
                     s.shatterOnCut.settleAfterCut.bind normalize) := by
     simp only [swap]
-    cases h : s.shatterOnCut.settleAfterCut <;> simp_all [combineHalves_self]
+    cases h : s.shatterOnCut.settleAfterCut <;>
+        simp_all only [Option.bind_none, combineHalves_self, Option.bind_some]
 
 end Shape
