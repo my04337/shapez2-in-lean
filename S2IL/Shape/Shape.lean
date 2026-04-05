@@ -66,16 +66,16 @@ def upper (s : Shape) : List Layer := s.layers.tail
 -- ============================================================
 
 /-- 1 レイヤのシェイプ -/
-@[inline] def single (l1 : Layer) : Shape := ⟨[l1], by simp⟩
+@[inline] def single (l1 : Layer) : Shape := ⟨[l1], by simp only [ne_eq, List.cons_ne_self, not_false_eq_true]⟩
 
 /-- 2 レイヤのシェイプ（l1 が下、l2 が上） -/
-@[inline] def double (l1 l2 : Layer) : Shape := ⟨[l1, l2], by simp⟩
+@[inline] def double (l1 l2 : Layer) : Shape := ⟨[l1, l2], by simp only [ne_eq, reduceCtorEq, not_false_eq_true]⟩
 
 /-- 3 レイヤのシェイプ（l1 が最下、l3 が最上） -/
-@[inline] def triple (l1 l2 l3 : Layer) : Shape := ⟨[l1, l2, l3], by simp⟩
+@[inline] def triple (l1 l2 l3 : Layer) : Shape := ⟨[l1, l2, l3], by simp only [ne_eq, reduceCtorEq, not_false_eq_true]⟩
 
 /-- 4 レイヤのシェイプ（l1 が最下、l4 が最上） -/
-@[inline] def quadruple (l1 l2 l3 l4 : Layer) : Shape := ⟨[l1, l2, l3, l4], by simp⟩
+@[inline] def quadruple (l1 l2 l3 l4 : Layer) : Shape := ⟨[l1, l2, l3, l4], by simp only [ne_eq, reduceCtorEq, not_false_eq_true]⟩
 
 -- ============================================================
 -- 基本操作
@@ -144,7 +144,7 @@ private theorem dropTrailingEmpty_of_getLast_not_empty :
     | [l], _, hl => by
         have : l.isEmpty = false := hl
         unfold dropTrailingEmpty dropTrailingEmpty
-        simp [this]
+        simp only [this, Bool.false_eq_true, ↓reduceIte]
     | l :: r :: rest, _, hl => by
         have h_ne : r :: rest ≠ [] := List.cons_ne_nil r rest
         have h_last : ((r :: rest).getLast h_ne).isEmpty = false := by
@@ -183,7 +183,7 @@ private theorem dropTrailingEmpty_map (f : Layer → Layer)
         rw [← ih]
         cases dropTrailingEmpty rest with
         | nil => rw [hf l]; cases l.isEmpty <;> rfl
-        | cons _ _ => simp [List.map]
+        | cons _ _ => simp only [List.map]
 
 /-- isEmpty を保存する写像で mapLayers した結果の normalize は可換 -/
 theorem normalize_map_layers (s : Shape) (f : Layer → Layer)
@@ -193,7 +193,7 @@ theorem normalize_map_layers (s : Shape) (f : Layer → Layer)
     rw [← dropTrailingEmpty_map f hf s.layers]
     cases dropTrailingEmpty s.layers with
     | nil => rfl
-    | cons a as => simp [ofLayers]
+    | cons a as => simp only [ofLayers, Option.map_some, List.map_cons]
 
 -- ============================================================
 -- シリアライズ・デシリアライズ
@@ -296,18 +296,18 @@ private theorem splitOnColon_noColon (cs : List Char) (h : ':' ∉ cs) :
         have hc : c ≠ ':' := fun heq => h (heq ▸ .head _)
         have hrest : ':' ∉ rest := fun hi => h (.tail _ hi)
         have h_if : (c == ':') = false := beq_eq_false_iff_ne.mpr hc
-        simp only [splitOnColon, h_if, ih hrest]; simp
+        simp only [splitOnColon, h_if, ih hrest]; simp only [Bool.false_eq_true, ↓reduceIte]
 
 /-- `:` を含まない接頭辞に `:` :: 後続を追加した場合の `splitOnColon` -/
 private theorem splitOnColon_append_colon (l1 l2 : List Char) (h : ':' ∉ l1) :
         splitOnColon (l1 ++ ':' :: l2) = l1 :: splitOnColon l2 := by
     induction l1 with
-    | nil => simp [splitOnColon]
+    | nil => simp only [↓Char.isValue, List.nil_append, splitOnColon, BEq.rfl, ↓reduceIte]
     | cons c rest ih =>
         have hc : c ≠ ':' := fun heq => h (heq ▸ .head _)
         have hrest : ':' ∉ rest := fun hi => h (.tail _ hi)
         have h_if : (c == ':') = false := beq_eq_false_iff_ne.mpr hc
-        simp only [List.cons_append, splitOnColon, h_if, ih hrest]; simp
+        simp only [List.cons_append, splitOnColon, h_if, ih hrest]; simp only [Bool.false_eq_true, ↓reduceIte]
 
 /-- `splitOnColon` と `List.intercalate [':']` のラウンドトリップ -/
 private theorem splitOnColon_intercalate
@@ -337,7 +337,7 @@ private theorem splitOnColon_intercalate
 private theorem parseLayers_map_eq (ls : List Layer) :
         parseLayers (ls.map (fun l => l.toString.toList)) = some ls := by
     induction ls with
-    | nil => simp [parseLayers]
+    | nil => simp only [List.map_nil, parseLayers]
     | cons l rest ih =>
         simp only [List.map_cons, parseLayers, String.ofList_toList,
                    Layer.ofString_toString, Option.bind_some, ih]
