@@ -7,29 +7,13 @@
 
 ---
 
-## 0. お知らせ: レイヤ数上限制約の導入 (2026-04-02)
+## 0. お知らせ: レイヤ数上限制約の撤廃 (2026-04-05)
 
-`Shape.stack` と `Shape.pinPush` にレイヤ数上限の前提条件が導入されました。
+`Shape.stack` と `Shape.pinPush` のレイヤ数上限の前提条件は **撤廃済み** (コミット `48d25ae`)。
 
-| 変更 | 概要 |
-|---|---|
-| `Shape.stack` | `_h_bottom : bottom.layerCount ≤ config.maxLayers` および `_h_top : top.layerCount ≤ config.maxLayers` を追加。工程5a (`shatterOnTruncate`) を削除（上側結晶は工程2で砕け散り済みのため不要） |
-| `Shape.pinPush` | `_h_s : s.layerCount ≤ config.maxLayers` を追加 |
-
-**本チートシートの対象である `process_rotate180` 証明パイプラインへの影響はありません。**
-`Gravity.process` は `stack`/`pinPush` を使用せず、`settle_foldl_eq` も無関係です。
-
-ただし、将来 `stack_rotate180_comm` や `pinPush_rotate180_comm` を証明する際には、
-`gravity_rotate180_comm` をその内部で使用することになります（両者とも内部で `gravity` を呼ぶため）。
-また、レイヤ数上限制約により `truncate` 前の `shatterOnTruncate` が stack で不要になったことで、
-`stack_rotate180_comm` の証明パイプラインが簡素化されます:
-
-```
-変更前: placeAbove_r180 → shatterTopCrystals_r180 → gravity_r180 → shatterOnTruncate_r180 → truncate_r180 → gravity_r180
-変更後: placeAbove_r180 → shatterTopCrystals_r180 → gravity_r180 → truncate_r180 → gravity_r180
-```
-
-前提条件 `h_bottom`/`h_top` と `layerCount_rotate180` の組み合わせでレイヤ数制約の保存が自明。
+- `_h_bottom`, `_h_top`, `_h_s` 引数を削除
+- `Machine.lean` の `if h : layerCount ≤ ...` 分岐を除去
+- 将来の `stack_rotate180_comm` / `pinPush_rotate180_comm` の証明パイプラインが簡素化
 
 ---
 
