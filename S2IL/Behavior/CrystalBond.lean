@@ -178,7 +178,7 @@ private theorem getDir_rotate180 (l : Layer) (d : Direction) :
 /-- Shape.layers と rotate180 の関係 -/
 private theorem layers_rotate180 (s : Shape) :
         s.rotate180.layers = s.layers.map Layer.rotate180 := by
-    simp [Shape.rotate180, Shape.mapLayers]
+    simp only [Shape.rotate180, Shape.mapLayers]
 
 /-- getQuarter と rotate180 の可換性 -/
 private theorem getQuarter_rotate180 (s : Shape) (pos : QuarterPos) :
@@ -187,7 +187,7 @@ private theorem getQuarter_rotate180 (s : Shape) (pos : QuarterPos) :
     rw [List.getElem?_map]
     cases s.layers[pos.layer]? with
     | none => rfl
-    | some l => simp [getDir_rotate180]
+    | some l => simp only [Option.map_some, getDir_rotate180]
 
 /-- isBondedInLayer は rotate180 で不変 -/
 theorem isBondedInLayer_rotate180 (s : Shape) (p1 p2 : QuarterPos) :
@@ -225,7 +225,7 @@ private theorem quarterPos_beq_rotate180 (p q : QuarterPos) :
         (p.rotate180 == q.rotate180) = (p == q) := by
     show (p.rotate180.layer == q.rotate180.layer && p.rotate180.dir == q.rotate180.dir) =
          (p.layer == q.layer && p.dir == q.dir)
-    simp [QuarterPos.rotate180, dir_beq_rotate180']
+    simp only [QuarterPos.rotate180, dir_beq_rotate180']
 
 /-- List.any は rotate180 のマッピングで保存される -/
 private theorem list_any_map_rotate180 (l : List QuarterPos) (p : QuarterPos) :
@@ -274,7 +274,7 @@ private theorem bfs_rotate180 (s : Shape)
     | zero => rfl
     | succ n ih =>
         cases queue with
-        | nil => simp [bfs]
+        | nil => simp only [bfs, List.map_nil]
         | cons pos rest =>
             -- queue.map を明示的に cons 形式にしてから bfs を展開
             show bfs s.rotate180 (allPos.map QuarterPos.rotate180)
@@ -299,7 +299,7 @@ private theorem bfs_rotate180 (s : Shape)
 theorem allValid_rotate180_eq (s : Shape) :
         QuarterPos.allValid s.rotate180 = QuarterPos.allValid s := by
     unfold QuarterPos.allValid
-    simp [Shape.layerCount_rotate180]
+    simp only [Shape.layerCount_rotate180]
 
 -- ============================================================
 -- crystalCluster の rotate180 等変性（mapped allPos 版）
@@ -355,7 +355,7 @@ private theorem bfs_vis_subset (s : Shape) (allPos vis queue : List QuarterPos)
             split
             · exact ih vis rest h_vis
             · exact ih (pos :: vis) (rest ++ _)
-                    (by rw [List.any_cons]; simp [h_vis])
+                    (by rw [List.any_cons]; simp only [h_vis, Bool.or_true])
 
 /-- BFS は fuel > 0 なら start を結果に含む -/
 private theorem bfs_contains_start (s : Shape) (allPos : List QuarterPos)
@@ -367,7 +367,7 @@ private theorem bfs_contains_start (s : Shape) (allPos : List QuarterPos)
         simp only [bfs, List.any]
         -- start ∉ [] なので処理される
         exact bfs_vis_subset s allPos [start] _ n start
-            (by rw [List.any_cons]; simp [BEq.rfl])
+            (by rw [List.any_cons]; simp only [BEq.rfl, List.any_nil, Bool.or_false])
 
 /-- BFS 結果の各要素は、初期 vis に含まれるか、
     初期 queue のある要素から BondReachable である -/
@@ -389,7 +389,7 @@ private theorem bfs_sound (s : Shape) (allPos vis queue : List QuarterPos)
               match ih vis rest h with
               | .inl h_vis => exact .inl h_vis
               | .inr ⟨q, h_q, h_reach⟩ =>
-                  exact .inr ⟨q, by rw [List.any_cons]; simp [h_q], h_reach⟩
+                  exact .inr ⟨q, by rw [List.any_cons]; simp only [h_q, Bool.or_true], h_reach⟩
             · -- pos ∉ vis: 処理
               intro h
               match ih (pos :: vis) (rest ++ _) h with
@@ -398,7 +398,7 @@ private theorem bfs_sound (s : Shape) (allPos vis queue : List QuarterPos)
                   cases h_eq : (pos == p) with
                   | true =>
                       have h_pos_eq_p := eq_of_beq h_eq
-                      exact .inr ⟨pos, by rw [List.any_cons]; simp [BEq.rfl],
+                      exact .inr ⟨pos, by rw [List.any_cons]; simp only [BEq.rfl, Bool.true_or],
                                   h_pos_eq_p ▸ BondReachable.refl⟩
                   | false =>
                       rw [h_eq, Bool.false_or] at h'
@@ -407,14 +407,14 @@ private theorem bfs_sound (s : Shape) (allPos vis queue : List QuarterPos)
                   rw [List.any_append] at h_q_mem
                   cases Bool.or_eq_true_iff.mp h_q_mem with
                   | inl h_rest =>
-                      exact .inr ⟨q, by rw [List.any_cons]; simp [h_rest], h_reach⟩
+                      exact .inr ⟨q, by rw [List.any_cons]; simp only [h_rest, Bool.or_true], h_reach⟩
                   | inr h_neigh =>
                       rw [List.any_filter, List.any_eq_true] at h_neigh
                       obtain ⟨a, _, h_pred⟩ := h_neigh
                       simp only [Bool.and_eq_true] at h_pred
                       obtain ⟨⟨h_bonded, _⟩, h_aeq⟩ := h_pred
                       have := eq_of_beq h_aeq; subst this
-                      exact .inr ⟨pos, by rw [List.any_cons]; simp [BEq.rfl],
+                      exact .inr ⟨pos, by rw [List.any_cons]; simp only [BEq.rfl, Bool.true_or],
                                   .step h_bonded h_reach⟩
 
 -- ============================================================
@@ -457,14 +457,14 @@ theorem allValid_any_rotate180 (s : Shape) (p : QuarterPos) :
     | true =>
         have h_lt := (allValid_any_iff_layer s p).mp h
         exact (allValid_any_iff_layer s p.rotate180).mpr
-            (by simp [QuarterPos.rotate180]; exact h_lt)
+            (by simp only [QuarterPos.rotate180]; exact h_lt)
     | false =>
         cases h' : (QuarterPos.allValid s).any (· == p.rotate180) with
         | false => rfl
         | true =>
             have h_lt := (allValid_any_iff_layer s p.rotate180).mp h'
-            simp [QuarterPos.rotate180] at h_lt
-            exact absurd ((allValid_any_iff_layer s p).mpr h_lt) (by simp [h])
+            simp only [QuarterPos.rotate180] at h_lt
+            exact absurd ((allValid_any_iff_layer s p).mpr h_lt) (by simp only [h, Bool.false_eq_true, not_false_eq_true])
 
 /-- (allValid s).map r180 のメンバーシップは allValid s と同じ -/
 private theorem allValid_map_rotate180_any (s : Shape) (p : QuarterPos) :
@@ -477,15 +477,15 @@ private theorem allValid_map_rotate180_any (s : Shape) (p : QuarterPos) :
         rw [List.any_eq_true]
         -- p.r180 ∈ allValid s を示し、p.r180.r180 = p を使う
         have h_r180_mem := (allValid_any_iff_layer s p.rotate180).mpr
-            (by simp [QuarterPos.rotate180]; exact h_lt)
+            (by simp only [QuarterPos.rotate180]; exact h_lt)
         rw [List.any_eq_true] at h_r180_mem
         obtain ⟨x, h_x_mem, h_x_eq⟩ := h_r180_mem
         exact ⟨x.rotate180, List.mem_map.mpr ⟨x, h_x_mem, rfl⟩, by
             have := eq_of_beq h_x_eq; subst this
-            simp [QuarterPos.rotate180_rotate180, BEq.rfl]⟩
+            simp only [QuarterPos.rotate180_rotate180, BEq.rfl]⟩
     | false =>
         have h_ge : ¬(p.layer < s.layerCount) := by
-            intro h_lt; exact absurd ((allValid_any_iff_layer s p).mpr h_lt) (by simp [h])
+            intro h_lt; exact absurd ((allValid_any_iff_layer s p).mpr h_lt) (by simp only [h, Bool.false_eq_true, not_false_eq_true])
         -- p ∉ allValid s → p ∉ (allValid s).map r180
         cases h' : ((QuarterPos.allValid s).map QuarterPos.rotate180).any (· == p) with
         | false => rfl
@@ -498,7 +498,7 @@ private theorem allValid_map_rotate180_any (s : Shape) (p : QuarterPos) :
             have := eq_of_beq h_x_eq; subst this
             have h_a_valid := (allValid_any_iff_layer s a).mp
                 (List.any_eq_true.mpr ⟨a, h_a_mem, BEq.rfl⟩)
-            simp at h_a_valid
+            simp only at h_a_valid
             exact absurd h_a_valid h_ge
 
 -- ============================================================
@@ -517,7 +517,7 @@ private theorem isBonded_valid (s : Shape) (p q : QuarterPos)
         simp only [Shape.layerCount]
         unfold QuarterPos.getQuarter at h_m
         cases hl : s.layers[q.layer]? with
-        | none => simp [hl] at h_m
+        | none => simp only [hl, reduceCtorEq, imp_self, implies_true, Bool.false_eq_true] at h_m
         | some _ =>
             exact (List.getElem?_eq_some_iff.mp hl).1
     | inr h_c =>
@@ -526,7 +526,7 @@ private theorem isBonded_valid (s : Shape) (p q : QuarterPos)
         simp only [Shape.layerCount]
         unfold QuarterPos.getQuarter at h_m
         cases hl : s.layers[q.layer]? with
-        | none => simp [hl] at h_m
+        | none => simp only [hl, reduceCtorEq, imp_self, implies_true, Bool.false_eq_true] at h_m
         | some _ =>
             exact (List.getElem?_eq_some_iff.mp hl).1
 
@@ -542,7 +542,7 @@ private theorem isBonded_valid_fst (s : Shape) (p q : QuarterPos)
         simp only [Shape.layerCount]
         unfold QuarterPos.getQuarter at h_m
         cases hl : s.layers[p.layer]? with
-        | none => simp [hl] at h_m
+        | none => simp only [hl, Bool.false_eq_true] at h_m
         | some _ =>
             exact (List.getElem?_eq_some_iff.mp hl).1
     | inr h_c =>
@@ -551,7 +551,7 @@ private theorem isBonded_valid_fst (s : Shape) (p q : QuarterPos)
         simp only [Shape.layerCount]
         unfold QuarterPos.getQuarter at h_m
         cases hl : s.layers[p.layer]? with
-        | none => simp [hl] at h_m
+        | none => simp only [hl, Bool.false_eq_true] at h_m
         | some _ =>
             exact (List.getElem?_eq_some_iff.mp hl).1
 
@@ -589,7 +589,7 @@ private def BFSInv (s : Shape) (allPos vis queue : List QuarterPos) : Prop :=
 private theorem bfsInv_initial (s : Shape) (allPos : List QuarterPos)
         (start : QuarterPos) :
         BFSInv s allPos [] [start] := by
-    intro v hv; simp [List.any] at hv
+    intro v hv; simp only [List.any, Bool.false_eq_true] at hv
 
 /-- 重複スキップで不変条件が保存される -/
 private theorem bfsInv_skip (s : Shape) (allPos vis : List QuarterPos)
@@ -629,16 +629,16 @@ private theorem bfsInv_process (s : Shape) (allPos vis : List QuarterPos)
               obtain ⟨x, h_x_mem, h_x_eq⟩ := hn
               exact eq_of_beq h_x_eq ▸ h_x_mem
           exact ⟨n, List.mem_filter.mpr ⟨h_n_mem, by
-            simp [hb, h_nv]⟩, BEq.rfl⟩
+            simp only [hb, h_nv, Bool.not_false, Bool.and_self]⟩, BEq.rfl⟩
     | false =>
         rw [h_vp, Bool.false_or] at hv
         match h_inv v hv n hn hb with
         | .inl h =>
-            exact .inl (by rw [List.any_cons]; simp [h])
+            exact .inl (by rw [List.any_cons]; simp only [h, Bool.or_true])
         | .inr h =>
             rw [List.any_cons] at h
             cases h_pn : (pos == n) with
-            | true => exact .inl (by rw [List.any_cons]; simp [h_pn])
+            | true => exact .inl (by rw [List.any_cons]; simp only [h_pn, Bool.true_or])
             | false =>
                 rw [h_pn, Bool.false_or] at h
                 exact .inr (by rw [List.any_append, Bool.or_eq_true_iff]; left; exact h)
@@ -677,7 +677,7 @@ private theorem filter_and_length_le (l : List QuarterPos)
         (p q : QuarterPos → Bool) :
         (l.filter fun x => p x && q x).length ≤ (l.filter q).length := by
     induction l with
-    | nil => simp [List.filter]
+    | nil => simp only [List.filter, List.length_nil, Std.le_refl]
     | cons a as ih =>
         simp only [List.filter]
         cases h_q : q a with
@@ -731,8 +731,8 @@ private theorem bfs_invariant_preserved (s : Shape) (allPos vis queue : List Qua
             -- n は queue に含まれる → queue 非空 → u² ≤ 0 → u = 0
             have h_qlen : queue.length ≥ 1 := by
                 cases queue with
-                | nil => simp [List.any] at h_q
-                | cons _ _ => simp [List.length]
+                | nil => simp only [List.any, Bool.false_eq_true] at h_q
+                | cons _ _ => simp only [List.length, ge_iff_le, Nat.le_add_left]
             -- filter 長 = 0 を示す (非線形算術: n*n ≤ 0 → n = 0)
             have h_u_zero : (allPos.filter fun p => !(vis.any (· == p))).length = 0 := by
                 cases hu : (allPos.filter fun p => !(vis.any (· == p))).length with
@@ -749,7 +749,7 @@ private theorem bfs_invariant_preserved (s : Shape) (allPos vis queue : List Qua
                 | [] => rfl
                 | _ :: _ =>
                     rw [h_f] at h_u_zero
-                    simp [List.length] at h_u_zero
+                    simp only [List.length, Nat.add_eq_zero_iff, List.length_eq_zero_iff, one_ne_zero, and_false] at h_u_zero
             -- n ∈ allPos なので vis.any (· == n) = true を導く
             rw [List.any_eq_true] at hn
             obtain ⟨x, hx_mem, hx_eq⟩ := hn
@@ -760,7 +760,7 @@ private theorem bfs_invariant_preserved (s : Shape) (allPos vis queue : List Qua
             | false =>
                 exfalso
                 have h_x_in : x ∈ allPos.filter (fun p => !(vis.any (· == p))) :=
-                    List.mem_filter.mpr ⟨hx_mem, by simp [h_vis_x]⟩
+                    List.mem_filter.mpr ⟨hx_mem, by simp only [h_vis_x, Bool.not_false]⟩
                 rw [h_filter_nil] at h_x_in
                 nomatch h_x_in
     | succ n ih =>
@@ -808,12 +808,12 @@ private theorem bfs_invariant_preserved (s : Shape) (allPos vis queue : List Qua
                           cases h_bond : isBonded s pos x with
                           | false => rfl
                           | true =>
-                              exact absurd (h_bond_in_allPos pos x h_bond) (by simp [h_pos])
+                              exact absurd (h_bond_in_allPos pos x h_bond) (by simp only [h_pos, Bool.false_eq_true, not_false_eq_true])
                       have h_nb_zero : (allPos.filter fun p =>
                               isBonded s pos p && !((pos :: vis).any (· == p))).length = 0 := by
                           have h_pred_false : ∀ x, (isBonded s pos x &&
                               !((pos :: vis).any (· == x))) = false := by
-                              intro x; simp [h_no_bond x]
+                              intro x; simp only [h_no_bond x, List.any_cons, Bool.not_or, Bool.false_and]
                           suffices h_gen : ∀ l : List QuarterPos,
                               (l.filter fun p => isBonded s pos p &&
                                   !((pos :: vis).any (· == p))).length = 0 from h_gen allPos
@@ -844,7 +844,7 @@ private theorem bfs_invariant_preserved (s : Shape) (allPos vis queue : List Qua
                                       List.any_eq_true.mpr ⟨pos, h_mem_pos, h_pred_pos⟩
                                   rw [h_pos] at h_any_true
                                   exact absurd h_any_true Bool.false_ne_true
-                          simp [this]
+                          simp only [this, Bool.false_or]
                       rw [h_nb_zero, h_u_eq]; omega
                   | true =>
                       -- pos ∈ allPos ∧ pos ∉ vis → u' < u
@@ -858,7 +858,7 @@ private theorem bfs_invariant_preserved (s : Shape) (allPos vis queue : List Qua
                           | true => exact absurd hh h_not_vis'
                       have h_pos_in_u :
                           pos ∈ allPos.filter (fun p => !(vis.any (· == p))) :=
-                          List.mem_filter.mpr ⟨h_pos_mem, by simp [h_vis_false]⟩
+                          List.mem_filter.mpr ⟨h_pos_mem, by simp only [h_vis_false, Bool.not_false]⟩
                       have h_u'_lt_u :
                           (allPos.filter fun p => !((pos :: vis).any (· == p))).length <
                           (allPos.filter fun p => !(vis.any (· == p))).length := by
@@ -875,7 +875,7 @@ private theorem bfs_invariant_preserved (s : Shape) (allPos vis queue : List Qua
                               (allPos.filter (fun p => !(vis.any (· == p))))
                               (fun p => !(pos == p)) pos
                               h_pos_in_u
-                              (by simp [BEq.rfl])
+                              (by simp only [BEq.rfl, Bool.not_true])
                       exact add_sq_le_sq_of_lt _ _ _ h_nb_le h_u'_lt_u
                 omega
 
@@ -885,10 +885,10 @@ private theorem allValid_length (s : Shape) :
     simp only [QuarterPos.allValid, Shape.layerCount]
     generalize s.layers.length = n
     induction n with
-    | zero => simp
+    | zero => simp only [List.range_zero, List.flatMap_nil, List.length_nil, Nat.zero_mul]
     | succ k ih =>
         rw [List.range_succ, List.flatMap_append, List.length_append, ih]
-        simp [List.flatMap_cons, List.flatMap_nil, List.map, Direction.all]
+        simp only [Direction.all, List.map_cons, List.map, List.flatMap_cons, List.flatMap_nil, List.append_nil, List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd]
         omega
 
 -- ============================================================
@@ -909,7 +909,7 @@ private theorem closed_contains_reachable (s : Shape) (allPos vis : List Quarter
     | step h_bond _ ih =>
         match h_closed _ h_start _ (h_isBonded_valid _ _ h_bond) h_bond with
         | .inl h => exact ih h
-        | .inr h => simp [List.any] at h
+        | .inr h => simp only [List.any, Bool.false_eq_true] at h
 
 /-- allValid s は isBonded の結果を全て含む -/
 private theorem allValid_contains_isBonded (s : Shape) (p q : QuarterPos)
@@ -941,14 +941,14 @@ theorem crystalCluster_sound (s : Shape) (start p : QuarterPos) :
     intro h
     unfold crystalClusterList at h
     match bfs_sound s _ [] [start] _ p h with
-    | .inl h_vis => simp [List.any] at h_vis
+    | .inl h_vis => simp only [List.any, Bool.false_eq_true] at h_vis
     | .inr ⟨q, h_q, h_reach⟩ =>
         rw [List.any_cons, Bool.or_eq_true_iff] at h_q
         cases h_q with
         | inl h_eq =>
             have := eq_of_beq h_eq; subst this; exact h_reach
         | inr h_rest =>
-            simp [List.any] at h_rest
+            simp only [List.any, Bool.false_eq_true] at h_rest
 
 -- ============================================================
 -- crystalCluster の完全性
@@ -970,7 +970,7 @@ theorem crystalCluster_complete (s : Shape) (start p : QuarterPos)
         (by
             have h_filter : (QuarterPos.allValid s).filter (fun p =>
                 !(([] : List QuarterPos).any (· == p))) = QuarterPos.allValid s :=
-                List.filter_eq_self.mpr (by intro x _; simp [List.any])
+                List.filter_eq_self.mpr (by intro x _; simp only [List.any, Bool.not_false])
             simp only [h_filter, List.length, allValid_length]; omega)
         (fun p q h => allValid_contains_isBonded_fst s p q h)
     -- start が BFS 結果に含まれることを確認
@@ -1005,14 +1005,14 @@ theorem crystalCluster_rotate180 (s : Shape) (start : QuarterPos) :
           have := bondReachable_rotate180 s.rotate180 start.rotate180 p h_reach
           simp only [Shape.rotate180_rotate180, QuarterPos.rotate180_rotate180] at this
           exact this
-      refine ⟨p.rotate180, ?_, by simp⟩
+      refine ⟨p.rotate180, ?_, by simp only [QuarterPos.rotate180_rotate180]⟩
       -- 完全性: layerCount = 0 では BFS 結果は空 → hp に矛盾
       cases h_lc : s.layerCount with
       | zero =>
           exfalso
           unfold crystalCluster at hp; rw [List.mem_toFinset, ← any_beq_iff_mem] at hp
           unfold crystalClusterList at hp
-          simp [Shape.layerCount_rotate180, allValid_rotate180_eq, h_lc, bfs] at hp
+          simp only [allValid_rotate180_eq, Shape.layerCount_rotate180, h_lc, Nat.zero_mul, Nat.mul_zero, bfs, List.any_nil, Bool.false_eq_true] at hp
       | succ n =>
           exact crystalCluster_complete s start p.rotate180 (by omega) h_back
     · rintro ⟨q, hq, rfl⟩
@@ -1024,7 +1024,7 @@ theorem crystalCluster_rotate180 (s : Shape) (start : QuarterPos) :
       | zero =>
           exfalso
           unfold crystalCluster at hq; rw [List.mem_toFinset, ← any_beq_iff_mem] at hq
-          unfold crystalClusterList at hq; simp [h_lc, bfs] at hq
+          unfold crystalClusterList at hq; simp only [h_lc, Nat.zero_mul, Nat.mul_zero, bfs, List.any_nil, Bool.false_eq_true] at hq
       | succ n =>
           exact crystalCluster_complete s.rotate180 start.rotate180 q.rotate180
               (by rw [Shape.layerCount_rotate180]; omega) h_r180

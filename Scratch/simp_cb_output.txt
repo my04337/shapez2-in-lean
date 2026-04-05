@@ -1,0 +1,92 @@
+Try this:
+  [apply] simp only [Shape.rotate180, Shape.mapLayers]
+Try this:
+  [apply] simp only [Option.map_some, getDir_rotate180]
+Try this:
+  [apply] simp only [QuarterPos.rotate180, dir_beq_rotate180']
+Try this:
+  [apply] simp only [bfs, List.map_nil]
+Try this:
+  [apply] simp only [Shape.layerCount_rotate180]
+Try this:
+  [apply] simp only [h_vis, Bool.or_true]
+Try this:
+  [apply] simp only [BEq.rfl, List.any_nil, Bool.or_false]
+Try this:
+  [apply] simp only [h_q, Bool.or_true]
+Try this:
+  [apply] simp only [BEq.rfl, Bool.true_or]
+Try this:
+  [apply] simp only [h_rest, Bool.or_true]
+Try this:
+  [apply] simp only [BEq.rfl, Bool.true_or]
+Try this:
+  [apply] simp only [QuarterPos.rotate180]
+Try this:
+  [apply] simp only [QuarterPos.rotate180] at h_lt
+Try this:
+  [apply] simp only [h, Bool.false_eq_true, not_false_eq_true]
+Try this:
+  [apply] simp only [QuarterPos.rotate180]
+Try this:
+  [apply] simp only [QuarterPos.rotate180_rotate180, BEq.rfl]
+Try this:
+  [apply] simp only [h, Bool.false_eq_true, not_false_eq_true]
+Try this:
+  [apply] simp only at h_a_valid
+Try this:
+  [apply] simp only [hl, reduceCtorEq, imp_self, implies_true, Bool.false_eq_true] at h_m
+Try this:
+  [apply] simp only [hl, reduceCtorEq, imp_self, implies_true, Bool.false_eq_true] at h_m
+Try this:
+  [apply] simp only [hl, Bool.false_eq_true] at h_m
+Try this:
+  [apply] simp only [hl, Bool.false_eq_true] at h_m
+Try this:
+  [apply] simp only [List.any, Bool.false_eq_true] at hv
+Try this:
+  [apply] simp only [hb, h_nv, Bool.not_false, Bool.and_self]
+Try this:
+  [apply] simp only [h, Bool.or_true]
+Try this:
+  [apply] simp only [h_pn, Bool.true_or]
+Try this:
+  [apply] simp only [List.filter, List.length_nil, Std.le_refl]
+Try this:
+  [apply] simp only [List.any, Bool.false_eq_true] at h_q
+Try this:
+  [apply] simp only [List.length, ge_iff_le, Nat.le_add_left]
+Try this:
+  [apply] simp only [List.length, Nat.add_eq_zero_iff, List.length_eq_zero_iff, one_ne_zero, and_false] at h_u_zero
+Try this:
+  [apply] simp only [h_vis_x, Bool.not_false]
+Try this:
+  [apply] simp only [h_pos, Bool.false_eq_true, not_false_eq_true]
+Try this:
+  [apply] simp only [h_no_bond x, List.any_cons, Bool.not_or, Bool.false_and]
+Try this:
+  [apply] simp only [this, Bool.false_or]
+Try this:
+  [apply] simp only [h_vis_false, Bool.not_false]
+Try this:
+  [apply] simp only [BEq.rfl, Bool.not_true]
+Try this:
+  [apply] simp only [List.range_zero, List.flatMap_nil, List.length_nil, Nat.zero_mul]
+Try this:
+  [apply] simp only [Direction.all, List.map_cons, List.map, List.flatMap_cons, List.flatMap_nil, List.append_nil,
+    List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd]
+Try this:
+  [apply] simp only [List.any, Bool.false_eq_true] at h
+Try this:
+  [apply] simp only [List.any, Bool.false_eq_true] at h_vis
+Try this:
+  [apply] simp only [List.any, Bool.false_eq_true] at h_rest
+Try this:
+  [apply] simp only [List.any, Bool.not_false]
+Try this:
+  [apply] simp only [QuarterPos.rotate180_rotate180]
+Try this:
+  [apply] simp only [allValid_rotate180_eq, Shape.layerCount_rotate180, h_lc, Nat.zero_mul, Nat.mul_zero, bfs,
+    List.any_nil, Bool.false_eq_true] at hp
+Try this:
+  [apply] simp only [h_lc, Nat.zero_mul, Nat.mul_zero, bfs, List.any_nil, Bool.false_eq_true] at hq
