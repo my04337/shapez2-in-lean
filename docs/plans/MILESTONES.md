@@ -40,7 +40,7 @@ Shapez2 in Lean (S2IL) の開発マイルストーンと達成状況を管理す
 | 1-2-1 | **Half-Destroyer** (切断処理機): West Half を削除する関数 | ✅ 完了 | |
 | 1-2-2 | **Cutter** (切断機): West Half と East Half に分割する関数 | ✅ 完了 | |
 | 1-2-3 | **Swapper** (スワップ機): 2 つのシェイプの West Half を入れ替える関数 | ✅ 完了 | |
-| 1-2-4 | 切断系操作の基本性質の証明 | 🔄 進行中 | `eastHalf_westHalf_combine` ✅, `swap_self` ✅, `combineHalves_self` ✅, `cut_rotate180_comm` sorry（`process_rotate180` の sorry 1件 `spb_no_chain` に依存。S-1, S-2, S-4a, S-4b は完了、S-3 は偽と判明し削除。詳細: [gravity-proof-cheatsheet.md](gravity-proof-cheatsheet.md)） |
+| 1-2-4 | 切断系操作の基本性質の証明 | 🔄 進行中 | `eastHalf_westHalf_combine` ✅, `swap_self` ✅, `combineHalves_self` ✅, `cut_rotate180_comm` sorry（`process_rotate180` の sorry 1件に依存。証明チェーン再構築中。詳細: [gravity-proof-execution-plan.md](gravity-proof-execution-plan.md) Wave 3〜5） |
 
 #### 回転 (Rotating)
 
@@ -159,8 +159,8 @@ Shapez2 in Lean (S2IL) の開発マイルストーンと達成状況を管理す
 | # | 整備項目 | 優先 | 概要 |
 |---|---|---|---|
 | T-1 | `lean-mathlib-search` スキルの新設 | ✅ 完了 | SKILL.md・`lean-lemma-finder` エージェント・`references/` (mathlib-search-guide.md, batteries-catalog.md) を整備済み。`#leansearch` / `#loogle` / `exact?` / `apply?` の4段階パイプライン・命名規則予測・Fin/Iff ゴールパターンを収録。 |
-| T-2 | S2IL 補題インデックスの整備 | 中 | `docs/lean/tactics/` に倣い、S2IL 自身の証明済み補題を索引化する（`docs/lean/s2il-lemma-index.md`）。定理ライブラリが大きくなるほど「何が既に示されているか」の把握が困難になるため。 |
-| T-3 | 等変性・交換則証明パターン集の拡充 | 中 | S2IL の主要証明パターン（`operator ∘ rotate = rotate ∘ operator` 型の等変性）を汎用的な証明骨格・タクティク列として `docs/knowledge/` に体系化する。現状は個別 knowledge として散在している。 |
+| T-2 | S2IL 補題インデックスの整備 | 中→**高** | `docs/lean/s2il-lemma-index.md` を新設。`gravity-proof-cheatsheet.md` 廃止に伴いその内容を吸収。詳細: [gravity-proof-execution-plan.md](gravity-proof-execution-plan.md) Wave 0 (0-1〜0-5) |
+| T-3 | 等変性・交換則証明パターン集の拡充 | 中→**高** | `docs/knowledge/equivariance-proof-patterns.md` を新設し、既存の個別 knowledge を統合。詳細: [gravity-proof-execution-plan.md](gravity-proof-execution-plan.md) Wave 0 (0-6〜0-9) |
 | T-4 | `lean-mathlib-search` — `lean-lsp-mcp` 統合評価 | 低 | MCP ツール `lean_state_search` 等を用いた REPL 不要の補題検索と既存フローの比較・移行判断。REPL は現在デフォルトモードで全 Mathlib タクティク・検索操作が利用可能（`-NoPickle` ~60s の制約は解消済み）なので優先度は低い（要 MCP サーバー導入評価）。 |
 | T-5 | `batteries-catalog.md` の継続的更新フロー整備 | 低 | `lean-lemma-finder` で新補題を発見した際に `batteries-catalog.md` へ追記する運用を定着させる。Phase 2 以降で `List`・`Finset` 系補題が増えた時点で特に有効。`lean-proof-progress` スキルとの連携セッション終了チェックリストへの組み込みを検討。 |
 
