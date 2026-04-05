@@ -56,7 +56,7 @@ theorem fillQuarter_crystal (c color : Color) :
 /-- fillLayer は冪等である -/
 @[simp] theorem fillLayer_idempotent (l : Layer) (color : Color) :
         fillLayer (fillLayer l color) color = fillLayer l color := by
-    simp [fillLayer]
+    simp only [fillLayer, fillQuarter_idempotent]
 
 end CrystalGenerator
 
@@ -73,6 +73,7 @@ def crystallize (s : Shape) (color : Color) : Shape :=
 /-- crystallize は冪等である -/
 @[simp] theorem crystallize_idempotent (s : Shape) (color : Color) :
         (s.crystallize color).crystallize color = s.crystallize color := by
-    ext; simp [crystallize, mapLayers, List.map_map, CrystalGenerator.fillLayer_idempotent]
+    ext; simp only [crystallize, mapLayers, List.map_map, List.getElem?_map,
+        Option.map_eq_some_iff, Function.comp_apply, CrystalGenerator.fillLayer_idempotent]
 
 end Shape

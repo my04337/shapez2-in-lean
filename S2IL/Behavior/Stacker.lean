@@ -39,12 +39,13 @@ namespace Stacker
 /-- 上側シェイプを下側シェイプの直上に単純配置する。
     結果のレイヤは `bottom.layers ++ top.layers` -/
 def placeAbove (bottom top : Shape) : Shape :=
-    ⟨bottom.layers ++ top.layers, by simp [bottom.layers_ne]⟩
+    ⟨bottom.layers ++ top.layers,
+        by simp only [ne_eq, List.append_eq_nil_iff, bottom.layers_ne, false_and, not_false_eq_true]⟩
 
 /-- placeAbove 後のレイヤ数は下側と上側のレイヤ数の和 -/
 theorem placeAbove_layerCount (bottom top : Shape) :
         (placeAbove bottom top).layerCount = bottom.layerCount + top.layerCount := by
-    simp [placeAbove, Shape.layerCount, List.length_append]
+    simp only [Shape.layerCount, placeAbove, List.length_append]
 
 -- ============================================================
 -- ステップ 2: 上側結晶の砕け散り

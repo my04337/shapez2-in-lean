@@ -33,12 +33,12 @@ namespace PinPusher
 
 /-- 全レイヤを1つ上に持ち上げる（最下層に空レイヤを挿入） -/
 def liftUp (s : Shape) : Shape :=
-    ⟨Layer.empty :: s.layers, by simp⟩
+    ⟨Layer.empty :: s.layers, by simp only [ne_eq, reduceCtorEq, not_false_eq_true]⟩
 
 /-- liftUp 後のレイヤ数は元のレイヤ数 + 1 -/
 theorem liftUp_layerCount (s : Shape) :
         (liftUp s).layerCount = s.layerCount + 1 := by
-    simp [liftUp, Shape.layerCount]
+    simp only [Shape.layerCount, liftUp, List.length_cons]
 
 -- ============================================================
 -- ステップ 2: ピン生成
@@ -51,7 +51,7 @@ def generatePins (lifted : Shape) (originalBottom : Layer) : Shape :=
     let pinSw := if originalBottom.sw.isEmpty then Quarter.empty else Quarter.pin
     let pinNw := if originalBottom.nw.isEmpty then Quarter.empty else Quarter.pin
     let pinLayer : Layer := ⟨pinNe, pinSe, pinSw, pinNw⟩
-    ⟨pinLayer :: lifted.layers.tail, by simp⟩
+    ⟨pinLayer :: lifted.layers.tail, by simp only [ne_eq, reduceCtorEq, not_false_eq_true]⟩
 
 
 end PinPusher

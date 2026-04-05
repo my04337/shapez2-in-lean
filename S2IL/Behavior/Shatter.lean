@@ -102,8 +102,8 @@ open QuarterPos (getQuarter_rotate180 getQuarter_rotate180_inv)
 private theorem any_map_beq {α : Type} [BEq α] (ps : List α) (f : α → α) (p : α) :
         (ps.map f).any (· == p) = ps.any (fun q => f q == p) := by
     induction ps with
-    | nil => simp
-    | cons x xs ih => simp [List.any_cons, ih]
+    | nil => simp only [List.map_nil, List.any_nil]
+    | cons x xs ih => simp only [List.map_cons, List.any_cons, ih]
 
 /-- rotate180 は BEq に対して involution として振る舞う -/
 private theorem beq_rotate180_iff (q p : QuarterPos) :
@@ -171,7 +171,7 @@ private theorem crystalCluster_decide_exists_rotate180 (s : Shape) (p : QuarterP
                      (∃ q ∈ CrystalBond.crystalCluster s p.rotate180, Q q) by
       cases h1 : decide (∃ q ∈ CrystalBond.crystalCluster s.rotate180 p, P q) <;>
         cases h2 : decide (∃ q ∈ CrystalBond.crystalCluster s p.rotate180, Q q) <;>
-        simp_all [decide_eq_true_eq, decide_eq_false_iff_not]
+        simp_all only [decide_eq_true_eq, decide_eq_false_iff_not]
     rw [h_cc]
     constructor
     · rintro ⟨q, hq, hpq⟩
@@ -204,10 +204,10 @@ private theorem shatterTargetPred_rotate180 (s : Shape) (p : QuarterPos) :
             -- isEast r180 = isWest, isWest r180 = isEast なので東西が入れ替わり && で戻る
             have h_east := crystalCluster_decide_exists_rotate180 s p
                 (fun q => q.dir.isEast = true) (fun q => q.dir.isWest = true)
-                (fun q => by simp [QuarterPos.rotate180, isWest_rotate180])
+                (fun q => by simp only [QuarterPos.rotate180, isWest_rotate180])
             have h_west := crystalCluster_decide_exists_rotate180 s p
                 (fun q => q.dir.isWest = true) (fun q => q.dir.isEast = true)
-                (fun q => by simp [QuarterPos.rotate180, isEast_rotate180])
+                (fun q => by simp only [QuarterPos.rotate180, isEast_rotate180])
             rw [h_east, h_west]
             exact Bool.and_comm ..
         | _ => rfl
@@ -217,17 +217,19 @@ private theorem shatterTargetPred_rotate180 (s : Shape) (p : QuarterPos) :
 private theorem any_beq_and [BEq α] [LawfulBEq α] (l : List α) (p : α) (f : α → Bool) :
         l.any (fun q => (q == p) && f q) = ((l.any (· == p)) && f p) := by
     induction l with
-    | nil => simp
+    | nil => simp only [List.any_nil, Bool.false_and]
     | cons x xs ih =>
         simp only [List.any_cons]
         rw [ih]
         -- goal: (x == p) && f x || xs.any (· == p) && f p
         --     = ((x == p) || xs.any (· == p)) && f p
         cases hx : (x == p) with
-        | false => simp
+        | false => simp only [Bool.false_and, Bool.false_or]
         | true =>
             have hxp := eq_of_beq hx; subst hxp
-            simp
+            simp only [Bool.true_and, Bool.true_or, Bool.or_eq_left_iff_imp,
+                Bool.and_eq_true, List.any_eq_true, beq_iff_eq, exists_eq_right,
+                and_imp, imp_self, implies_true]
 
 /-- any_beq_and の && 逆順版 -/
 private theorem any_and_beq [BEq α] [LawfulBEq α] (l : List α) (p : α) (f : α → Bool) :
@@ -280,13 +282,13 @@ private theorem fragilePositions_map_rotate180 (s : Shape) (ps : List QuarterPos
             match p.getQuarter s with | some q => q.isFragile | none => false)).map
             QuarterPos.rotate180 := by
     induction ps with
-    | nil => simp
+    | nil => simp only [List.map_nil, List.filter_nil]
     | cons x xs ih =>
         simp only [List.map_cons, List.filter_cons]
         rw [fragile_pred_rotate180]
         cases match x.getQuarter s with | some q => q.isFragile | none => false with
-        | true => simp [ih]
-        | false => simp [ih]
+        | true => simp only [↓reduceIte, ih, List.map_cons]
+        | false => simp only [Bool.false_eq_true, ↓reduceIte, ih]
 
 /-- shatterTargetsOnFall の落下判定述語は r180 で等変 -/
 private theorem shatterFallPred_rotate180 (s : Shape) (ps : List QuarterPos)
@@ -376,24 +378,24 @@ private theorem filter_any_eq (l : List QuarterPos) (pred : QuarterPos → Bool)
         (q : QuarterPos) :
         (l.filter pred).any (· == q) = (l.any (· == q) && pred q) := by
     induction l with
-    | nil => simp [List.filter, List.any]
+    | nil => simp only [List.filter, List.any_nil, List.any, Bool.false_and]
     | cons x xs ih =>
         simp only [List.filter]
         cases hpx : pred x with
         | false =>
             simp only [List.any_cons, ih]
             cases hxq : (x == q) with
-            | false => simp
+            | false => simp only [Bool.false_or]
             | true =>
                 have := eq_of_beq hxq; subst this
-                simp [hpx]
+                simp only [hpx, Bool.and_false, Bool.true_or]
         | true =>
             simp only [List.any_cons, ih]
             cases hxq : (x == q) with
-            | false => simp
+            | false => simp only [Bool.false_or]
             | true =>
                 have := eq_of_beq hxq; subst this
-                simp [hpx]
+                simp only [hpx, Bool.and_true, Bool.true_or, Bool.and_self]
 
 /-- shatterOnFall は位置集合の .any メンバーシップのみに依存する。
     2 つの位置リストが各位置について同じ .any 結果を返すなら、
