@@ -212,9 +212,7 @@ private theorem filter_length_lt_of_mem_of_not' [BEq α]
         cases h_mem with
         | head => simp only [h_not]; have := List.length_filter_le (p := pred) as; omega
         | tail _ h_as =>
-            cases pred a with
-            | false => simp only []; have := ih h_as; omega
-            | true => simp only [List.length]; have := ih h_as; omega
+            cases pred a <;> simp only [List.length] <;> (have := ih h_as; omega)
 
 private theorem filter_and_length_le' [BEq α]
         (l : List α) (p q : α → Bool) :
@@ -223,13 +221,7 @@ private theorem filter_and_length_le' [BEq α]
     | nil => simp only [List.filter, List.length_nil, Std.le_refl]
     | cons a as ih =>
         simp only [List.filter]
-        cases h_q : q a with
-        | false => simp only [Bool.and_false]; have := ih; omega
-        | true =>
-            simp only [Bool.and_true]
-            cases p a with
-            | true => simp only [List.length]; have := ih; omega
-            | false => simp only [List.length]; have := ih; omega
+        cases h_q : q a <;> cases p a <;> simp only [Bool.and_true, Bool.and_false, List.length] <;> omega
 
 private theorem add_sq_le_sq_of_lt' (nb u' u : Nat)
         (h_nb : nb ≤ u') (h_lt : u' < u) :
@@ -238,6 +230,69 @@ private theorem add_sq_le_sq_of_lt' (nb u' u : Nat)
     have h3 : u' * (u' + 1) ≤ u * u := Nat.mul_le_mul h1 h_lt
     have h4 : u' + u' * u' = u' * (u' + 1) := by rw [Nat.mul_succ]; omega
     omega
+
+/-- pos を vis に追加したとき、新エッジ + 未訪問²  ≤ 旧未訪問² -/
+private theorem fuel_key_estimate [BEq α] [LawfulBEq α]
+        (edge : α → α → Bool) (allNodes vis : List α) (pos : α)
+        (h_nv : ¬(vis.any (· == pos) = true))
+        (h_edge_valid : ∀ p q, edge p q = true → allNodes.any (· == p) = true) :
+        (allNodes.filter fun p => edge pos p && !((pos :: vis).any (· == p))).length +
+        (allNodes.filter fun p => !((pos :: vis).any (· == p))).length *
+        (allNodes.filter fun p => !((pos :: vis).any (· == p))).length ≤
+        (allNodes.filter fun p => !(vis.any (· == p))).length *
+        (allNodes.filter fun p => !(vis.any (· == p))).length := by
+    have h_nb_le := filter_and_length_le' allNodes
+        (fun p => edge pos p) (fun p => !((pos :: vis).any (· == p)))
+    cases h_pos : allNodes.any (· == pos) with
+    | false =>
+        have h_no_edge : ∀ x, edge pos x = false := by
+            intro x; cases h_e : edge pos x with
+            | false => rfl
+            | true => exact absurd (h_edge_valid pos x h_e) (by simp only [h_pos, Bool.false_eq_true, not_false_eq_true])
+        have h_nb_zero : (allNodes.filter fun p =>
+                edge pos p && !((pos :: vis).any (· == p))).length = 0 := by
+            suffices h : ∀ l : List α,
+                (l.filter fun p => edge pos p && !((pos :: vis).any (· == p))).length = 0 from h allNodes
+            intro l; induction l with
+            | nil => rfl
+            | cons a as ih_l =>
+                simp only [List.filter, h_no_edge a, Bool.false_and]; exact ih_l
+        have h_u_eq :
+            (allNodes.filter fun p => !((pos :: vis).any (· == p))).length =
+            (allNodes.filter fun p => !(vis.any (· == p))).length := by
+            congr 1; apply List.filter_congr; intro x hx
+            simp only [List.any_cons]
+            cases h_eq : (pos == x) with
+            | false => simp only [Bool.false_or]
+            | true =>
+                exfalso
+                have := eq_of_beq h_eq; subst this
+                have h_mem : allNodes.any (· == pos) = true := by
+                    rw [List.any_eq_true]; exact ⟨pos, hx, BEq.rfl⟩
+                simp only [h_pos, Bool.false_eq_true] at h_mem
+        rw [h_nb_zero, h_u_eq]; omega
+    | true =>
+        have h_pos_mem : pos ∈ allNodes := by
+            rw [List.any_eq_true] at h_pos
+            obtain ⟨x, hx, he⟩ := h_pos; exact eq_of_beq he ▸ hx
+        have h_vis_false : vis.any (· == pos) = false :=
+            Bool.eq_false_iff.mpr h_nv
+        have h_pos_in_u : pos ∈ allNodes.filter (fun p => !(vis.any (· == p))) :=
+            List.mem_filter.mpr ⟨h_pos_mem, by simp only [h_vis_false, Bool.not_false]⟩
+        have h_u'_lt_u :
+            (allNodes.filter fun p => !((pos :: vis).any (· == p))).length <
+            (allNodes.filter fun p => !(vis.any (· == p))).length := by
+            have h_eq :
+                (allNodes.filter fun p => !((pos :: vis).any (· == p))) =
+                (allNodes.filter (fun p => !(vis.any (· == p)))).filter
+                    (fun p => !(pos == p)) := by
+                rw [List.filter_filter]; apply List.filter_congr
+                intro x _; simp only [List.any_cons, Bool.not_or]
+            rw [h_eq]
+            exact filter_length_lt_of_mem_of_not'
+                (allNodes.filter (fun p => !(vis.any (· == p))))
+                (fun p => !(pos == p)) pos h_pos_in_u (by simp only [BEq.rfl, Bool.not_true])
+        exact add_sq_le_sq_of_lt' _ _ _ h_nb_le h_u'_lt_u
 
 -- ============================================================
 -- BFS 不変条件保存 (メイン定理)
@@ -298,65 +353,7 @@ theorem genericBfs_invariant_preserved [BEq α] [LawfulBEq α]
               · simp only [List.length_append]
                 have h_len : (pos :: rest).length = rest.length + 1 := rfl
                 rw [h_len] at h_fuel
-                have h_key : (allNodes.filter fun p =>
-                        edge pos p && !((pos :: vis).any (· == p))).length +
-                    (allNodes.filter fun p => !((pos :: vis).any (· == p))).length *
-                    (allNodes.filter fun p => !((pos :: vis).any (· == p))).length ≤
-                    (allNodes.filter fun p => !(vis.any (· == p))).length *
-                    (allNodes.filter fun p => !(vis.any (· == p))).length := by
-                  have h_nb_le := filter_and_length_le' allNodes
-                      (fun p => edge pos p) (fun p => !((pos :: vis).any (· == p)))
-                  cases h_pos : allNodes.any (· == pos) with
-                  | false =>
-                      have h_no_edge : ∀ x, edge pos x = false := by
-                          intro x; cases h_e : edge pos x with
-                          | false => rfl
-                          | true => exact absurd (h_edge_valid pos x h_e) (by simp only [h_pos, Bool.false_eq_true, not_false_eq_true])
-                      have h_nb_zero : (allNodes.filter fun p =>
-                              edge pos p && !((pos :: vis).any (· == p))).length = 0 := by
-                          suffices h : ∀ l : List α,
-                              (l.filter fun p => edge pos p && !((pos :: vis).any (· == p))).length = 0 from h allNodes
-                          intro l; induction l with
-                          | nil => rfl
-                          | cons a as ih_l =>
-                              simp only [List.filter, h_no_edge a, Bool.false_and]; exact ih_l
-                      have h_u_eq :
-                          (allNodes.filter fun p => !((pos :: vis).any (· == p))).length =
-                          (allNodes.filter fun p => !(vis.any (· == p))).length := by
-                          congr 1; apply List.filter_congr; intro x hx
-                          simp only [List.any_cons]
-                          cases h_eq : (pos == x) with
-                          | false => simp only [Bool.false_or]
-                          | true =>
-                              exfalso
-                              have := eq_of_beq h_eq; subst this
-                              have h_mem : allNodes.any (· == pos) = true := by
-                                  rw [List.any_eq_true]; exact ⟨pos, hx, BEq.rfl⟩
-                              simp only [h_pos, Bool.false_eq_true] at h_mem
-                      rw [h_nb_zero, h_u_eq]; omega
-                  | true =>
-                      have h_pos_mem : pos ∈ allNodes := by
-                          rw [List.any_eq_true] at h_pos
-                          obtain ⟨x, hx, he⟩ := h_pos; exact eq_of_beq he ▸ hx
-                      have h_vis_false : vis.any (· == pos) = false := by
-                          cases hh : vis.any (· == pos) with
-                          | false => rfl | true => exact absurd hh h_nv
-                      have h_pos_in_u : pos ∈ allNodes.filter (fun p => !(vis.any (· == p))) :=
-                          List.mem_filter.mpr ⟨h_pos_mem, by simp only [h_vis_false, Bool.not_false]⟩
-                      have h_u'_lt_u :
-                          (allNodes.filter fun p => !((pos :: vis).any (· == p))).length <
-                          (allNodes.filter fun p => !(vis.any (· == p))).length := by
-                          have h_eq :
-                              (allNodes.filter fun p => !((pos :: vis).any (· == p))) =
-                              (allNodes.filter (fun p => !(vis.any (· == p)))).filter
-                                  (fun p => !(pos == p)) := by
-                              rw [List.filter_filter]; apply List.filter_congr
-                              intro x _; simp only [List.any_cons, Bool.not_or]
-                          rw [h_eq]
-                          exact filter_length_lt_of_mem_of_not'
-                              (allNodes.filter (fun p => !(vis.any (· == p))))
-                              (fun p => !(pos == p)) pos h_pos_in_u (by simp only [BEq.rfl, Bool.not_true])
-                      exact add_sq_le_sq_of_lt' _ _ _ h_nb_le h_u'_lt_u
+                have h_key := fuel_key_estimate edge allNodes vis pos h_nv h_edge_valid
                 omega
 
 /-- BFS の初期 vis ∪ queue 内の allNodes メンバーは、十分な fuel のとき結果に含まれる -/
@@ -437,72 +434,7 @@ theorem genericBfs_queue_in_result [BEq α] [LawfulBEq α]
                           simp only [List.length_append]
                           have h_len : (pos :: rest).length = rest.length + 1 := rfl
                           rw [h_len] at h_fuel
-                          have h_key : (allNodes.filter fun p =>
-                                  edge pos p && !((pos :: vis).any (· == p))).length +
-                              (allNodes.filter fun p => !((pos :: vis).any (· == p))).length *
-                              (allNodes.filter fun p => !((pos :: vis).any (· == p))).length ≤
-                              (allNodes.filter fun p => !(vis.any (· == p))).length *
-                              (allNodes.filter fun p => !(vis.any (· == p))).length := by
-                            have h_nb_le := filter_and_length_le' allNodes
-                                (fun p => edge pos p) (fun p => !((pos :: vis).any (· == p)))
-                            cases h_pos : allNodes.any (· == pos) with
-                            | false =>
-                                have h_no_edge : ∀ x, edge pos x = false := by
-                                    intro x; cases h_e : edge pos x with
-                                    | false => rfl
-                                    | true => exact absurd (h_edge_valid pos x h_e) (by simp only [h_pos, Bool.false_eq_true, not_false_eq_true])
-                                have h_nb_zero : (allNodes.filter fun p =>
-                                        edge pos p && !((pos :: vis).any (· == p))).length = 0 := by
-                                    suffices h : ∀ l : List α,
-                                        (l.filter fun p => edge pos p &&
-                                            !((pos :: vis).any (· == p))).length = 0 from h allNodes
-                                    intro l; induction l with
-                                    | nil => rfl
-                                    | cons a as ih_l =>
-                                        simp only [List.filter, h_no_edge a, Bool.false_and]
-                                        exact ih_l
-                                have h_u_eq :
-                                    (allNodes.filter fun p => !((pos :: vis).any (· == p))).length =
-                                    (allNodes.filter fun p => !(vis.any (· == p))).length := by
-                                    congr 1; apply List.filter_congr; intro x hx
-                                    simp only [List.any_cons]
-                                    cases h_eq' : (pos == x) with
-                                    | false => simp only [Bool.false_or]
-                                    | true =>
-                                        exfalso
-                                        have := eq_of_beq h_eq'; subst this
-                                        have h_mem' : allNodes.any (· == pos) = true := by
-                                            rw [List.any_eq_true]; exact ⟨pos, hx, BEq.rfl⟩
-                                        simp only [h_pos, Bool.false_eq_true] at h_mem'
-                                rw [h_nb_zero, h_u_eq]; omega
-                            | true =>
-                                have h_pos_mem : pos ∈ allNodes := by
-                                    rw [List.any_eq_true] at h_pos
-                                    obtain ⟨x, hx, he⟩ := h_pos; exact eq_of_beq he ▸ hx
-                                have h_vis_false : vis.any (· == pos) = false := by
-                                    cases hh : vis.any (· == pos) with
-                                    | false => rfl | true => exact absurd hh h_nv
-                                have h_pos_in_u :
-                                    pos ∈ allNodes.filter (fun p => !(vis.any (· == p))) :=
-                                    List.mem_filter.mpr ⟨h_pos_mem, by simp only [h_vis_false, Bool.not_false]⟩
-                                have h_u'_lt_u :
-                                    (allNodes.filter fun p =>
-                                        !((pos :: vis).any (· == p))).length <
-                                    (allNodes.filter fun p => !(vis.any (· == p))).length := by
-                                    have h_eq' :
-                                        (allNodes.filter fun p =>
-                                            !((pos :: vis).any (· == p))) =
-                                        (allNodes.filter (fun p =>
-                                            !(vis.any (· == p)))).filter
-                                            (fun p => !(pos == p)) := by
-                                        rw [List.filter_filter]; apply List.filter_congr
-                                        intro x _
-                                        simp only [List.any_cons, Bool.not_or]
-                                    rw [h_eq']
-                                    exact filter_length_lt_of_mem_of_not'
-                                        (allNodes.filter (fun p => !(vis.any (· == p))))
-                                        (fun p => !(pos == p)) pos h_pos_in_u (by simp only [BEq.rfl, Bool.not_true])
-                                exact add_sq_le_sq_of_lt' _ _ _ h_nb_le h_u'_lt_u
+                          have h_key := fuel_key_estimate edge allNodes vis pos h_nv h_edge_valid
                           omega) h_q'
 
 -- ============================================================

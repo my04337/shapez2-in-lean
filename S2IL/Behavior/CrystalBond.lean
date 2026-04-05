@@ -3,6 +3,7 @@
 
 import S2IL.Shape.QuarterPos
 import S2IL.Behavior.Rotate
+import S2IL.Behavior.Rotate180Lemmas
 import Batteries
 import Mathlib.Data.Finset.Image
 
@@ -167,40 +168,22 @@ def allCrystalClusters (s : Shape) : List (Finset QuarterPos) :=
 -- 180° 回転等変性
 -- ============================================================
 
-/- rotate180 に関するヘルパー補題。
-   CrystalBond 内部で BFS 等変性を証明するために必要。 -/
-
-/-- getDir と rotate180 の可換性 -/
-private theorem getDir_rotate180 (l : Layer) (d : Direction) :
-        QuarterPos.getDir (l.rotate180) (d.rotate180) = QuarterPos.getDir l d := by
-    cases d <;> rfl
-
-/-- Shape.layers と rotate180 の関係 -/
-private theorem layers_rotate180 (s : Shape) :
-        s.rotate180.layers = s.layers.map Layer.rotate180 := by
-    simp only [Shape.rotate180, Shape.mapLayers]
-
-/-- getQuarter と rotate180 の可換性 -/
-private theorem getQuarter_rotate180 (s : Shape) (pos : QuarterPos) :
-        pos.rotate180.getQuarter s.rotate180 = pos.getQuarter s := by
-    simp only [QuarterPos.getQuarter, QuarterPos.rotate180, layers_rotate180]
-    rw [List.getElem?_map]
-    cases s.layers[pos.layer]? with
-    | none => rfl
-    | some l => simp only [Option.map_some, getDir_rotate180]
+/- rotate180 に関する基盤補題は Rotate180Lemmas.lean で定義済み:
+   QuarterPos.getDir_rotate180, Shape.layers_rotate180,
+   QuarterPos.getQuarter_rotate180 等。 -/
 
 /-- isBondedInLayer は rotate180 で不変 -/
 theorem isBondedInLayer_rotate180 (s : Shape) (p1 p2 : QuarterPos) :
         isBondedInLayer (s.rotate180) (p1.rotate180) (p2.rotate180) =
         isBondedInLayer s p1 p2 := by
-    simp only [isBondedInLayer, getQuarter_rotate180]
+    simp only [isBondedInLayer, QuarterPos.getQuarter_rotate180]
     simp only [QuarterPos.rotate180, Direction.adjacent_rotate180]
 
 /-- isBondedCrossLayer は rotate180 で不変 -/
 theorem isBondedCrossLayer_rotate180 (s : Shape) (p1 p2 : QuarterPos) :
         isBondedCrossLayer (s.rotate180) (p1.rotate180) (p2.rotate180) =
         isBondedCrossLayer s p1 p2 := by
-    simp only [isBondedCrossLayer, getQuarter_rotate180]
+    simp only [isBondedCrossLayer, QuarterPos.getQuarter_rotate180]
     simp only [QuarterPos.rotate180]
     congr 1
     cases p1.dir <;> cases p2.dir <;> rfl
@@ -369,6 +352,21 @@ private theorem bfs_contains_start (s : Shape) (allPos : List QuarterPos)
         exact bfs_vis_subset s allPos [start] _ n start
             (by rw [List.any_cons]; simp only [BEq.rfl, List.any_nil, Bool.or_false])
 
+/-- filter 済み近傍リストの要素から BondReachable を構成する -/
+private theorem bondReachable_of_filter_neighbor (s : Shape)
+        (allPos : List QuarterPos) (pos : QuarterPos) (newVis : List QuarterPos)
+        (q p : QuarterPos)
+        (h_neigh : (allPos.filter fun a =>
+            isBonded s pos a && !(newVis.any (· == a))).any (· == q) = true)
+        (h_reach : BondReachable s q p) :
+        BondReachable s pos p := by
+    rw [List.any_filter, List.any_eq_true] at h_neigh
+    obtain ⟨a, _, h_pred⟩ := h_neigh
+    simp only [Bool.and_eq_true] at h_pred
+    obtain ⟨⟨h_bonded, _⟩, h_aeq⟩ := h_pred
+    have := eq_of_beq h_aeq; subst this
+    exact .step h_bonded h_reach
+
 /-- BFS 結果の各要素は、初期 vis に含まれるか、
     初期 queue のある要素から BondReachable である -/
 private theorem bfs_sound (s : Shape) (allPos vis queue : List QuarterPos)
@@ -409,13 +407,8 @@ private theorem bfs_sound (s : Shape) (allPos vis queue : List QuarterPos)
                   | inl h_rest =>
                       exact .inr ⟨q, by rw [List.any_cons]; simp only [h_rest, Bool.or_true], h_reach⟩
                   | inr h_neigh =>
-                      rw [List.any_filter, List.any_eq_true] at h_neigh
-                      obtain ⟨a, _, h_pred⟩ := h_neigh
-                      simp only [Bool.and_eq_true] at h_pred
-                      obtain ⟨⟨h_bonded, _⟩, h_aeq⟩ := h_pred
-                      have := eq_of_beq h_aeq; subst this
                       exact .inr ⟨pos, by rw [List.any_cons]; simp only [BEq.rfl, Bool.true_or],
-                                  .step h_bonded h_reach⟩
+                                  bondReachable_of_filter_neighbor s allPos pos _ q p h_neigh h_reach⟩
 
 -- ============================================================
 -- allValid のメンバーシップ特性

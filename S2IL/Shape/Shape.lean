@@ -350,33 +350,39 @@ private theorem ofLayers_layers (s : Shape) : ofLayers s.layers = some s := by
         simp only [ofLayers]
         exact congrArg some (Shape.ext hc.symm)
 
+-- toString のラウンドトリップに必要な補助定理群
+
+/-- layers.map toString は空でない -/
+private theorem layers_map_toString_ne_nil (s : Shape) :
+        s.layers.map (fun l => l.toString.toList) ≠ [] :=
+    fun h_e => s.layers_ne (List.map_eq_nil_iff.mp h_e)
+
+/-- layers.map toString の各要素にはコロンが含まれない -/
+private theorem layers_map_toString_noColon (s : Shape) :
+        ∀ cs ∈ s.layers.map (fun l => l.toString.toList), ':' ∉ cs := by
+    intro cs hcs
+    obtain ⟨l, _, rfl⟩ := List.mem_map.mp hcs
+    exact layer_toString_noColon l
+
+/-- layers.map toString は [[]] でない -/
+private theorem layers_map_toString_ne_singleton_nil (s : Shape) :
+        s.layers.map (fun l => l.toString.toList) ≠ [[]] := by
+    cases hc : s.layers with
+    | nil => exact absurd hc s.layers_ne
+    | cons l ls =>
+        rw [List.map_cons]
+        intro h_eq
+        exact layer_toString_toList_ne_nil l (List.cons.inj h_eq).1
+
 /-- `ofString?` と `toString` のラウンドトリップ: 正規化済みのシェイプに対して
     `ofString? (toString s) = some s` が成り立つ -/
 theorem ofString_toString (s : Shape) (h : s.isNormalized) :
         ofString? s.toString = some s := by
-    -- toString を展開して List Char レベルに落とす
     simp only [ofString?, Shape.toString, String.toList_ofList, toCharList]
-    -- splitOnColon (intercalate ':' layers.map f) = layers.map f を適用
-    have h_ne : s.layers.map (fun l => l.toString.toList) ≠ [] :=
-        fun h_e => s.layers_ne (List.map_eq_nil_iff.mp h_e)
-    have h_nc : ∀ cs ∈ s.layers.map (fun l => l.toString.toList), ':' ∉ cs := by
-        intro cs hcs
-        obtain ⟨l, _, rfl⟩ := List.mem_map.mp hcs
-        exact layer_toString_noColon l
-    rw [splitOnColon_intercalate _ h_ne h_nc]
-    -- 分割結果が [[]] でないことを示す（Layer.toString は常に 8 文字）
-    have h_ne_cc : s.layers.map (fun l => l.toString.toList) ≠ [[]] := by
-        cases hc : s.layers with
-        | nil => exact absurd hc s.layers_ne
-        | cons l ls =>
-            rw [List.map_cons]
-            intro h_eq
-            exact layer_toString_toList_ne_nil l (List.cons.inj h_eq).1
-    -- Bool の if 条件を false に簡約（false = true は False に変換してから if_false を適用）
-    have h_beq : (s.layers.map (fun l => l.toString.toList) == [[]]) = false :=
-        beq_eq_false_iff_ne.mpr h_ne_cc
-    simp only [h_beq, Bool.false_eq_true, if_false]
-    -- parseLayers、ofLayers、normalize の順に計算
+    rw [splitOnColon_intercalate _
+        (layers_map_toString_ne_nil s) (layers_map_toString_noColon s)]
+    simp only [beq_eq_false_iff_ne.mpr (layers_map_toString_ne_singleton_nil s),
+               Bool.false_eq_true, if_false]
     rw [parseLayers_map_eq]
     simp only [Option.bind_some]
     rw [ofLayers_layers]

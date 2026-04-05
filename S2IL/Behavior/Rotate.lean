@@ -111,7 +111,7 @@ theorem rotate180_eq_rotateCW_rotateCW (l : Layer) :
     cases l; rfl
 
 /-- 時計回り回転と反時計回り回転は可換である -/
-@[simp] theorem rotateCW_rotateCCW_comm (l : Layer) :
+theorem rotateCW_rotateCCW_comm (l : Layer) :
         l.rotateCW.rotateCCW = l.rotateCCW.rotateCW := by
     simp only [rotateCCW, rotateCW_four]
 

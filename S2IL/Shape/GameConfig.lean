@@ -104,7 +104,7 @@ theorem truncate_of_le (s : Shape) (config : GameConfig)
     exact List.take_of_length_le h
 
 /-- truncate は冪等である -/
-theorem truncate_idempotent (s : Shape) (config : GameConfig) :
+@[simp] theorem truncate_idempotent (s : Shape) (config : GameConfig) :
         (s.truncate config).truncate config = s.truncate config := by
     ext1; simp only [truncate, List.take_take, Std.le_refl, Nat.min_eq_left]
 

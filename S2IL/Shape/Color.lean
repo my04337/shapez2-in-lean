@@ -188,15 +188,15 @@ theorem mix_comm (a b : Color) : mix a b = mix b a := by
     cases a <;> cases b <;> rfl
 
 /-- 混色の冪等性: `mix a a = a` -/
-theorem mix_self (a : Color) : mix a a = a := by
+@[simp] theorem mix_self (a : Color) : mix a a = a := by
     cases a <;> rfl
 
 /-- White は混色の左恒等元: `mix white a = a` -/
-theorem mix_white_left (a : Color) : mix white a = a := by
+@[simp] theorem mix_white_left (a : Color) : mix white a = a := by
     cases a <;> rfl
 
 /-- White は混色の右恒等元: `mix a white = a` -/
-theorem mix_white_right (a : Color) : mix a white = a := by
+@[simp] theorem mix_white_right (a : Color) : mix a white = a := by
     cases a <;> rfl
 
 /-!
