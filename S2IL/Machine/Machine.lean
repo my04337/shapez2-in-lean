@@ -72,7 +72,10 @@ def rotate180 (shape : Option Shape) : Option Shape :=
 /-- ピン押し機を適用する。シェイプが存在する場合のみ出力を生成する -/
 def pinPush (shape : Option Shape) (config : GameConfig) : Option Shape :=
     match shape with
-    | some s => s.pinPush config
+    | some s =>
+        if h : s.layerCount ≤ config.maxLayers then
+          s.pinPush config h
+        else none
     | none => none
 
 -- ============================================================
@@ -82,7 +85,12 @@ def pinPush (shape : Option Shape) (config : GameConfig) : Option Shape :=
 /-- 積層機を適用する。下側・上側の両シェイプが存在する場合のみ出力を生成する -/
 def stack (bottom top : Option Shape) (config : GameConfig) : Option Shape :=
     match bottom, top with
-    | some b, some t => b.stack t config
+    | some b, some t =>
+        if h1 : b.layerCount ≤ config.maxLayers then
+          if h2 : t.layerCount ≤ config.maxLayers then
+            b.stack t config h1 h2
+          else none
+        else none
     | _, _ => none
 
 -- ============================================================

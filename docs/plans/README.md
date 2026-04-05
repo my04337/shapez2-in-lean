@@ -14,12 +14,17 @@ S2IL プロジェクトの開発計画・マイルストーン・証明アプロ
 |---|---|
 | [MILESTONES.md](MILESTONES.md) | マイルストーン チェックシート。フェーズ 0〜 の各タスクと達成状況を管理 |
 
+### 証明チートシート
+
+| ファイル | 概要 |
+|---|---|
+| [gravity-proof-cheatsheet.md](gravity-proof-cheatsheet.md) | Gravity 証明チートシート。`process_rotate180` の証明状態・ファイル構造・禁止パターン・作業計画をコンパクトに集約 |
+
 ### 証明計画・アプローチ
 
 | ファイル | 概要 |
 |---|---|
-| [proof-approach-candidates.md](proof-approach-candidates.md) | 証明アプローチ候補レポート。残 sorry 解消のための調査と候補整理 |
-| [gravity-rotate180-proof-plan.md](gravity-rotate180-proof-plan.md) | Gravity rotate180 等変性の証明計画。`process_rotate180` 定理の証明戦略と進捗 |
+| [proof-cleanup-plan.md](proof-cleanup-plan.md) | 証明リファクタリング計画。裸 simp の安定化・巨大証明の分割・タクティク活用の改善を Wave 0〜4 で段階実施。レイヤ数制約の撤廃、安定状態の適切な反映、ドメインドキュメント改善も含む |
 
 ---
 
@@ -30,6 +35,7 @@ S2IL プロジェクトの開発計画・マイルストーン・証明アプロ
 | 作業 | 参照先 |
 |---|---|
 | マイルストーンの確認・更新 | `MILESTONES.md` |
+| 落下処理に関わる実装・証明 | `../shapez2/falling.md` + `../shapez2/adjacency.md` + `gravity-proof-cheatsheet.md` |
 | 新しい証明に着手する前 | 既存の証明計画ファイルを確認し、関連する計画がないか調べる |
 | 証明が難航した場合 | 既存のアプローチ候補を確認し、代替戦略を検討 |
 | 証明が完了した場合 | 該当する計画ファイルとマイルストーンを更新 |

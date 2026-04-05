@@ -97,11 +97,11 @@ def rotate180 (p : QuarterPos) : QuarterPos :=
 
 ---
 
-## 現在の状態 (2026-06 第2セッション更新)
+## 現在の状態 (2026-03-25 第2セッション更新)
 
 ### ⚠️ 重大発見 (第1セッション): `sortFU_preserves_spb_order` は偽定理
 
-**2026-06 第1セッションで発見・削除済み**。
+**2026-03-25 第1セッションで発見・削除済み**。
 仮定 `spb(a,b)=true, spb(b,a)=false` はペアワイズな 2-cycle 禁止しか保証せず、
 第三者との **3-cycle** が insertSorted のグリーディ動作を破壊する。
 
@@ -119,7 +119,7 @@ l = [w, a, b] → sortFU = [b, w, a] → 定理に矛盾
 
 ### ⚠️ 重大発見 (第2セッション): `sortFU_foldl_perm_input_eq` 一般版は偽
 
-**2026-06 第2セッションで発見**。旧版（h_disj + h_rank 仮定）は一般入力で偽。
+**2026-03-25 第2セッションで発見**。旧版（h_disj + h_rank 仮定）は一般入力で偽。
 → floatingUnits 限定版 (h_sub) に修正済み。詳細は「証明計画」セクションを参照。
 
 ### ⚠️ 重大発見 (第2セッション): tiebreaker 辞書式全順序化は不可能
@@ -131,20 +131,41 @@ r180 が方角を置換するため、辞書式全順序は r180 非等変。
 
 前セッションで発見済み。位置素のみでは反対称律不成立。
 
-### コード構造 (2026-06 第2セッション時点)
+### コード構造 (2026-04-05 第5セッション更新)
 
-ファイル: `Gravity.lean` (~5710行、sorry 2件)
+ファイル: `Gravity.lean` (~6,500行、sorry 1件)
 
 1. **l_mid 構築**: Classical choice で `g : fU(s) → fU(s.r180)` を構築。✅ 証明済
 2. **Step 2**: `sortFU l1 foldl = sortFU l_mid foldl` — `sorted_foldl_pointwise_eq` で ✅ 証明済
-3. **Step 3**: `sortFU l_mid foldl = sortFU l2 foldl` — `sortFU_foldl_perm_input_eq` (fU限定版) で依存
+3. **Step 3**: `sortFU l_mid foldl = sortFU l2 foldl` — `sortFU_foldl_perm_input_eq` で ✅ 証明済 (S-5 sorry 内包)
 
-### 残 sorry (2 個)
+### 残 sorry (1 個) — 2026-04-05 第5セッション更新
 
 | 定理 | 行 | 状態 | 依存関係 |
 |---|---|---|---|
-| `floatingUnits_spb_rank` | L5556 | sorry | fU 上の spb DAG → rank 関数存在 |
-| `sortFU_foldl_perm_input_eq` | L5585 | sorry (TRUE) | fU 限定 Perm → foldl 一致 |
+| `spb_no_chain` | L5605 | ❌ **FALSE** | `foldl_insertSorted_preserves_spb_order` Case 3 |
+
+**証明チェーン（下流は全て不健全）**:
+```
+spb_no_chain (sorry, FALSE)
+  → foldl_insertSorted_preserves_spb_order (Case 3 が不健全)
+    → sortFallingUnits_spb_order_preserving (一般入力で偽)
+      → sortFU_inversion_is_tied (一般 Perm で偽)
+        → sortFU_inversion_dir_disjoint
+          → sortFU_foldl_perm_input_eq
+            → settle_foldl_eq
+              → process_rotate180
+```
+
+**解消済み**:
+- `spb_no_mutual` (S-1): ✅ 完了 — d1≠d2 の 4-horizontal-step 矛盾戦略で証明
+- `insertSorted_preserves_relative_order` (S-2): ✅ 完了 — insertSorted_split + 3 ケース分岐
+- `sortFU_spb_one_way_order` (S-3): ❌ **偽と判明、削除済み** — fU 上でも spb 非推移性で反例
+- `floatingUnits_spb_rank`: ❌ **不要化・削除済み** — バブルソート帰納法に切り替え
+- `sortFU_foldl_perm_input_eq`: ✅ 完了 — `foldl_eq_of_perm_tied_adj_comm` + S-4 で証明
+- `sortFU_inversion_is_tied` (S-4a): ✅ 完了 — spb_no_chain(sorry) 経由
+- `sortFU_inversion_dir_disjoint` (S-4b): ✅ 完了 — S-4a 経由
+- `spb_no_chain` (S-5): ❌ **偽と判明** — 同列 3 ピンで反例
 
 ### 削除した偽定理
 
@@ -153,94 +174,136 @@ r180 が方角を置換するため、辞書式全順序は r180 非等変。
 | `spb_antisymm_of_disjoint` | 位置素のみでは反対称律不成立 (反例あり) |
 | `foldl_sorted_disjoint_flatMap_eq` | flatMap .any 等価 + 位置素では unit 分割不一致 |
 | `sortFU_preserves_spb_order` | 3-cycle 下で insertSorted の順序保存が偽 (第1セッション) |
-| `floatingUnits_spb_no_cycle` | DAG rank 版 (`floatingUnits_spb_rank`) に置き換え |
+| `floatingUnits_spb_no_cycle` | DAG rank 版に置き換え後、全面削除 |
 | `sortFU_foldl_perm_input_eq` (一般版) | h_disj+h_rank 仮定では偽 → fU 限定版に修正 (第2セッション) |
+| `sortFU_spb_one_way_order` | fU 上でも spb 非推移性で偽 (第3セッション) |
+| `sortFU_spb_order_on_fU` | 同根 (第3セッション) |
+| `floatingUnits_spb_rank` | バブルソート帰納法に切り替え、不要化 (第3セッション) |
+| `spb_no_chain` | 同列 3+ ピンで反例 (第5セッション)、**要削除** |
+
+### ⚠️ 要削除/修正の定理 (spb_no_chain 波及)
+
+| 定理 | 状態 | 修正方針 |
+|---|---|---|
+| `spb_no_chain` | FALSE、要削除 | 代替不要（下流を直接修正） |
+| `foldl_insertSorted_preserves_spb_order` | Case 3 不健全 | r180 特化版に置き換え or 削除 |
+| `sortFallingUnits_spb_order_preserving` | 一般入力で偽 | r180 特化版に置き換え or 削除 |
+| `sortFU_inversion_is_tied` | 一般 Perm で偽 | r180 特化版に置き換え or 削除 |
 
 ---
 
-## 証明計画 (2026-06 第2セッション改訂)
+## 証明計画 (2026-04-05 第5セッション改訂)
 
-### 現在の構造
+### 現在の構造（不健全チェーン）
 
 ```
 settle_foldl_eq
   ├─ l_mid 構築 (Classical choice)                    ✅ 証明済
   ├─ Step 2: sorted_foldl_pointwise_eq               ✅ 証明済
-  └─ Step 3: sortFU_foldl_perm_input_eq (fU限定)     ← sorry
+  └─ Step 3: sortFU_foldl_perm_input_eq (fU限定)     ✅ 証明済 (不健全チェーン内包)
+       └─ foldl_eq_of_perm_tied_adj_comm              ✅ 証明済
+            └─ sortFU_inversion_dir_disjoint          ✅ 証明済 (不健全)
+                 └─ sortFU_inversion_is_tied          ✅ 証明済 (不健全)
+                      └─ sortFallingUnits_spb_order_preserving ✅ 証明済 (不健全)
+                           └─ foldl_insertSorted_preserves_spb_order (不健全)
+                                └─ spb_no_chain       ← sorry (FALSE)
 ```
 
-### ⚠️ 重大発見 (第2セッション): `sortFU_foldl_perm_input_eq` 一般版は偽
+### 第5セッションでの重大発見 (2026-04-05)
 
-**2026-06 第2セッションで発見**: 旧版 `sortFU_foldl_perm_input_eq`
-(仮定: h_disj + h_rank) は一般入力で **偽**。
+**`spb_no_chain` (S-5) は FALSE**。同列 3 ピン・混合方角チェーンで反例あり。
+詳細は [`gravity-equivariance-analysis.md`](gravity-equivariance-analysis.md) 参照。
 
-#### 反例
+影響:
+- `foldl_insertSorted_preserves_spb_order` Case 3: spb_no_chain 直接使用 → 不健全
+- `sortFallingUnits_spb_order_preserving`: 一般入力で偽
+- `sortFU_inversion_is_tied`: 一般 Perm で偽（第4セッション既知）
+- **`process_rotate180` 自体は TRUE**（l_mid/l2 ペアでは 0 violations）
 
-```
-x = pin(NE, 7), u = cluster[(NE,8),(SW,1)], w = pin(SW, 3)
-DAG: rank(x)=0 < rank(u)=1 < rank(w)=2
-spb(x,u)=true, spb(u,w)=true, x と w は tied (方角素)
+### 修正計画
 
-l1 = [w, x, u] → sortFU = [u, w, x]
-l2 = [x, u, w] → sortFU = [w, x, u]
-→ u が w,x 両方と方角共有 → foldl 不可換 → 結果が異なる
-```
+#### 基本方針: 不健全チェーン（4定理）を廃止し、r180 固有構造で直接証明
 
-全仮定 (Perm, NoDup, 位置素, DAG ランク) を満たすが結論は偽。
+削除対象: `spb_no_chain`, `foldl_insertSorted_preserves_spb_order`,
+`sortFallingUnits_spb_order_preserving`, `sortFU_inversion_is_tied`
 
-#### 原因
+#### 証明ルート候補
 
-insertSorted が u を挿入する際、spb(u,w)=true で w の前に停止。
-tied な x は w より後（tiebreaker 順）なので、u は x より前に配置される。
-結果: spb(x,u)=true なのに u が x より前 → 非 tied 反転ペア → foldl 不可換。
+**ルート α（推奨）: sortFU_inversion_dir_disjoint に r180 仮説を追加**
 
-#### 修正
+追加仮説: `h_input_tied : ∀ a b, 入力反転 → tied(a, b) ∧ direction-disjoint(a, b)`
 
-定理文を floatingUnits 限定に変更:
-```lean
-(h_sub : ∀ x, x ∈ l1 → x ∈ floatingUnits s)
-```
-floatingUnits の幾何制約（方角遷移層の排他性）により反例パターンは排除される。
+r180 由来の入力反転は同レイヤ・反対方角ペアのみ（計算確認済み）。
+幾何制約（クラスタの方角遷移層封鎖）により tied swap が他要素の insertSorted 挙動を変えない。
 
-### 棄却: tiebreaker 辞書式全順序化
+改修スコープ: sortFU_inversion_dir_disjoint + sortFU_foldl_perm_input_eq + settle_foldl_eq
 
-r180 が方角を置換 (NE↔SW, SE↔NW) するため、
-方角の固定順序に基づく辞書式比較は r180 非等変。
-u ≠ u.r180 のペアでは比較結果が r180 で反転し、
-`sortFallingUnits_rotate180` が壊れる。
+**ルート β: settle_foldl_eq Phase 2 を書き直し**
 
-### 修正の選択肢（更新版）
+sortFU_foldl_perm_input_eq を使わず、settle_foldl_eq 内で直接
+foldl_eq_of_perm_tied_adj_comm を呼び、h_tied_comm を inline で証明。
 
-詳細は `docs/plans/gravity-rotate180-proof-plan.md` §7 を参照。
+利点: 中間定理のシグネチャ変更が最小。
+欠点: settle_foldl_eq が大幅に膨張。
 
-- **Phase 1**: `floatingUnits_spb_rank` の証明 (幾何制約 → DAG)
-- **Phase 2**: `sortFU_foldl_perm_input_eq` の証明
-  - 方法A: sortFU 反転ペアが全て direction-disjoint を証明
-  - 方法B: floatingUnits 上の sortFU が入力順序非依存を直接証明
-  - 方法C: rankSort を定義して sortFU foldl = rankSort foldl を tied 可換で証明
+#### 注意: h_input_tied だけでは不十分
+
+一般の h_input_tied（入力反転が tied）では出力反転も tied とは限らない。
+反例: cluster({(2,SW),(6,NE)}) + pin(4,NE) + pin(4,SW) パターン。
+ただしこの反例は floatingUnits の幾何制約（クラスタが方角遷移層を封鎖し、
+同層の他ユニット位置を排除）で排除される。幾何制約の形式証明が核心。
 
 ---
 
-## 既存インフラの使用可否サマリー
+### 過去の発見（第4セッション）
 
-| 補題 | 状態 | 位置 | 用途 |
-|---|---|---|---|
-| `insertSorted_split` | ✅ 証明済 | L4334 | insertSorted は take k ++ [u] ++ drop k 形式で分解可能 |
-| `floatingUnits_spb_rank` | sorry | L5556 | floatingUnits 上の spb DAG → rank 関数存在 |
-| `sortFU_foldl_perm_input_eq` | sorry | L5585 | fU 限定: Perm 入力 → foldl 一致 |
-| `sortFallingUnits_rotate180` | ✅ 証明済 | L694 | LHS の map r180 を sortFU 内部に移動 |
-| `shouldProcessBefore_ext` | ✅ 証明済 | | spb は .any にのみ依存 |
-| `tied_no_shared_dir` | ✅ 証明済 | | tied ペア → 方角素 |
-| `foldl_eq_of_perm_tied_adj_comm` | ✅ 証明済 | L5228 | bubble sort 帰納: Perm + dir-disjoint 反転 → foldl 一致 |
-| `foldl_settle_head_swap` | ✅ 証明済 | | 方角素隣接要素の swap → foldl 不変 |
-| `foldl_settle_swap_at` | ✅ 証明済 | | prefix 付き方角素 swap → foldl 不変 |
-| `settleStep_comm_ne_dir` | ✅ 証明済 | | 方角素ペアの settleStep 可換 |
-| `foldl_pointwise_ext` | ✅ 証明済 | | pointwise .any equiv → foldl 一致 |
-| `sorted_foldl_pointwise_eq` | ✅ 証明済 | | pointwise .any equiv 入力 → sortFU foldl 一致 |
-| `floatingUnits_pairwise_disjoint` | ✅ 証明済 | | floatingUnits の位置素性 |
-| `floatingUnits_nodup` | ✅ 証明済 | | NoDup 性 |
-| `sortFallingUnits_perm` | ✅ 証明済 | L844 | sortFU は入力の置換 |
-| `floatingUnits_length_rotate180` | ✅ 証明済 | | \|fU(s)\| = \|fU(s.r180)\| |
-| `floatingUnit_any_in_rotate180` | ✅ 証明済 | | 各 u ∈ fU(s) に .any 等価な v ∈ fU(s.r180) |
-| `map_rotate180_pairwise_disjoint` | ✅ 証明済 | | 位置素性は map r180 で保存 |
-| `invCount_adj_swap_lt` | ✅ 証明済 | | 隣接反転 swap で転置数が減少 |
+**重大発見**: `sortFU_inversion_is_tied` の現型シグネチャは **一般の l1.Perm l2 に対して FALSE**。
+3L 3色、fU 要素 ≤ 4 の全順列テストで 8628 violations（Scratch/AllPermInvCheck.lean）。
+
+**h_ow 条件** (spb(a,b)=true → a before b in both inputs) では **0 violations**。
+
+**l_mid/l2 ペアでは 0 violations** (SortedInvTiedCheck.lean で確認):
+- 入力反転は同レイヤ・別方角ペアのみ（r180 方角回転で allValid 順序が変わる）
+- これらは必ず tied（方角非共有 → spb 双方 false）
+- sortFU の insertSorted 補正が両入力で同一のパターンで行われるため出力も tied のみ
+
+### 過去の発見（第3セッション）
+
+1. **S-1 `spb_no_mutual` 完了**: d1≠d2 の 4-horizontal-step 矛盾戦略で証明
+2. **S-2 `insertSorted_preserves_relative_order` 完了**: insertSorted_split + 3 case 分岐
+3. **S-3 `sortFU_spb_one_way_order` は偽と判明**: fU 上の spb 非推移性 → 削除
+4. **S-4b `sortFU_inversion_dir_disjoint` 完了**: tied + position-disjoint → direction-disjoint
+5. **`sortFU_foldl_perm_input_eq` 本体完成**: `foldl_eq_of_perm_tied_adj_comm` + S-4b
+
+**棄却済み**:
+- DAG rank ベース（floatingUnits_spb_rank）→ spb は DAG でない場合あり
+- sortFU spb 順序保存（S-3）→ spb 非推移性で偽
+- tiebreaker 辞書式全順序化 → r180 非等変
+
+---
+
+## 既存インフラの使用可否サマリー (2026-04-04 第3セッション更新)
+
+| 補題 | 状態 | 用途 |
+|---|---|---|
+| `insertSorted_split` | ✅ 証明済 | insertSorted は take k ++ [u] ++ drop k 形式で分解可能 |
+| `spb_no_mutual` | ✅ 証明済 | floatingUnits 間で spb 双方向 true 不可 |
+| `insertSorted_preserves_relative_order` | ✅ 証明済 | insertSorted が既存要素の相対順序保存 |
+| `sortFU_inversion_dir_disjoint` | **sorry** | sortFU の反転ペアが direction-disjoint |
+| `sortFU_foldl_perm_input_eq` | ✅ 証明済 | fU 限定: Perm 入力 → foldl 一致 (S-4 に依存) |
+| `sortFallingUnits_rotate180` | ✅ 証明済 | LHS の map r180 を sortFU 内部に移動 |
+| `shouldProcessBefore_ext` | ✅ 証明済 | spb は .any にのみ依存 |
+| `tied_no_shared_dir` | ✅ 証明済 | tied ペア → 方角素 |
+| `foldl_eq_of_perm_tied_adj_comm` | ✅ 証明済 | bubble sort 帰納: Perm + dir-disjoint 反転 → foldl 一致 |
+| `foldl_settle_head_swap` | ✅ 証明済 | 方角素隣接要素の swap → foldl 不変 |
+| `foldl_settle_swap_at` | ✅ 証明済 | prefix 付き方角素 swap → foldl 不変 |
+| `settleStep_comm_ne_dir` | ✅ 証明済 | 方角素ペアの settleStep 可換 |
+| `foldl_pointwise_ext` | ✅ 証明済 | pointwise .any equiv → foldl 一致 |
+| `sorted_foldl_pointwise_eq` | ✅ 証明済 | pointwise .any equiv 入力 → sortFU foldl 一致 |
+| `floatingUnits_pairwise_disjoint` | ✅ 証明済 | floatingUnits の位置素性 |
+| `floatingUnits_nodup` | ✅ 証明済 | NoDup 性 |
+| `sortFallingUnits_perm` | ✅ 証明済 | sortFU は入力の置換 |
+| `floatingUnits_length_rotate180` | ✅ 証明済 | \|fU(s)\| = \|fU(s.r180)\| |
+| `floatingUnit_any_in_rotate180` | ✅ 証明済 | 各 u ∈ fU(s) に .any 等価な v ∈ fU(s.r180) |
+| `map_rotate180_pairwise_disjoint` | ✅ 証明済 | 位置素性は map r180 で保存 |
+| `invCount_adj_swap_lt` | ✅ 証明済 | 隣接反転 swap で転置数が減少 |

@@ -12,15 +12,20 @@ import S2IL.Behavior.PinPusher
 private def pinPushTest (inputCode expected : String) : Bool :=
     match Shape.ofString? inputCode with
     | some s =>
-        match s.pinPush GameConfig.vanilla4 with
-        | some result => result.toString == expected
-        | none => false
+        if h : s.layerCount ≤ GameConfig.vanilla4.maxLayers then
+          match s.pinPush GameConfig.vanilla4 h with
+          | some result => result.toString == expected
+          | none => false
+        else false
     | none => false
 
 /-- ピン押し結果が none になることを検証するヘルパー（vanilla4）-/
 private def pinPushNone (inputCode : String) : Bool :=
     match Shape.ofString? inputCode with
-    | some s => (s.pinPush GameConfig.vanilla4).isNone
+    | some s =>
+        if h : s.layerCount ≤ GameConfig.vanilla4.maxLayers then
+          (s.pinPush GameConfig.vanilla4 h).isNone
+        else false
     | none => false
 
 -- ============================================================
@@ -111,6 +116,10 @@ private def pinPushNone (inputCode : String) : Bool :=
 -- CrCrCrCr:RgRgRgRg:SbSbSbSb:crcrcrcr → P-P-P-P-:CrCrCrCr:RgRgRgRg:SbSbSbSb
 #guard pinPushTest "CrCrCrCr:RgRgRgRg:SbSbSbSb:crcrcrcr" "P-P-P-P-:CrCrCrCr:RgRgRgRg:SbSbSbSb"
 
+-- 全4レイヤ結晶 → ピン押し後に全て砕け散る → ピンのみの1レイヤに → P-P-P-P-
+-- crcrcrcr:cgcgcgcg:cbcbcbcb:cwcwcwcw → P-P-P-P-
+#guard pinPushTest "crcrcrcr:cgcgcgcg:cbcbcbcb:cwcwcwcw" "P-P-P-P-"
+
 -- ============================================================
 -- 結晶のクロスレイヤ結合 + truncation
 -- ============================================================
@@ -138,7 +147,9 @@ private def pinPushNone (inputCode : String) : Bool :=
 private def pinPushV5 (inputCode : String) : Option String :=
     match Shape.ofString? inputCode with
     | some s =>
-        (s.pinPush GameConfig.vanilla5).map Shape.toString
+        if h : s.layerCount ≤ GameConfig.vanilla5.maxLayers then
+          (s.pinPush GameConfig.vanilla5 h).map Shape.toString
+        else none
     | none => none
 
 -- 4レイヤ → 5レイヤに収まる（vanilla5 なら truncate 不要）

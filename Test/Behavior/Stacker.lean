@@ -14,15 +14,24 @@ private def emptyLayer : Layer := Layer.mk .empty .empty .empty .empty
 private def stackTest (bottomCode topCode expected : String) : Bool :=
     match Shape.ofString? bottomCode, Shape.ofString? topCode with
     | some b, some t =>
-        match Shape.stack b t GameConfig.vanilla4 with
-        | some result => result.toString == expected
-        | none => false
+        if h1 : b.layerCount ≤ GameConfig.vanilla4.maxLayers then
+          if h2 : t.layerCount ≤ GameConfig.vanilla4.maxLayers then
+            match Shape.stack b t GameConfig.vanilla4 h1 h2 with
+            | some result => result.toString == expected
+            | none => false
+          else false
+        else false
     | _, _ => false
 
 /-- 積層結果が none になることを検証するヘルパー（vanilla4）-/
 private def stackNone (bottomCode topCode : String) : Bool :=
     match Shape.ofString? bottomCode, Shape.ofString? topCode with
-    | some b, some t => (Shape.stack b t GameConfig.vanilla4).isNone
+    | some b, some t =>
+        if h1 : b.layerCount ≤ GameConfig.vanilla4.maxLayers then
+          if h2 : t.layerCount ≤ GameConfig.vanilla4.maxLayers then
+            (Shape.stack b t GameConfig.vanilla4 h1 h2).isNone
+          else false
+        else false
     | _, _ => false
 
 -- ============================================================
@@ -81,6 +90,11 @@ private def stackNone (bottomCode topCode : String) : Bool :=
 -- 上側が全結晶で下側も全結晶 → 上だけ消滅、下は残る
 #guard stackTest "crcrcrcr" "crcrcrcr" "crcrcrcr"
 
+-- 上側のシェイプが砕けたことで分断された2クラスタがそれぞれ独立して落下すること
+-- CuRucwcw:----SuWu の結晶(cw)消滅後 → {L2:NE(Cu),L2:SE(Ru)} は底側L1:NE(Cr)に接地
+-- {L3:SW(Su),L3:NW(Wu)} は直下が全空 → L1 まで落下
+#guard stackTest "Cr------" "CuRucwcw:----SuWu" "Cr--SuWu:CuRu----"
+
 -- ============================================================
 -- 落下連携: gravity との連携
 -- ============================================================
@@ -99,7 +113,8 @@ private def bottomWithGap : Shape :=
 -- Rg は L3 にあり、L2 が空 → L1:NE(Cr)の直上 L2:NE は空 → Rg(NE)はL1に着地できない
 -- L3:NE の直下 L2:NE は空 → さらに L1:NE(Cr) → L2 に着地
 -- 結局: Cr------:Rg------
-#guard (Shape.stack bottomWithGap (Shape.single (Layer.mk (.colored .rectangle .green) .empty .empty .empty)) GameConfig.vanilla4).map Shape.toString
+#guard (Shape.stack bottomWithGap (Shape.single (Layer.mk (.colored .rectangle .green) .empty .empty .empty)) GameConfig.vanilla4
+    (by decide) (by decide)).map Shape.toString
     == some "Cr------:Rg------"
 
 -- 部分的な落下: 下側に穴があり上側パーツが部分的に落下
@@ -148,10 +163,9 @@ private def top2full : Shape :=
 --   L4:{NE,SE,SW,NW} → L3:NE 空, L3:SE(Sb) → 構造クラスタ全体が接地 → 落下しない
 -- afterGravity = combined (5レイヤ)
 -- truncate: maxLayers=4 → L5(Cy) 廃棄
--- shatterOnTruncate: L5 は Cy (非結晶) → 砕け散りなし
 -- truncated = 4レイヤ: L1(Cr), L2(Rg), L3(Sb--), L4(Wu)
 -- 再gravity: 全て接地 → 変化なし
-#guard (Shape.stack bottom3partial top2full GameConfig.vanilla4).map Shape.toString
+#guard (Shape.stack bottom3partial top2full GameConfig.vanilla4 (by decide) (by decide)).map Shape.toString
     == some "CrCrCrCr:RgRgRgRg:SbSb----:WuWuWuWu"
 
 -- ============================================================
@@ -186,7 +200,11 @@ private def top2full : Shape :=
 private def stackV5 (bottomCode topCode : String) : Option String :=
     match Shape.ofString? bottomCode, Shape.ofString? topCode with
     | some b, some t =>
-        (Shape.stack b t GameConfig.vanilla5).map Shape.toString
+        if h1 : b.layerCount ≤ GameConfig.vanilla5.maxLayers then
+          if h2 : t.layerCount ≤ GameConfig.vanilla5.maxLayers then
+            (Shape.stack b t GameConfig.vanilla5 h1 h2).map Shape.toString
+          else none
+        else none
     | _, _ => none
 
 -- 4レイヤ + 1レイヤ → 5レイヤに収まる（vanilla5 なら truncate 不要）

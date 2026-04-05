@@ -39,7 +39,7 @@ Shapez2 のゲーム内仕様・用語・操作セマンティクスをまとめ
 | 新しい操作の Lean 実装着手前 | まず `glossary.md` で用語を確認し、対応する仕様ファイルを読む |
 | 隣接関係・結合判定に関わる実装 | `adjacency.md` を必ず参照 |
 | 結晶の砕け散りに関わる実装・証明 | `crystal-shatter.md` + `adjacency.md` |
-| 落下処理に関わる実装・証明 | `falling.md` + `adjacency.md` |
+| Gravity 証明の着手・再開 | `../plans/gravity-proof-cheatsheet.md` を必ず最初に通読 |
 | ゲーム仕様の曖昧な点に遭遇した場合 | `glossary.md` → 対応する仕様ファイルの順に確認 |
 
 ### 新規ファイルの追加基準

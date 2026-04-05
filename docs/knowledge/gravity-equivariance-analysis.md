@@ -50,6 +50,59 @@ spb 関係: a→b (ne:0<3), b→w (sw:0<3), w→a (se:0<5)  ← 3-cycle
 
 ---
 
+## `spb_no_chain` (S-5) は偽定理（2026-04-05 第5セッションで発見）
+
+「floatingUnits の要素間で spb の連鎖 (a→b→c) は生じない」は **FALSE**。
+
+### 反例 1: 同列 3 ピン（6 層）
+
+```
+Shape: "--------:P-------:--------:P-------:--------:P-------"
+floatingUnits: [pin(1,NE), pin(3,NE), pin(5,NE)]
+spb(pin1→pin3) = true (NE: 1<3)
+spb(pin3→pin5) = true (NE: 3<5) → CHAIN
+```
+
+### 反例 2: 混合方角（4 層）
+
+```
+Shape: "--------:P-------:CrCr----:--P-----"
+floatingUnits: [cluster({SE@2,NE@2}), pin(1,NE), pin(3,SE)]
+spb(pin(1,NE)→cluster) = true (NE: 1<2)
+spb(cluster→pin(3,SE)) = true (SE: 2<3) → CHAIN
+```
+
+### 根本原因
+
+- pin は `canFormBond = false` → 構造結合不可能 → 常に独立 floatingUnit
+- 同一方角列内に複数の独立ピンが存在可能（layer 0 が空の場合）
+- 事前の計算検証が 2L/3L 小規模シェイプのみで 4L+ を未検証だった
+
+### 波及範囲
+
+`spb_no_chain` に依存する以下の補題チェーンが全て不健全:
+
+1. `foldl_insertSorted_preserves_spb_order` — Case 3 が不健全
+2. `sortFallingUnits_spb_order_preserving` — 一般の入力順で偽
+3. `sortFU_inversion_is_tied` — 一般の Perm で偽
+4. `sortFU_inversion_dir_disjoint` — `is_tied` 経由で依存
+
+**ただし `process_rotate180` 自体は TRUE**（全反例シェイプで計算検証済み）。
+
+### 修正方針
+
+証明チェーンの中間補題は「一般の Perm に対して」は偽だが、
+r180 由来の **特定の Perm に対しては TRUE**（計算で確認済み）。
+
+修正候補:
+- **A**: `sortFU_inversion_dir_disjoint` を r180 固有構造で直接証明（推奨）
+- **B**: 中間補題に h_input_tied 仮説を追加してシグネチャ特殊化
+- **C**: settle_foldl_eq Phase 2 全体を書き直し
+
+詳細は [`settle-foldl-eq-analysis.md`](settle-foldl-eq-analysis.md) を参照。
+
+---
+
 ## `insertSorted` のグリーディ挿入の動作特性
 
 `insertSorted u sorted fuel`:
@@ -154,3 +207,167 @@ Gravity の `floatingUnits` は内部で `allStructuralClusters` → `structural
 7. clusters_no_adj_same_layer で矛盾
 
 pin-pin と pin-cluster は ℕ 順序から直接導出可能。
+
+---
+
+## `sortFU_spb_order_on_fU` 任意入力版は偽定理
+
+`sortFU_spb_order_on_fU` は以下を主張:
+
+> 任意のリスト l（floatingUnits の要素を任意の順序で並べたもの）に対し、
+> `spb(a, b) = true` ならば `posIn a (sortFU l) < posIn b (sortFU l)`
+
+これは **偽** である。
+
+### 反例
+
+5 層シェイプ（Layer 0 全空）:
+
+```
+Layer 1: SE=crystal, SW=crystal
+Layer 2: SE=crystal, SW=pin (pin_e)
+Layer 3: NE=pin (pin_a), SE=crystal
+Layer 4: NE=crystal, SE=crystal
+```
+
+floatingUnits:
+- cluster(NE@4, SE@1-4, SW@1, tb=9)
+- pin_a(NE@3, tb=4)
+- pin_e(SW@2, tb=3)
+
+spb 関係: pin_a→cluster (NE:3<4), cluster→pin_e (SW:1<2), pin_a/pin_e は tied
+
+入力 [cluster, pin_a, pin_e] → sortFU = [pin_e ti, pin_a, cluster]
+→ spb(cluster, pin_e)=true だが posIn cluster=2 > posIn pin_e=0: **違反**
+
+6 入力順列中 4 つで sortFU 出力が spb 順序に違反する。
+
+### 根本原因
+
+`insertSorted` のグリーディ挿入:
+1. tied ペアの tiebreaker 比較で早期挿入が発生
+2. 挿入位置より後方の要素との spb 関係がチェックされない
+3. 結果として、spb-related 要素が逆順になりうる
+
+### 重要な知見
+
+- **`process_rotate180` 自体は TRUE**: 実際の計算は常に自然順序（floatingUnits の出力順）を使用
+- **自然順序では sortFU は正しく動作**: 6 順列中、自然順序を含む 2 順列は OK
+- **問題は中間補題の過度な一般化**: settle_foldl_eq の l_mid が任意順序になりうる
+- **修正方向**: l_mid の順序差分が tied-only であることを証明 or 別アプローチ
+
+### insertSorted の tiebreaker が危険な条件
+
+3 要素 a, b, c で:
+- a と b が tied（方角列非共有）
+- b と c が spb 関係（方角列共有）
+- a.tb ≤ b.tb（tiebreaker で a が b の前に入る）
+
+この場合、入力順 [b, c, a] → insertSorted:
+1. b → [b]
+2. c: spb(b,c)=true → skip b → [b, c]
+3. a: a と b は tied, a.tb ≤ b.tb → a を b の前に挿入 → [a, b, c]
+
+しかし spb(c, a) が true の場合（c が a より前に来るべき）、a が c より前になり違反。
+insertSorted は a の挿入時に c をチェックしない（b の前で停止するため）。
+
+---
+
+## `sortFU_spb_one_way_order` は floatingUnits 上でも偽（2026-04-04 第3セッションで発見）
+
+S-3 (`sortFU_spb_one_way_order`) は **floatingUnits の制約下でも偽** と判明。
+
+### 反例
+
+```
+a = pin(2, NE)
+b = cluster[(4, NE), (4, SE)]
+c = pin(6, SE)
+
+spb: a→b (NE:2<4), b→c (SE:4<6), a/c は tied (方角素)
+→ NON-TRANSITIVE: spb(a,b)=T, spb(b,c)=T, spb(a,c)=F
+```
+
+入力 `l = [c, a, b]` → `sortFU = [b, c, a]`:
+- `posIn a = 2 > posIn b = 0` → spb(a,b)=true なのに b の方が前 → **S-3 違反**
+
+### 根本原因
+
+spb が floatingUnits 上でも**非推移的**。3 要素 a, b, c で spb(a,b)=T, spb(b,c)=T
+だが spb(a,c)=F（方角素の場合）が成立する。
+insertSorted のグリーディ挿入はこの非推移性を処理できず、期待順序を逆転させる。
+
+### 教訓
+
+- **spb の準推移性を前提とした S-3 のアプローチは全面的に不可**
+- floatingUnits の制約でも非推移三角形は排除されない（pin と cluster の方角が異なるため）
+- 代替として、sortFU の反転ペアが **direction-disjoint** であることを直接証明するアプローチ (S-4) に切り替え
+
+---
+
+## `placeFallingUnit` (foldl settle) は non-commutative（2026-04-04 第3セッションで確認）
+
+`placeFallingUnit` は一般には非可換。**方角を共有する one-way ペアで foldl 結果が異なる**。
+
+計算確認: one-way spb ペアのうち方角共有するもの（例: pin(2,NE) と cluster[(4,NE),(4,SE)]）は
+`foldl [a,b] ≠ foldl [b,a]` となる。
+
+→ **sortFU は本質的に必要**。foldl settle が入力のすべての置換に対して不変ということはない。
+
+→ 可換になるのは **direction-disjoint** なペアのみ (`settleStep_comm_ne_dir` で証明済み)。
+
+---
+
+## l_mid と l2 の反転は常に tied（2026-04-04 第3セッションで確認）
+
+`settle_foldl_eq` の l_mid = (fU s).map g と l2 = fU(s.r180) の sortFU 出力間の反転ペアは
+**常に tied (spb 双方 false)** であることが計算で確認された（10+ shapes 全て）。
+
+### 理由の構造的分析
+
+1. `allValid` (= `allIsolatedPins ++ allStructuralClustersList`) は **layer 昇順** で列挙
+2. `rotate180` は**レイヤ不変**（方角のみ NE↔SW, SE↔NW 回転）
+3. one-way ペアは**同一方角の異なる minLayer** で順序が決まる
+4. layer 昇順の列挙 + r180 のレイヤ不変性 → one-way ペアの相対順序は l_mid と l2 で同一
+5. l_mid と l2 で順序が異なるのは tied ペア（方角素で spb 双方 false）のみ
+
+### 証明への影響
+
+sortFU の入力（l_mid, l2）間の反転が tied-only であることが示されれば、
+sortFU 出力間の反転も tied → direction-disjoint → foldl 結果一致。
+これが S-4 (`sortFU_inversion_dir_disjoint`) の証明の核心。
+
+---
+
+## `spb_no_mutual` の証明戦略（2026-04-04 第3セッションで完了）
+
+### d1 = d2 ケース
+`lu < lv ∧ lv < lu` → `omega` で即座に矛盾。
+
+### d1 ≠ d2 ケース — 4-horizontal-step 矛盾戦略
+
+1. **方角 witness の抽出**: spb(u,v)=T → ∃ d1, u.min(d1) < v.min(d1)。
+   spb(v,u)=T → ∃ d2, v.min(d2) < u.min(d2)。d1 ≠ d2。
+2. **minLayerAtDir の witness**: u は d1 に位置を持つ → ∃ p ∈ u.positions, p.dir = d1
+3. **クラスタ内パスの水平ステップ**: u が d1 と d2 に位置を持つ場合、
+   BFS パス中に「水平ステップ」（同レイヤ隣接方角への遷移）が存在。
+   `genReachable_diff_dir_horizontal` でこれを形式化。
+4. **隣接方角の占有**: 水平ステップの遷移元位置 p に対し、p.dir = d1 かつ
+   同レイヤで隣接方角 d2 に別の位置が存在。
+5. **位置非共有との矛盾**: v も d2 の位置を持ち、v.min(d2) ≤ p.layer なので
+   v がその層の d2 に位置を持つ → u も同層の d2 に位置を持つ → 位置共有で矛盾。
+
+### 使用した補題
+- `genReachable_diff_dir_horizontal`: クラスタ内の方角遷移で水平ステップ存在
+- `minLayerAtDir_le_of_mem`: minLayer 以上のレイヤに位置が存在
+
+---
+
+## `insertSorted_preserves_relative_order` の証明戦略（2026-04-04 第3セッションで完了）
+
+`insertSorted_split` で挿入位置 k を取得し、3 ケース分岐:
+- k ≤ pos_a: u は a の前に挿入 → a, b は drop 部分にそのまま残り、prefix が [u] ++ take k
+- pos_a < k ≤ pos_b: u は a と b の間に挿入 → a は take 部分、b は drop 部分
+- k > pos_b: u は b の後に挿入 → a, b は take 部分にそのまま残り、suffix に [u] ++ drop k
+
+各ケースで List の take/drop 分割を manipulate し、`prefix_ ++ [a] ++ mid ++ [b] ++ suffix_` 形式の witness を構成。

@@ -170,7 +170,12 @@ private def mstackTest (bottomCode topCode expected : String) : Bool :=
 
 -- コア関数との等価性
 #guard Machine.pinPush (s "CrCrCrCr") GameConfig.vanilla4 ==
-    ((s "CrCrCrCr").bind (·.pinPush GameConfig.vanilla4))
+    (match s "CrCrCrCr" with
+    | some ss =>
+        if h : ss.layerCount ≤ GameConfig.vanilla4.maxLayers then
+          ss.pinPush GameConfig.vanilla4 h
+        else none
+    | none => none)
 
 -- ============================================================
 -- 積層機: 有効入力
@@ -182,7 +187,12 @@ private def mstackTest (bottomCode topCode expected : String) : Bool :=
 -- コア関数との等価性
 #guard Machine.stack (s "CrCrCrCr") (s "RgRgRgRg") GameConfig.vanilla4 ==
     (match s "CrCrCrCr", s "RgRgRgRg" with
-    | some b, some t => b.stack t GameConfig.vanilla4
+    | some b, some t =>
+        if h1 : b.layerCount ≤ GameConfig.vanilla4.maxLayers then
+          if h2 : t.layerCount ≤ GameConfig.vanilla4.maxLayers then
+            b.stack t GameConfig.vanilla4 h1 h2
+          else none
+        else none
     | _, _ => none)
 
 -- ############################################################
