@@ -1,4 +1,4 @@
--- sortFU(perm).foldl が全順列で同じ結果を返すか検証
+-- sortFallingUnits(perm).foldl が全順列で同じ結果を返すか検証
 import S2IL.Behavior.Gravity
 
 open Gravity
@@ -9,7 +9,7 @@ deriving instance Inhabited for FallingUnit
 -- (private なので直接アクセスできない → processSettleStep を使う)
 
 -- settle one unit into the obstacle
--- processSettleStep は public でないかもしれないので、代わりに sortFU + foldl を直接分解
+-- processSettleStep は public でないかもしれないので、代わりに sortFallingUnits + foldl を直接分解
 
 -- foldl の結果を比較（全順列）
 private def checkFoldlPermInvariant (label : String) (_s : Shape) (fus : List FallingUnit) (_obs : List Layer) : IO Bool := do
@@ -17,7 +17,7 @@ private def checkFoldlPermInvariant (label : String) (_s : Shape) (fus : List Fa
     if perms.isEmpty then return true
     -- 基準: 最初の順列
     let ref := sortFallingUnits perms.head!
-    -- sortFU の結果自体は順列によって変わるので、foldl 結果を見るために
+    -- sortFallingUnits の結果自体は順列によって変わるので、foldl 結果を見るために
     -- process 関数全体を使う（obs は空リストから開始）
     -- ただし process は floatingUnits を内部で計算するので、任意の順列を入力できない
     -- → 代替: sortFallingUnits の結果を比較
@@ -27,13 +27,13 @@ private def checkFoldlPermInvariant (label : String) (_s : Shape) (fus : List Fa
         if sorted != ref then
             allSame := false
     if allSame then
-        IO.println s!"{label}: sortFU output SAME for all {perms.length} permutations"
+        IO.println s!"{label}: sortFallingUnits output SAME for all {perms.length} permutations"
     else
-        IO.println s!"{label}: sortFU output DIFFERS across permutations"
+        IO.println s!"{label}: sortFallingUnits output DIFFERS across permutations"
     return allSame
 
 def main : IO Unit := do
-    IO.println "=== sortFU 出力のperm不変性チェック ==="
+    IO.println "=== sortFallingUnits 出力のperm不変性チェック ==="
 
     let testShapes : List (String × String) := [
         ("1pin", "--------:--P-----"),

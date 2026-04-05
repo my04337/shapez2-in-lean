@@ -188,7 +188,7 @@ Quarter.isFragile : Quarter → Bool
 | 脆弱 (Fragile) | 脆弱 (Fragile) | `Quarter.isFragile` |
 | 砕け散り (Shatter) | 砕け散り (Shatter) | `Shape.shatterOnCut`, `Shape.shatterOnFall`, `Shape.shatterOnTruncate` |
 | 結合 (Bond) | — | `CrystalBond.isBonded` |
-| 結合クラスタ (Bonded Cluster) | — | `CrystalBond.crystalClusterList` |
+| 結合クラスタ (Bonded Cluster) | — | `CrystalBond.clusterList` |
 | 落下 (Fall) | 落下 | — |
 | 切断 (Cutting) | 切断 (Cutting) | — |
 | 西側の半分 (West Half) | 西側の半分 (West Half) | `{NW, SW}` |

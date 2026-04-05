@@ -1,5 +1,5 @@
 -- foldl settle の順列不変性の破綻を確認するテスト
--- 反例候補: 4つの独立浮遊ユニットで sortFU 順序依存性を示す
+-- 反例候補: 4つの独立浮遊ユニットで sortFallingUnits 順序依存性を示す
 import S2IL.Behavior.Gravity
 
 open Gravity
@@ -31,13 +31,13 @@ def main : IO Unit := do
         let fus_r := floatingUnits s.rotate180
         IO.println s!"floatingUnits(s.r180) count: {fus_r.length}"
         for i in List.range fus_r.length do
-            IO.println s!"  fU_r[{i}]: positions={repr fus_r[i]!.positions}"
+            IO.println s!"  floatingUnits_r[{i}]: positions={repr fus_r[i]!.positions}"
 
-        -- sortFU results
+        -- sortFallingUnits results
         let sorted := sortFallingUnits fus
         let sorted_r := sortFallingUnits fus_r
-        IO.println s!"sortFU(fU(s)): {repr (sorted.map (·.positions))}"
-        IO.println s!"sortFU(fU(s.r180)): {repr (sorted_r.map (·.positions))}"
+        IO.println s!"sortFallingUnits(floatingUnits(s)): {repr (sorted.map (·.positions))}"
+        IO.println s!"sortFallingUnits(floatingUnits(s.r180)): {repr (sorted_r.map (·.positions))}"
 
     -- 他のテストケース: process_r180 が成立するか
     let extras := [

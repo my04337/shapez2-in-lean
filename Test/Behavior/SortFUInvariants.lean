@@ -1,4 +1,4 @@
--- sortFU_spb_order_on_fU の厳密な反例チェック
+-- sortFallingUnits_shouldProcessBefore_order の厳密な反例チェック
 -- 特に非推移的パターン: pin_a → cluster_u → pin_c だが pin_a ↛ pin_c
 import S2IL.Behavior.Gravity
 
@@ -75,7 +75,7 @@ def main : IO Unit := do
                         s!"{reprStr d}={match u.minLayerAtDir d with | some l => toString l | none => "-"}"
                     IO.println s!"  fU[{i}]: minL={u.minLayer} pos={ps} minL=[{String.intercalate ", " minLayers}]"
 
-            -- spb 関係
+            -- shouldProcessBefore 関係
             IO.println s!"  spb relations:"
             for a in fu do
                 for b in fu do

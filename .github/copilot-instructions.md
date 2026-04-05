@@ -154,6 +154,20 @@ theorem map_natCast : ...
 | `s`, `t` | リスト・集合 |
 | `f`, `g` | 関数 |
 
+#### プロジェクト固有の命名規約
+
+定義名・定理名では**略称を使わず正式名称をそのまま使う**。可読性と grep・検索の一貫性を優先する。
+
+| 略称（禁止） | 正式名称（使用する） | 例 |
+|---|---|---|
+| `spb` | `shouldProcessBefore` | `shouldProcessBefore_no_mutual` |
+| `sortFU` | `sortFallingUnits` | `sortFallingUnits_inversion_is_tied` |
+| `fU` | `floatingUnits` | `floatingUnits_elem_positions_disjoint` |
+| `σ_ic` | `swapIndex` | `swapIndex_invol` |
+
+- ローカル変数（`have h_spb := ...`）やテスト用ヘルパー（`private def spb`）では略称を使用して良い
+- アクロニム `BFS` → `Bfs`（例: `GenericBfsInv`）。Lean 4 の `UpperCamelCase` 規約に従う
+
 ### Lean 4 証明スタイル
 
 - **裸 `simp` 禁止**: 最終証明では `simp only [...]` を使う。裸 `simp` は Mathlib 更新で壊れうる

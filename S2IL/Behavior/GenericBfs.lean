@@ -159,7 +159,7 @@ theorem genericBfs_sound [BEq α] [LawfulBEq α] (edge : α → α → Bool)
 -- ============================================================
 
 /-- BFS の不変条件: vis 内の全ノードの allNodes 内エッジ隣接先は vis ∪ queue に含まれる -/
-def GenericBFSInv [BEq α] (edge : α → α → Bool)
+def GenericBfsInv [BEq α] (edge : α → α → Bool)
         (allNodes vis queue : List α) : Prop :=
     ∀ v, vis.any (· == v) = true →
       ∀ n, allNodes.any (· == n) = true →
@@ -167,18 +167,18 @@ def GenericBFSInv [BEq α] (edge : α → α → Bool)
         vis.any (· == n) = true ∨ queue.any (· == n) = true
 
 /-- BFS 初期不変条件 -/
-theorem genericBfsInv_initial [BEq α] (edge : α → α → Bool)
+theorem GenericBfsInv_initial [BEq α] (edge : α → α → Bool)
         (allNodes : List α) (start : α) :
-        GenericBFSInv edge allNodes [] [start] := by
+        GenericBfsInv edge allNodes [] [start] := by
     intro v hv; simp only [List.any, Bool.false_eq_true] at hv
 
 /-- 重複スキップで不変条件が保存される -/
-theorem genericBfsInv_skip [BEq α] [LawfulBEq α]
+theorem GenericBfsInv_skip [BEq α] [LawfulBEq α]
         (edge : α → α → Bool) (allNodes vis : List α)
         (pos : α) (rest : List α)
-        (h_inv : GenericBFSInv edge allNodes vis (pos :: rest))
+        (h_inv : GenericBfsInv edge allNodes vis (pos :: rest))
         (h_vis : vis.any (· == pos) = true) :
-        GenericBFSInv edge allNodes vis rest := by
+        GenericBfsInv edge allNodes vis rest := by
     intro v hv n hn hb
     match h_inv v hv n hn hb with
     | .inl h => exact .inl h
@@ -189,12 +189,12 @@ theorem genericBfsInv_skip [BEq α] [LawfulBEq α]
         | false => rw [h_eq, Bool.false_or] at h; exact .inr h
 
 /-- 新ノード処理で不変条件が保存される -/
-theorem genericBfsInv_process [BEq α] [LawfulBEq α]
+theorem GenericBfsInv_process [BEq α] [LawfulBEq α]
         (edge : α → α → Bool) (allNodes vis : List α)
         (pos : α) (rest : List α)
-        (h_inv : GenericBFSInv edge allNodes vis (pos :: rest))
+        (h_inv : GenericBfsInv edge allNodes vis (pos :: rest))
         (_h_not_vis : ¬(vis.any (· == pos) = true)) :
-        GenericBFSInv edge allNodes (pos :: vis)
+        GenericBfsInv edge allNodes (pos :: vis)
             (rest ++ allNodes.filter fun p =>
                 edge pos p && !((pos :: vis).any (· == p))) := by
     intro v hv n hn hb
@@ -327,12 +327,12 @@ private theorem fuel_key_estimate [BEq α] [LawfulBEq α]
 /-- BFS が不変条件を保存する。燃料条件: fuel + 1 ≥ |queue| + |未訪問|² -/
 theorem genericBfs_invariant_preserved [BEq α] [LawfulBEq α]
         (edge : α → α → Bool) (allNodes vis queue : List α) (fuel : Nat)
-        (h_inv : GenericBFSInv edge allNodes vis queue)
+        (h_inv : GenericBfsInv edge allNodes vis queue)
         (h_fuel : fuel + 1 ≥ queue.length +
             (allNodes.filter fun p => !(vis.any (· == p))).length *
             (allNodes.filter fun p => !(vis.any (· == p))).length)
         (h_edge_valid : ∀ p q, edge p q = true → allNodes.any (· == p) = true) :
-        GenericBFSInv edge allNodes (genericBfs edge allNodes vis queue fuel) [] := by
+        GenericBfsInv edge allNodes (genericBfs edge allNodes vis queue fuel) [] := by
     induction fuel generalizing vis queue with
     | zero =>
         simp only [genericBfs]
@@ -368,14 +368,14 @@ theorem genericBfs_invariant_preserved [BEq α] [LawfulBEq α]
             simp only [genericBfs]
             split
             · rename_i h_vis
-              apply ih vis rest (genericBfsInv_skip edge allNodes vis pos rest h_inv h_vis)
+              apply ih vis rest (GenericBfsInv_skip edge allNodes vis pos rest h_inv h_vis)
               have : (pos :: rest).length = rest.length + 1 := rfl
               rw [this] at h_fuel; omega
             · rename_i h_not_vis
               have h_nv : ¬(vis.any (· == pos) = true) := by
                   intro h; rw [h] at h_not_vis; exact h_not_vis rfl
               apply ih (pos :: vis) (rest ++ _)
-                  (genericBfsInv_process edge allNodes vis pos rest h_inv h_nv)
+                  (GenericBfsInv_process edge allNodes vis pos rest h_inv h_nv)
               · simp only [List.length_append]
                 have h_len : (pos :: rest).length = rest.length + 1 := rfl
                 rw [h_len] at h_fuel
@@ -470,7 +470,7 @@ theorem genericBfs_queue_in_result [BEq α] [LawfulBEq α]
 /-- 閉じた集合は到達可能な全ノードを含む -/
 theorem genericBfs_closed_contains_reachable [BEq α] [LawfulBEq α]
         (edge : α → α → Bool) (allNodes vis : List α)
-        (h_closed : GenericBFSInv edge allNodes vis [])
+        (h_closed : GenericBfsInv edge allNodes vis [])
         (start p : α)
         (h_start : vis.any (· == start) = true)
         (h_reach : GenericReachable edge start p)

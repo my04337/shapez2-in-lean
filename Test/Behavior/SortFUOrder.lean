@@ -1,4 +1,4 @@
--- sortFU_spb_order_on_fU の反例チェック（insertSorted 修正後）
+-- sortFallingUnits_shouldProcessBefore_order の反例チェック（insertSorted 修正後）
 import S2IL.Behavior.Gravity
 
 open Gravity
@@ -13,7 +13,7 @@ private def spb (a b : FallingUnit) : Bool :=
 private def posIn (x : FallingUnit) (l : List FallingUnit) : Nat :=
     l.findIdx (fun y => decide (y = x))
 
--- sortFU の spb order チェック: spb(a,b) なら posIn a < posIn b
+-- sortFallingUnits の shouldProcessBefore order チェック: shouldProcessBefore(a,b) なら posIn a < posIn b
 private def checkSortFUOrder (label : String) (units : List FallingUnit) : IO Bool := do
     let sorted := sortFallingUnits units
     let mut ok := true
@@ -39,7 +39,7 @@ private def permutations : List FallingUnit → List (List FallingUnit)
                 perm.take i ++ [x] ++ perm.drop i
 
 def main : IO Unit := do
-    IO.println "=== sortFU_spb_order_on_fU 反例チェック (insertSorted 修正後) ===\n"
+    IO.println "=== sortFallingUnits_shouldProcessBefore_order 反例チェック (insertSorted 修正後) ===\n"
 
     -- テストシェイプ
     let codes := [

@@ -136,18 +136,18 @@ private def bfs (s : Shape) (allPos : List QuarterPos) (visited queue : List Qua
                 bfs s allPos newVisited (rest ++ neighbors) fuel
 
 /-- 指定位置から到達可能な結合クラスタを返す（リスト版、計算用） -/
-def crystalClusterList (s : Shape) (pos : QuarterPos) : List QuarterPos :=
+def clusterList (s : Shape) (pos : QuarterPos) : List QuarterPos :=
     let allPos := QuarterPos.allValid s
     -- fuel は最大頂点数の2乗で十分
     let n := s.layerCount * 4
     bfs s allPos [] [pos] (n * n)
 
 /-- 指定位置から到達可能な結合クラスタを返す（Finset 版、証明用） -/
-def crystalCluster (s : Shape) (pos : QuarterPos) : Finset QuarterPos :=
-    (crystalClusterList s pos).toFinset
+def cluster (s : Shape) (pos : QuarterPos) : Finset QuarterPos :=
+    (clusterList s pos).toFinset
 
 /-- シェイプ内の全結合クラスタを返す。各クラスタは `QuarterPos` の有限集合 -/
-def allCrystalClusters (s : Shape) : List (Finset QuarterPos) :=
+def allClusters (s : Shape) : List (Finset QuarterPos) :=
     let allPos := QuarterPos.allValid s
     -- 結晶位置のみを対象にする
     let crystalPositions := allPos.filter fun p =>
@@ -157,10 +157,10 @@ def allCrystalClusters (s : Shape) : List (Finset QuarterPos) :=
     -- 各結晶位置についてクラスタを算出し、重複を除去する
     crystalPositions.foldl (fun clusters pos =>
         -- この位置が既存のクラスタに含まれているか確認
-        if clusters.any (fun _cluster => (crystalClusterList s pos).any (· == pos)) then
+        if clusters.any (fun _cluster => (clusterList s pos).any (· == pos)) then
             clusters
         else
-            let cluster := crystalCluster s pos
+            let cluster := cluster s pos
             clusters ++ [cluster]
     ) []
 
@@ -279,24 +279,24 @@ private theorem bfs_rotate180 (s : Shape)
 -- ============================================================
 
 /-- allValid は rotate180 で不変（layerCount のみに依存するため） -/
-theorem allValid_rotate180_eq (s : Shape) :
+theorem allValid_rotate180 (s : Shape) :
         QuarterPos.allValid s.rotate180 = QuarterPos.allValid s := by
     unfold QuarterPos.allValid
     simp only [Shape.layerCount_rotate180]
 
 -- ============================================================
--- crystalCluster の rotate180 等変性（mapped allPos 版）
+-- cluster の rotate180 等変性（mapped allPos 版）
 -- ============================================================
 
-/-- crystalClusterList を mapped allPos で呼んだ場合の等変性。
+/-- clusterList を mapped allPos で呼んだ場合の等変性。
     bfs_rotate180 から直接導出される。 -/
-private theorem crystalClusterList_rotate180_mapped (s : Shape) (pos : QuarterPos) :
+private theorem clusterList_rotate180_mapped (s : Shape) (pos : QuarterPos) :
         bfs s.rotate180
             ((QuarterPos.allValid s).map QuarterPos.rotate180) []
             [pos.rotate180]
             (s.layerCount * 4 * (s.layerCount * 4)) =
-        (crystalClusterList s pos).map QuarterPos.rotate180 := by
-    unfold crystalClusterList
+        (clusterList s pos).map QuarterPos.rotate180 := by
+    unfold clusterList
     exact bfs_rotate180 s (QuarterPos.allValid s) [] [pos]
         (s.layerCount * 4 * (s.layerCount * 4))
 
@@ -911,7 +911,7 @@ private theorem allValid_contains_isBonded (s : Shape) (p q : QuarterPos)
     (allValid_any_iff_layer s q).mpr (isBonded_valid s p q h)
 
 -- ============================================================
--- crystalCluster の健全性
+-- cluster の健全性
 -- ============================================================
 
 /-- .any (· == p) と List.mem の等価性（LawfulBEq 前提） -/
@@ -925,14 +925,14 @@ private theorem any_beq_iff_mem (l : List QuarterPos) (p : QuarterPos) :
     · intro h
       exact List.any_eq_true.mpr ⟨p, h, BEq.rfl⟩
 
-/-- crystalCluster の健全性:
+/-- cluster の健全性:
     結果に含まれる要素は start から BondReachable -/
-theorem crystalCluster_sound (s : Shape) (start p : QuarterPos) :
-        p ∈ crystalCluster s start →
+theorem cluster_sound (s : Shape) (start p : QuarterPos) :
+        p ∈ cluster s start →
         BondReachable s start p := by
-    unfold crystalCluster; rw [List.mem_toFinset, ← any_beq_iff_mem]
+    unfold cluster; rw [List.mem_toFinset, ← any_beq_iff_mem]
     intro h
-    unfold crystalClusterList at h
+    unfold clusterList at h
     match bfs_sound s _ [] [start] _ p h with
     | .inl h_vis => simp only [List.any, Bool.false_eq_true] at h_vis
     | .inr ⟨q, h_q, h_reach⟩ =>
@@ -944,18 +944,18 @@ theorem crystalCluster_sound (s : Shape) (start p : QuarterPos) :
             simp only [List.any, Bool.false_eq_true] at h_rest
 
 -- ============================================================
--- crystalCluster の完全性
+-- cluster の完全性
 -- ============================================================
 
-/-- crystalCluster の完全性:
+/-- cluster の完全性:
     start から BondReachable な要素が結果に含まれる
     （s.layerCount > 0 が必要: layerCount = 0 では BFS のキューが空） -/
-theorem crystalCluster_complete (s : Shape) (start p : QuarterPos)
+theorem cluster_complete (s : Shape) (start p : QuarterPos)
         (h_lc : s.layerCount > 0)
         (h_reach : BondReachable s start p) :
-        p ∈ crystalCluster s start := by
-    unfold crystalCluster; rw [List.mem_toFinset, ← any_beq_iff_mem]
-    unfold crystalClusterList
+        p ∈ cluster s start := by
+    unfold cluster; rw [List.mem_toFinset, ← any_beq_iff_mem]
+    unfold clusterList
     -- BFS 不変条件保存
     have h_inv := bfs_invariant_preserved s (QuarterPos.allValid s) []
         [start] (s.layerCount * 4 * (s.layerCount * 4))
@@ -978,21 +978,21 @@ theorem crystalCluster_complete (s : Shape) (start p : QuarterPos)
         (fun q r h_bond => allValid_contains_isBonded s q r h_bond)
 
 -- ============================================================
--- crystalCluster の rotate180 等変性
+-- cluster の rotate180 等変性
 -- ============================================================
 
-/-- crystalCluster の rotate180 等変性（Finset.image 形式）。
+/-- cluster の rotate180 等変性（Finset.image 形式）。
     rotate180 してからクラスタ算出 = クラスタ算出してから Finset.image。
     BFS の健全性・完全性・到達可能性の等変性から直接導出。 -/
-theorem crystalCluster_rotate180 (s : Shape) (start : QuarterPos) :
-        crystalCluster s.rotate180 start.rotate180 =
-        (crystalCluster s start).image QuarterPos.rotate180 := by
+theorem cluster_rotate180 (s : Shape) (start : QuarterPos) :
+        cluster s.rotate180 start.rotate180 =
+        (cluster s start).image QuarterPos.rotate180 := by
     ext p
     simp only [Finset.mem_image]
     constructor
     · intro hp
       -- 健全性: p は start.r180 から s.r180 で BondReachable
-      have h_reach := crystalCluster_sound s.rotate180 start.rotate180 p hp
+      have h_reach := cluster_sound s.rotate180 start.rotate180 p hp
       -- 等変性の逆方向: s での start → p.r180 の到達可能性
       have h_back : BondReachable s start p.rotate180 := by
           have := bondReachable_rotate180 s.rotate180 start.rotate180 p h_reach
@@ -1003,31 +1003,31 @@ theorem crystalCluster_rotate180 (s : Shape) (start : QuarterPos) :
       cases h_lc : s.layerCount with
       | zero =>
           exfalso
-          unfold crystalCluster at hp; rw [List.mem_toFinset, ← any_beq_iff_mem] at hp
-          unfold crystalClusterList at hp
-          simp only [allValid_rotate180_eq, Shape.layerCount_rotate180, h_lc, Nat.zero_mul, Nat.mul_zero, bfs, List.any_nil, Bool.false_eq_true] at hp
+          unfold cluster at hp; rw [List.mem_toFinset, ← any_beq_iff_mem] at hp
+          unfold clusterList at hp
+          simp only [allValid_rotate180, Shape.layerCount_rotate180, h_lc, Nat.zero_mul, Nat.mul_zero, bfs, List.any_nil, Bool.false_eq_true] at hp
       | succ n =>
-          exact crystalCluster_complete s start p.rotate180 (by omega) h_back
+          exact cluster_complete s start p.rotate180 (by omega) h_back
     · rintro ⟨q, hq, rfl⟩
       -- 健全性 + 等変性: q.r180 は start.r180 から s.r180 で BondReachable
-      have h_reach := crystalCluster_sound s start q hq
+      have h_reach := cluster_sound s start q hq
       have h_r180 := bondReachable_rotate180 s start q h_reach
       -- 完全性
       cases h_lc : s.layerCount with
       | zero =>
           exfalso
-          unfold crystalCluster at hq; rw [List.mem_toFinset, ← any_beq_iff_mem] at hq
-          unfold crystalClusterList at hq; simp only [h_lc, Nat.zero_mul, Nat.mul_zero, bfs, List.any_nil, Bool.false_eq_true] at hq
+          unfold cluster at hq; rw [List.mem_toFinset, ← any_beq_iff_mem] at hq
+          unfold clusterList at hq; simp only [h_lc, Nat.zero_mul, Nat.mul_zero, bfs, List.any_nil, Bool.false_eq_true] at hq
       | succ n =>
-          exact crystalCluster_complete s.rotate180 start.rotate180 q.rotate180
+          exact cluster_complete s.rotate180 start.rotate180 q.rotate180
               (by rw [Shape.layerCount_rotate180]; omega) h_r180
 
-/-- crystalCluster メンバーシップの rotate180 等変性。
-    crystalCluster_rotate180 (Finset.image) から導出。 -/
-theorem crystalCluster_mem_rotate180 (s : Shape) (start p : QuarterPos) :
-        p ∈ crystalCluster s start ↔
-        p.rotate180 ∈ crystalCluster s.rotate180 start.rotate180 := by
-    rw [crystalCluster_rotate180, Finset.mem_image]
+/-- cluster メンバーシップの rotate180 等変性。
+    cluster_rotate180 (Finset.image) から導出。 -/
+theorem cluster_mem_rotate180 (s : Shape) (start p : QuarterPos) :
+        p ∈ cluster s start ↔
+        p.rotate180 ∈ cluster s.rotate180 start.rotate180 := by
+    rw [cluster_rotate180, Finset.mem_image]
     constructor
     · exact fun h => ⟨p, h, rfl⟩
     · rintro ⟨q, hq, hqe⟩

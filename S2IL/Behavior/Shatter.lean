@@ -48,7 +48,7 @@ def shatterTargetsOnCut (s : Shape) : List QuarterPos :=
     allPos.filter fun p =>
         match p.getQuarter s with
         | some (.crystal _) =>
-            let cc := CrystalBond.crystalCluster s p
+            let cc := CrystalBond.cluster s p
             decide (∃ q ∈ cc, q.dir.isEast = true) && decide (∃ q ∈ cc, q.dir.isWest = true)
         | _ => false
 
@@ -75,7 +75,7 @@ def shatterTargetsOnFall (s : Shape) (fallingPositions : List QuarterPos)
     allPos.filter fun p =>
         match p.getQuarter s with
         | some (.crystal _) =>
-            let cc := CrystalBond.crystalCluster s p
+            let cc := CrystalBond.cluster s p
             decide (∃ q ∈ cc, q ∈ fragilePositions)
         | _ => false
 
@@ -159,18 +159,18 @@ private theorem isWest_rotate180 (d : Direction) :
 private theorem crystalCluster_decide_exists_rotate180 (s : Shape) (p : QuarterPos)
         (P Q : QuarterPos → Prop) [DecidablePred P] [DecidablePred Q]
         (h_pq : ∀ q, P q ↔ Q q.rotate180) :
-        decide (∃ q ∈ CrystalBond.crystalCluster s.rotate180 p, P q) =
-        decide (∃ q ∈ CrystalBond.crystalCluster s p.rotate180, Q q) := by
+        decide (∃ q ∈ CrystalBond.cluster s.rotate180 p, P q) =
+        decide (∃ q ∈ CrystalBond.cluster s p.rotate180, Q q) := by
     -- crystalCluster s.r180 p = (crystalCluster s p.r180).image r180
-    have h_cc : CrystalBond.crystalCluster s.rotate180 p =
-        (CrystalBond.crystalCluster s p.rotate180).image QuarterPos.rotate180 := by
-      have := CrystalBond.crystalCluster_rotate180 s p.rotate180
+    have h_cc : CrystalBond.cluster s.rotate180 p =
+        (CrystalBond.cluster s p.rotate180).image QuarterPos.rotate180 := by
+      have := CrystalBond.cluster_rotate180 s p.rotate180
       simp only [QuarterPos.rotate180_rotate180] at this; exact this
     -- Prop ↔ を示して decide の等価性に帰着
-    suffices h_iff : (∃ q ∈ CrystalBond.crystalCluster s.rotate180 p, P q) ↔
-                     (∃ q ∈ CrystalBond.crystalCluster s p.rotate180, Q q) by
-      cases h1 : decide (∃ q ∈ CrystalBond.crystalCluster s.rotate180 p, P q) <;>
-        cases h2 : decide (∃ q ∈ CrystalBond.crystalCluster s p.rotate180, Q q) <;>
+    suffices h_iff : (∃ q ∈ CrystalBond.cluster s.rotate180 p, P q) ↔
+                     (∃ q ∈ CrystalBond.cluster s p.rotate180, Q q) by
+      cases h1 : decide (∃ q ∈ CrystalBond.cluster s.rotate180 p, P q) <;>
+        cases h2 : decide (∃ q ∈ CrystalBond.cluster s p.rotate180, Q q) <;>
         simp_all only [decide_eq_true_eq, decide_eq_false_iff_not]
     rw [h_cc]
     constructor
@@ -186,13 +186,13 @@ private theorem crystalCluster_decide_exists_rotate180 (s : Shape) (p : QuarterP
 private theorem shatterTargetPred_rotate180 (s : Shape) (p : QuarterPos) :
         (match p.getQuarter s.rotate180 with
          | some (.crystal _) =>
-            decide (∃ q ∈ CrystalBond.crystalCluster s.rotate180 p, q.dir.isEast = true) &&
-            decide (∃ q ∈ CrystalBond.crystalCluster s.rotate180 p, q.dir.isWest = true)
+            decide (∃ q ∈ CrystalBond.cluster s.rotate180 p, q.dir.isEast = true) &&
+            decide (∃ q ∈ CrystalBond.cluster s.rotate180 p, q.dir.isWest = true)
          | _ => false) =
         (match p.rotate180.getQuarter s with
          | some (.crystal _) =>
-            decide (∃ q ∈ CrystalBond.crystalCluster s p.rotate180, q.dir.isEast = true) &&
-            decide (∃ q ∈ CrystalBond.crystalCluster s p.rotate180, q.dir.isWest = true)
+            decide (∃ q ∈ CrystalBond.cluster s p.rotate180, q.dir.isEast = true) &&
+            decide (∃ q ∈ CrystalBond.cluster s p.rotate180, q.dir.isWest = true)
          | _ => false) := by
     rw [getQuarter_rotate180_inv]
     cases p.rotate180.getQuarter s with
@@ -253,7 +253,7 @@ private theorem shatterTargetsOnCut_any_rotate180 (s : Shape) (p : QuarterPos) :
         (shatterTargetsOnCut s.rotate180).any (· == p) =
         (shatterTargetsOnCut s).any (· == p.rotate180) := by
     simp only [shatterTargetsOnCut,
-        CrystalBond.allValid_rotate180_eq]
+        CrystalBond.allValid_rotate180]
     exact filter_any_rotate180 s _ _ (fun q => shatterTargetPred_rotate180 s q) p
 
 /-- 砕け散り対象位置の clearPositions 結果は rotate180 で等変である -/
@@ -295,13 +295,13 @@ private theorem shatterFallPred_rotate180 (s : Shape) (ps : List QuarterPos)
         (p : QuarterPos) :
         (match p.getQuarter s.rotate180 with
          | some (.crystal _) =>
-            decide (∃ q ∈ CrystalBond.crystalCluster s.rotate180 p,
+            decide (∃ q ∈ CrystalBond.cluster s.rotate180 p,
                 q ∈ (ps.map QuarterPos.rotate180).filter (fun (rr : QuarterPos) =>
                     match rr.getQuarter s.rotate180 with | some w => w.isFragile | none => false))
          | _ => false) =
         (match p.rotate180.getQuarter s with
          | some (.crystal _) =>
-            decide (∃ q ∈ CrystalBond.crystalCluster s p.rotate180,
+            decide (∃ q ∈ CrystalBond.cluster s p.rotate180,
                 q ∈ ps.filter (fun (rr : QuarterPos) =>
                     match rr.getQuarter s with | some w => w.isFragile | none => false))
          | _ => false) := by
@@ -337,7 +337,7 @@ private theorem shatterTargetsOnFall_any_rotate180 (s : Shape)
         (shatterTargetsOnFall s.rotate180 (ps.map QuarterPos.rotate180)).any (· == p) =
         (shatterTargetsOnFall s ps).any (· == p.rotate180) := by
     simp only [shatterTargetsOnFall,
-        CrystalBond.allValid_rotate180_eq]
+        CrystalBond.allValid_rotate180]
     exact filter_any_rotate180 s _ _ (fun q => shatterFallPred_rotate180 s ps q) p
 
 /-- 落下砕け散り対象の clearPositions 結果は rotate180 で等変である。 -/

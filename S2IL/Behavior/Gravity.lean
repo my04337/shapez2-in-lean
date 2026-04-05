@@ -257,7 +257,7 @@ private def shouldProcessBefore (a b : FallingUnit) : Bool :=
 /-- 挿入ソート: u をソート済みリストの適切な位置に挿入する。
     shouldProcessBefore u v = true の場合のみ v の前に挿入する。
     tied ペア（双方 false）の場合はスキップして後方に配置する。
-    これにより spb 関係が常に保存される。 -/
+    これにより shouldProcessBefore 関係が常に保存される。 -/
 private def insertSorted (u : FallingUnit) (sorted : List FallingUnit)
         : (fuel : Nat) → List FallingUnit
     | 0 => u :: sorted
@@ -698,7 +698,7 @@ private theorem insertSorted_rotate180 (u : FallingUnit) (sorted : List FallingU
                 insertSorted u.rotate180 (v.rotate180 :: rest.map FallingUnit.rotate180) (n + 1)
             -- 2 分岐を by_cases で場合分け
             by_cases h1 : shouldProcessBefore u v
-            · -- spb u v = true
+            · -- shouldProcessBefore u v = true
               have lhs : insertSorted u (v :: rest) (n + 1) = u :: v :: rest := by
                   show (if shouldProcessBefore u v then u :: v :: rest
                       else v :: insertSorted u rest n) = _
@@ -709,7 +709,7 @@ private theorem insertSorted_rotate180 (u : FallingUnit) (sorted : List FallingU
                       else _) = _
                   simp [hspb1, h1]
               rw [lhs, rhs]; simp [List.map]
-            · -- spb u v = false → スキップして再帰
+            · -- shouldProcessBefore u v = false → スキップして再帰
               simp only [Bool.not_eq_true] at h1
               have h1' : shouldProcessBefore u.rotate180 v.rotate180 = false := by
                   rw [hspb1]; exact h1
@@ -764,9 +764,9 @@ private theorem insertSorted_perm (u : FallingUnit) (sorted : List FallingUnit) 
         | cons v rest =>
             simp only [insertSorted]
             split
-            · -- spb u v = true: u :: v :: rest — そのまま
+            · -- shouldProcessBefore u v = true: u :: v :: rest — そのまま
               exact List.Perm.refl _
-            · -- spb u v = false: v :: insertSorted u rest fuel
+            · -- shouldProcessBefore u v = false: v :: insertSorted u rest fuel
               exact ((ih rest).cons v).trans (List.Perm.swap u v rest)
 
 /-- sortFallingUnits の結果は入力の置換である -/
@@ -812,9 +812,9 @@ private theorem insertSorted_any_positions (u : FallingUnit) (sorted : List Fall
         | cons v rest =>
             simp only [insertSorted]
             split
-            · -- spb u v = true: u :: v :: rest → そのまま
+            · -- shouldProcessBefore u v = true: u :: v :: rest → そのまま
               rfl
-            · -- spb u v = false: v :: insertSorted u rest fuel
+            · -- shouldProcessBefore u v = false: v :: insertSorted u rest fuel
               simp only [List.flatMap_cons, List.any_append]
               rw [ih]
               simp only [List.flatMap_cons, List.any_append]
@@ -1015,11 +1015,11 @@ private theorem structuralClusterList_complete (s : Shape) (start p : QuarterPos
         (structuralClusterList s start).any (· == p) = true := by
     unfold structuralClusterList
     rw [structuralBfs_eq_generic]
-    have h_inv : GenericBFSInv (isStructurallyBonded s) (QuarterPos.allValid s)
+    have h_inv : GenericBfsInv (isStructurallyBonded s) (QuarterPos.allValid s)
         (genericBfs (isStructurallyBonded s) (QuarterPos.allValid s) [] [start]
             (s.layerCount * 4 * (s.layerCount * 4))) [] := by
       apply genericBfs_invariant_preserved
-      · exact genericBfsInv_initial _ _ _
+      · exact GenericBfsInv_initial _ _ _
       · have h_filter : (QuarterPos.allValid s).filter (fun p =>
             !(([] : List QuarterPos).any (· == p))) = QuarterPos.allValid s :=
             List.filter_eq_self.mpr (by intro x _; simp [List.any])
@@ -1233,7 +1233,7 @@ theorem structuralCluster_rotate180 (s : Shape) (start : QuarterPos) :
           -- layerCount = 0 なら BFS 結果は空 → hp に矛盾
           exfalso
           unfold structuralClusterList at hp
-          rw [structuralBfs_eq_generic, CrystalBond.allValid_rotate180_eq,
+          rw [structuralBfs_eq_generic, CrystalBond.allValid_rotate180,
               Shape.layerCount_rotate180] at hp
           simp [h_lc, genericBfs] at hp
       | succ n =>
@@ -1276,7 +1276,7 @@ theorem groundedPositions_rotate180 (s : Shape) :
           exact this
       -- seed'.r180 は s の有効 seed（allValid_rotate180_eq で allValid を統一）
       have h_seed_valid := grounding_seed_rotate180 s seed'
-          (CrystalBond.allValid_rotate180_eq s ▸ h_seed')
+          (CrystalBond.allValid_rotate180 s ▸ h_seed')
       refine ⟨p.rotate180, ?_, by simp⟩
       exact (any_beq_iff_mem _ _).mp
           (groundedPositionsList_complete s seed'.rotate180 p.rotate180
@@ -1289,7 +1289,7 @@ theorem groundedPositions_rotate180 (s : Shape) :
       have h_reach_r180 := groundingReachable_rotate180 s seed q h_reach
       -- seed.r180 は s.r180 の有効 seed（allValid_rotate180_eq で allValid を統一）
       have h_seed_r180 := grounding_seed_to_rotate180 s seed h_seed
-      rw [← CrystalBond.allValid_rotate180_eq] at h_seed_r180
+      rw [← CrystalBond.allValid_rotate180] at h_seed_r180
       exact (any_beq_iff_mem _ _).mp
           (groundedPositionsList_complete s.rotate180 seed.rotate180 q.rotate180
               h_seed_r180 h_reach_r180)
@@ -1354,7 +1354,7 @@ private theorem isGroundingContact_symm (s : Shape) (p1 p2 : QuarterPos) :
                 Direction.adjacent_symm p1.dir p2.dir, h_match_symm]
 
 /-- GenericReachable の推移律 -/
-private theorem GenericReachable_trans {edge : α → α → Bool}
+private theorem genericReachable_trans {edge : α → α → Bool}
         (h1 : GenericReachable edge a b) (h2 : GenericReachable edge b c) :
         GenericReachable edge a c := by
     induction h1 with
@@ -1362,14 +1362,14 @@ private theorem GenericReachable_trans {edge : α → α → Bool}
     | step h_bond _ ih => exact .step h_bond (ih h2)
 
 /-- 対称エッジでの GenericReachable 逆転 -/
-private theorem GenericReachable_reverse {edge : α → α → Bool}
+private theorem genericReachable_reverse {edge : α → α → Bool}
         (h_symm : ∀ x y, edge x y = edge y x)
         (h : GenericReachable edge a b) :
         GenericReachable edge b a := by
     induction h with
     | refl => exact .refl
     | step h_bond _ ih =>
-        exact GenericReachable_trans ih (.step (h_symm _ _ ▸ h_bond) .refl)
+        exact genericReachable_trans ih (.step (h_symm _ _ ▸ h_bond) .refl)
 
 /-- 構造結合は接地接触に含まれる -/
 private theorem isStructurallyBonded_implies_isGroundingContact (s : Shape) (p1 p2 : QuarterPos)
@@ -1394,7 +1394,7 @@ private theorem isStructurallyBonded_implies_isGroundingContact (s : Shape) (p1 
                  simp_all (config := { decide := true }))
 
 /-- エッジ述語の包含による GenericReachable の単調性 -/
-private theorem GenericReachable_mono {edge1 edge2 : α → α → Bool}
+private theorem genericReachable_mono {edge1 edge2 : α → α → Bool}
         (h_sub : ∀ a b, edge1 a b = true → edge2 a b = true)
         (h : GenericReachable edge1 a b) :
         GenericReachable edge2 a b := by
@@ -1404,7 +1404,7 @@ private theorem GenericReachable_mono {edge1 edge2 : α → α → Bool}
 
 /-- groundedPositionsList の BFS 不変条件 -/
 private theorem groundedPositionsList_inv (s : Shape) :
-        GenericBFSInv (isGroundingContact s) (QuarterPos.allValid s)
+        GenericBfsInv (isGroundingContact s) (QuarterPos.allValid s)
             (groundedPositionsList s) [] := by
     unfold groundedPositionsList
     rw [groundingBfs_eq_generic]
@@ -1711,12 +1711,12 @@ private theorem ungrounded_nonempty_implies_floatingUnits_nonempty (s : Shape) (
                 have h_reach_pos_x := structuralClusterList_sound s pos x h_x_in_sc
                 have h_reach_pos_p := structuralClusterList_sound s pos p h_p_in_sc
                 -- x → pos → p（逆転 + 推移）
-                have h_reach_x_pos := GenericReachable_reverse
+                have h_reach_x_pos := genericReachable_reverse
                     (fun a b => isStructurallyBonded_symm s a b) h_reach_pos_x
                 have h_reach_x_p :=
-                    GenericReachable_trans h_reach_x_pos h_reach_pos_p
+                    genericReachable_trans h_reach_x_pos h_reach_pos_p
                 -- 構造結合 → 接地接触
-                have h_reach_gc := GenericReachable_mono
+                have h_reach_gc := genericReachable_mono
                     (fun a b => isStructurallyBonded_implies_isGroundingContact s a b)
                     h_reach_x_p
                 -- BFS 閉包性から p も接地 → 矛盾
@@ -2054,11 +2054,11 @@ private theorem ungrounded_in_floatingUnits_positions (s : Shape) (p : QuarterPo
                 have h_p_in_sc := hc_is_sc ▸ hc_has_p
                 have h_reach_pos_x := structuralClusterList_sound s pos x h_x_in_sc
                 have h_reach_pos_p := structuralClusterList_sound s pos p h_p_in_sc
-                have h_reach_x_pos := GenericReachable_reverse
+                have h_reach_x_pos := genericReachable_reverse
                     (fun a b => isStructurallyBonded_symm s a b) h_reach_pos_x
                 have h_reach_x_p :=
-                    GenericReachable_trans h_reach_x_pos h_reach_pos_p
-                have h_reach_gc := GenericReachable_mono
+                    genericReachable_trans h_reach_x_pos h_reach_pos_p
+                have h_reach_gc := genericReachable_mono
                     (fun a b => isStructurallyBonded_implies_isGroundingContact s a b) h_reach_x_p
                 have h_p_grounded := genericBfs_closed_contains_reachable
                     (isGroundingContact s) (QuarterPos.allValid s)
@@ -3210,7 +3210,7 @@ private theorem minLayerAtDir_some_of_mem (u : FallingUnit) (dir : Direction) (p
     exact foldMinOption_some_isSome rest a
 
 /-- shouldProcessBefore u v = false のとき、共有方角の minLayerAtDir で u ≥ v -/
-private theorem spb_false_minLayerAtDir_ge (u v : FallingUnit) (dir : Direction)
+private theorem shouldProcessBefore_false_minLayerAtDir_ge (u v : FallingUnit) (dir : Direction)
         (h : shouldProcessBefore u v = false)
         (lu lv : Nat)
         (hu : u.minLayerAtDir dir = some lu)
@@ -3242,8 +3242,8 @@ private theorem tied_no_shared_dir (u v : FallingUnit)
         obtain ⟨lu, hlu⟩ := minLayerAtDir_some_of_mem u p.dir p hp rfl
         obtain ⟨lv, hlv⟩ := minLayerAtDir_some_of_mem v p.dir q hq_mem hd
         -- shouldProcessBefore 双方 false → lu ≥ lv ∧ lv ≥ lu → lu = lv
-        have h_ge := spb_false_minLayerAtDir_ge u v p.dir h_tied_uv lu lv hlu hlv
-        have h_le := spb_false_minLayerAtDir_ge v u p.dir h_tied_vu lv lu hlv hlu
+        have h_ge := shouldProcessBefore_false_minLayerAtDir_ge u v p.dir h_tied_uv lu lv hlu hlv
+        have h_le := shouldProcessBefore_false_minLayerAtDir_ge v u p.dir h_tied_vu lv lu hlv hlu
         have h_eq : lu = lv := by omega
         -- minLayerAtDir_some_witness: v に (lv, p.dir) の位置が存在
         obtain ⟨q', hq'_mem, hq'_dir, hq'_layer⟩ := minLayerAtDir_some_witness v p.dir lv hlv
@@ -3443,7 +3443,7 @@ private theorem insertSorted_pointwise_ext
                     shouldProcessBefore_ext hu h_v
                 -- 条件分岐: by_cases で分岐
                 by_cases h1 : shouldProcessBefore u1 v1
-                · -- spb u1 v1 = true → spb u2 v2 = true
+                · -- shouldProcessBefore u1 v1 = true → shouldProcessBefore u2 v2 = true
                   have h1' : shouldProcessBefore u2 v2 = true := h_spb_uv ▸ h1
                   have lhs : insertSorted u1 (v1 :: rest1) (n + 1) = u1 :: v1 :: rest1 := by
                       show (if shouldProcessBefore u1 v1 then u1 :: v1 :: rest1
@@ -3465,7 +3465,7 @@ private theorem insertSorted_pointwise_ext
                         | succ k =>
                             simp only [List.getElem_cons_succ]
                             exact h_pw (k + 1) (by simp at hi ⊢; omega) p
-                · -- spb u1 v1 = false → スキップして再帰
+                · -- shouldProcessBefore u1 v1 = false → スキップして再帰
                   simp only [Bool.not_eq_true] at h1
                   have h1' : shouldProcessBefore u2 v2 = false := h_spb_uv ▸ h1
                   have lhs : insertSorted u1 (v1 :: rest1) (n + 1) =
@@ -3501,7 +3501,7 @@ private theorem sortFallingUnits_pointwise_ext
                 rw [sortFallingUnits_length] at hi ⊢
                 rw [h_len] at hi; exact hi)).positions.any (· == p) := by
     -- foldl の帰納法で pointwise 等価を保存する補助定理
-    -- sortFU = foldl (fun sorted u => insertSorted u sorted (sorted.length + 1)) []
+    -- sortFallingUnits = foldl (fun sorted u => insertSorted u sorted (sorted.length + 1)) []
     -- l1, l2 に対する帰納法で acc1, acc2 を保持
     have key : ∀ (l1' l2' : List FallingUnit)
         (h_len' : l1'.length = l2'.length)
@@ -3549,7 +3549,7 @@ private theorem sortFallingUnits_pointwise_ext
                   (insertSorted u1 acc1 (acc1.length + 1))
                   (insertSorted u2 acc2 (acc1.length + 1))
                   h_ins.1 h_ins.2
-    -- key を sortFU に適用
+    -- key を sortFallingUnits に適用
     simp only [sortFallingUnits]
     have result := key l1 l2 h_len h_pw [] [] rfl (fun _ hi => absurd hi (by simp))
     constructor
@@ -4052,7 +4052,7 @@ private theorem floatingUnit_any_in_rotate180 (s : Shape) (u : FallingUnit)
             exact hp_floating_raw
         have h_pin_r180 : p.rotate180 ∈ allIsolatedPins s.rotate180 := by
             unfold allIsolatedPins
-            rw [CrystalBond.allValid_rotate180_eq]
+            rw [CrystalBond.allValid_rotate180]
             rw [List.mem_filter]
             constructor
             · -- p.r180 ∈ allValid s
@@ -4210,11 +4210,11 @@ private theorem insertSorted_split (u : FallingUnit) (sorted : List FallingUnit)
         -- sorted = [] → k = 0
         exact ⟨0, by omega, rfl⟩
     | case3 fuel v rest h_spb =>
-        -- spb(u, v) = true → u :: v :: rest, k = 0
+        -- shouldProcessBefore(u, v) = true → u :: v :: rest, k = 0
         simp only [insertSorted, h_spb, ite_true]
         exact ⟨0, by omega, rfl⟩
     | case4 fuel v rest h_not_spb ih =>
-        -- spb(u, v) = false → v :: insertSorted u rest fuel
+        -- shouldProcessBefore(u, v) = false → v :: insertSorted u rest fuel
         simp only [insertSorted, h_not_spb]
         have h_fuel' : fuel ≥ rest.length := by
             simp only [List.length] at h_fuel; omega
@@ -4573,11 +4573,11 @@ private theorem exists_adj_inv_of_exists_inv (l1 l2 : List FallingUnit)
 -- ================================================================
 
 -- 位置 k と k+1 の置換
-private def σ_ic (k m : Nat) : Nat :=
+private def swapIndex (k m : Nat) : Nat :=
     if m = k then k + 1 else if m = k + 1 then k else m
 
-private theorem σ_ic_invol (k m : Nat) : σ_ic k (σ_ic k m) = m := by
-    simp only [σ_ic]
+private theorem swapIndex_invol (k m : Nat) : swapIndex k (swapIndex k m) = m := by
+    simp only [swapIndex]
     split
     · split
       · omega
@@ -4586,44 +4586,44 @@ private theorem σ_ic_invol (k m : Nat) : σ_ic k (σ_ic k m) = m := by
       · split <;> omega
       · rfl
 
-private theorem σ_ic_lt_of_lt (k m n : Nat) (hk : k + 1 < n) (hm : m < n) : σ_ic k m < n := by
-    unfold σ_ic; split
+private theorem swapIndex_lt_of_lt (k m n : Nat) (hk : k + 1 < n) (hm : m < n) : swapIndex k m < n := by
+    unfold swapIndex; split
     · omega
     · split <;> omega
 
-private theorem σ_ic_preserves_lt (k : Nat) {i j : Nat} (h_lt : i < j)
-        (h_ne : (i, j) ≠ (k, k + 1)) : σ_ic k i < σ_ic k j := by
-    unfold σ_ic
+private theorem swapIndex_preserves_lt (k : Nat) {i j : Nat} (h_lt : i < j)
+        (h_ne : (i, j) ≠ (k, k + 1)) : swapIndex k i < swapIndex k j := by
+    unfold swapIndex
     by_cases hi_k : i = k <;> by_cases hi_k1 : i = k + 1 <;>
         by_cases hj_k : j = k <;> by_cases hj_k1 : j = k + 1 <;>
         simp_all <;> omega
 
-private theorem σ_ic_pair_ne (k : Nat) {i j : Nat} (h_lt : i < j)
-        (_h_ne : (i, j) ≠ (k, k + 1)) : (σ_ic k i, σ_ic k j) ≠ (k, k + 1) := by
+private theorem swapIndex_pair_ne (k : Nat) {i j : Nat} (h_lt : i < j)
+        (_h_ne : (i, j) ≠ (k, k + 1)) : (swapIndex k i, swapIndex k j) ≠ (k, k + 1) := by
     intro h_eq
     have h1 := congr_arg Prod.fst h_eq
     have h2 := congr_arg Prod.snd h_eq
     simp only at h1 h2
     have hi_eq : i = k + 1 := by
-        have := σ_ic_invol k i; rw [h1] at this
-        simp only [σ_ic, ite_true] at this; exact this.symm
+        have := swapIndex_invol k i; rw [h1] at this
+        simp only [swapIndex, ite_true] at this; exact this.symm
     have hj_eq : j = k := by
-        have := σ_ic_invol k j; rw [h2] at this
-        simp only [σ_ic, show ¬(k + 1 = k) from by omega, ite_false, ite_true] at this
+        have := swapIndex_invol k j; rw [h2] at this
+        simp only [swapIndex, show ¬(k + 1 = k) from by omega, ite_false, ite_true] at this
         exact this.symm
     omega
 
 -- pairsList: (i,j) ペアのリスト (i < j < n)
-private def pairsList_ic (n : Nat) : List (Nat × Nat) :=
+private def pairsList (n : Nat) : List (Nat × Nat) :=
     (List.range n).flatMap fun i =>
         (List.range n).flatMap fun j =>
             if i < j then [(i, j)] else []
 
-private theorem mem_pairsList_ic {n : Nat} {p : Nat × Nat} :
-        p ∈ pairsList_ic n ↔ p.1 < n ∧ p.2 < n ∧ p.1 < p.2 := by
+private theorem mem_pairsList {n : Nat} {p : Nat × Nat} :
+        p ∈ pairsList n ↔ p.1 < n ∧ p.2 < n ∧ p.1 < p.2 := by
     constructor
     · intro hp
-      simp only [pairsList_ic, List.mem_flatMap, List.mem_range] at hp
+      simp only [pairsList, List.mem_flatMap, List.mem_range] at hp
       obtain ⟨a, ha, b, hb, h3⟩ := hp
       by_cases hab : a < b
       · simp only [hab, ite_true, List.mem_singleton] at h3
@@ -4638,8 +4638,8 @@ private theorem mem_pairsList_ic {n : Nat} {p : Nat × Nat} :
       refine ⟨p.2, List.mem_range.mpr h2, ?_⟩
       simp [h_lt]
 
-private theorem pairsList_ic_nodup (n : Nat) : (pairsList_ic n).Nodup := by
-    simp only [pairsList_ic]
+private theorem pairsList_nodup (n : Nat) : (pairsList n).Nodup := by
+    simp only [pairsList]
     refine List.nodup_flatMap.mpr ⟨?_, ?_⟩
     · intro i _
       refine List.nodup_flatMap.mpr ⟨?_, ?_⟩
@@ -4672,15 +4672,15 @@ private theorem pairsList_ic_nodup (n : Nat) : (pairsList_ic n).Nodup := by
         · simp only [h1, ite_false, List.not_mem_nil] at hj1)
 
 -- σ をペアに適用
-private def σ_pair_ic (k : Nat) (p : Nat × Nat) : Nat × Nat := (σ_ic k p.1, σ_ic k p.2)
+private def swapPair (k : Nat) (p : Nat × Nat) : Nat × Nat := (swapIndex k p.1, swapIndex k p.2)
 
-private theorem σ_pair_ic_invol (k : Nat) (p : Nat × Nat) : σ_pair_ic k (σ_pair_ic k p) = p := by
-    simp only [σ_pair_ic, σ_ic_invol]
+private theorem swapPair_invol (k : Nat) (p : Nat × Nat) : swapPair k (swapPair k p) = p := by
+    simp only [swapPair, swapIndex_invol]
 
-private theorem σ_pair_ic_injective (k : Nat) : Function.Injective (σ_pair_ic k) := by
+private theorem swapPair_injective (k : Nat) : Function.Injective (swapPair k) := by
     intro a b h
-    have := congr_arg (σ_pair_ic k) h
-    rwa [σ_pair_ic_invol, σ_pair_ic_invol] at this
+    have := congr_arg (swapPair k) h
+    rwa [swapPair_invol, swapPair_invol] at this
 
 -- foldl ヘルパー
 private theorem rc_add_f_ic (f : Nat × Nat → Nat) :
@@ -4708,23 +4708,23 @@ private theorem foldl_add_extract_ic (l : List (Nat × Nat)) (f : Nat × Nat →
 
 private theorem pairFoldl_split_ic (n k : Nat) (v : Nat × Nat → Nat)
         (hk : k + 1 < n) :
-        (pairsList_ic n).foldl (fun acc p => acc + v p) 0 = v (k, k + 1) +
-        ((pairsList_ic n).erase (k, k + 1)).foldl (fun acc p => acc + v p) 0 :=
-    foldl_add_extract_ic (pairsList_ic n) v (k, k + 1)
-        (mem_pairsList_ic.mpr ⟨by omega, hk, by omega⟩) (pairsList_ic_nodup n)
+        (pairsList n).foldl (fun acc p => acc + v p) 0 = v (k, k + 1) +
+        ((pairsList n).erase (k, k + 1)).foldl (fun acc p => acc + v p) 0 :=
+    foldl_add_extract_ic (pairsList n) v (k, k + 1)
+        (mem_pairsList.mpr ⟨by omega, hk, by omega⟩) (pairsList_nodup n)
 
 private theorem mem_erase_nodup_ic {l : List (Nat × Nat)} {a x : Nat × Nat}
         (hnd : l.Nodup) (h : x ∈ l.erase a) : x ∈ l ∧ x ≠ a :=
     ⟨List.mem_of_mem_erase h, fun heq => by subst heq; exact hnd.not_mem_erase h⟩
 
 private theorem foldl_σ_reindex_ic (n k : Nat) (v : Nat × Nat → Nat) (hk : k + 1 < n) :
-        ((pairsList_ic n).erase (k, k + 1)).foldl (fun acc p => acc + v (σ_pair_ic k p)) 0 =
-        ((pairsList_ic n).erase (k, k + 1)).foldl (fun acc p => acc + v p) 0 := by
-    have hnd := pairsList_ic_nodup n
+        ((pairsList n).erase (k, k + 1)).foldl (fun acc p => acc + v (swapPair k p)) 0 =
+        ((pairsList n).erase (k, k + 1)).foldl (fun acc p => acc + v p) 0 := by
+    have hnd := pairsList_nodup n
     have h_nodup_erase := hnd.erase (k, k + 1)
-    have h_map_nodup := List.Nodup.map (σ_pair_ic_injective k) h_nodup_erase
-    have h_perm : ((pairsList_ic n).erase (k, k + 1)).map (σ_pair_ic k) |>.Perm
-            ((pairsList_ic n).erase (k, k + 1)) := by
+    have h_map_nodup := List.Nodup.map (swapPair_injective k) h_nodup_erase
+    have h_perm : ((pairsList n).erase (k, k + 1)).map (swapPair k) |>.Perm
+            ((pairsList n).erase (k, k + 1)) := by
         rw [List.perm_ext_iff_of_nodup h_map_nodup h_nodup_erase]
         intro x
         simp only [List.mem_map]
@@ -4732,31 +4732,31 @@ private theorem foldl_σ_reindex_ic (n k : Nat) (v : Nat × Nat → Nat) (hk : k
         · rintro ⟨a, ha_mem, ha_eq⟩
           rw [← ha_eq]
           have ⟨ha_in, ha_ne⟩ := mem_erase_nodup_ic hnd ha_mem
-          rw [mem_pairsList_ic] at ha_in
-          exact (List.mem_erase_of_ne (σ_ic_pair_ne k ha_in.2.2 ha_ne)).mpr
-              (mem_pairsList_ic.mpr ⟨σ_ic_lt_of_lt k a.1 n hk ha_in.1,
-                   σ_ic_lt_of_lt k a.2 n hk ha_in.2.1,
-                   σ_ic_preserves_lt k ha_in.2.2 ha_ne⟩)
+          rw [mem_pairsList] at ha_in
+          exact (List.mem_erase_of_ne (swapIndex_pair_ne k ha_in.2.2 ha_ne)).mpr
+              (mem_pairsList.mpr ⟨swapIndex_lt_of_lt k a.1 n hk ha_in.1,
+                   swapIndex_lt_of_lt k a.2 n hk ha_in.2.1,
+                   swapIndex_preserves_lt k ha_in.2.2 ha_ne⟩)
         · intro hx_mem
           have ⟨hx_in, hx_ne⟩ := mem_erase_nodup_ic hnd hx_mem
-          rw [mem_pairsList_ic] at hx_in
-          refine ⟨σ_pair_ic k x, ?_, σ_pair_ic_invol k x⟩
+          rw [mem_pairsList] at hx_in
+          refine ⟨swapPair k x, ?_, swapPair_invol k x⟩
           apply (List.mem_erase_of_ne ?_).mpr
-          · rw [mem_pairsList_ic]; simp only [σ_pair_ic]
-            exact ⟨σ_ic_lt_of_lt k x.1 n hk hx_in.1,
-                   σ_ic_lt_of_lt k x.2 n hk hx_in.2.1,
-                   σ_ic_preserves_lt k hx_in.2.2 hx_ne⟩
+          · rw [mem_pairsList]; simp only [swapPair]
+            exact ⟨swapIndex_lt_of_lt k x.1 n hk hx_in.1,
+                   swapIndex_lt_of_lt k x.2 n hk hx_in.2.1,
+                   swapIndex_preserves_lt k hx_in.2.2 hx_ne⟩
           · intro h_eq
-            have h_inv := σ_pair_ic_invol k x
+            have h_inv := swapPair_invol k x
             rw [h_eq] at h_inv
-            simp only [σ_pair_ic, σ_ic, ite_true, show ¬(k + 1 = k) from by omega, ite_false] at h_inv
+            simp only [swapPair, swapIndex, ite_true, show ¬(k + 1 = k) from by omega, ite_false] at h_inv
             have := hx_in.2.2
             rw [← h_inv] at this
             simp at this; omega
-    set erase_list := (pairsList_ic n).erase (k, k + 1)
-    have h_eq : erase_list.foldl (fun acc p => acc + v (σ_pair_ic k p)) 0 =
-        (erase_list.map (σ_pair_ic k)).foldl (fun acc p => acc + v p) 0 :=
-        (List.foldl_map (f := σ_pair_ic k) (g := fun acc p => acc + v p)).symm
+    set erase_list := (pairsList n).erase (k, k + 1)
+    have h_eq : erase_list.foldl (fun acc p => acc + v (swapPair k p)) 0 =
+        (erase_list.map (swapPair k)).foldl (fun acc p => acc + v p) 0 :=
+        (List.foldl_map (f := swapPair k) (g := fun acc p => acc + v p)).symm
     rw [h_eq]
     exact h_perm.foldl_eq (rcomm := rc_add_f_ic v) 0
 
@@ -4777,14 +4777,14 @@ private theorem pairFoldl_decrease_ic (n k : Nat) (v v' : Nat × Nat → Nat)
         (hk : k + 1 < n)
         (h_old_kk : v (k, k + 1) ≥ 1)
         (h_new_kk : v' (k, k + 1) = 0)
-        (h_other : ∀ p ∈ (pairsList_ic n).erase (k, k + 1),
-            v' p = v (σ_pair_ic k p)) :
-        (pairsList_ic n).foldl (fun acc p => acc + v' p) 0 <
-        (pairsList_ic n).foldl (fun acc p => acc + v p) 0 := by
+        (h_other : ∀ p ∈ (pairsList n).erase (k, k + 1),
+            v' p = v (swapPair k p)) :
+        (pairsList n).foldl (fun acc p => acc + v' p) 0 <
+        (pairsList n).foldl (fun acc p => acc + v p) 0 := by
     rw [pairFoldl_split_ic n k v hk, pairFoldl_split_ic n k v' hk]
     rw [h_new_kk]; simp only [Nat.zero_add]
-    have h_erase_eq : ((pairsList_ic n).erase (k, k + 1)).foldl (fun acc p => acc + v' p) 0 =
-        ((pairsList_ic n).erase (k, k + 1)).foldl (fun acc p => acc + v (σ_pair_ic k p)) 0 :=
+    have h_erase_eq : ((pairsList n).erase (k, k + 1)).foldl (fun acc p => acc + v' p) 0 =
+        ((pairsList n).erase (k, k + 1)).foldl (fun acc p => acc + v (swapPair k p)) 0 :=
         foldl_add_congr_ic _ _ _ h_other
     rw [h_erase_eq, foldl_σ_reindex_ic n k v hk]
     omega
@@ -4858,10 +4858,10 @@ private def invContrib_ic (l1 l2 : List FallingUnit) (p : Nat × Nat) : Nat :=
         else 0
     else 0
 
--- invCount = pairsList_ic(n).foldl(+invContrib)
-private theorem invCount_eq_pairsFoldl_ic (l1 l2 : List FallingUnit) :
+-- invCount = pairsList(n).foldl(+invContrib)
+private theorem invCount_eq_pairsFoldl (l1 l2 : List FallingUnit) :
         invCount l1 l2 =
-        (pairsList_ic l1.length).foldl (fun acc p => acc + invContrib_ic l1 l2 p) 0 := by
+        (pairsList l1.length).foldl (fun acc p => acc + invContrib_ic l1 l2 p) 0 := by
     unfold invCount
     suffices ∀ (init : Nat) (l : List (Nat × Nat)),
         l.foldl (fun acc (ij : Nat × Nat) =>
@@ -4890,29 +4890,29 @@ private theorem invCount_eq_pairsFoldl_ic (l1 l2 : List FallingUnit) :
         rw [h_eq]
         exact ih _
 
--- getElem_swap: σ_ic で統合
-private theorem getElem_swap_σ_ic (l : List FallingUnit) (k m : Nat)
+-- getElem_swap: swapIndex で統合
+private theorem getElem_swap_swapIndex (l : List FallingUnit) (k m : Nat)
         (hk : k + 1 < l.length) (hm : m < l.length) :
         (l.take k ++ l[k + 1]'hk :: l[k]'(by omega) :: l.drop (k + 2))[m]'(by
             rw [swap_length_ic]; exact hm) =
-        l[σ_ic k m]'(σ_ic_lt_of_lt k m l.length hk hm) := by
+        l[swapIndex k m]'(swapIndex_lt_of_lt k m l.length hk hm) := by
     by_cases h1 : m < k
-    · have hσ : σ_ic k m = m := by
-          simp [σ_ic, show m ≠ k from by omega, show m ≠ k + 1 from by omega]
+    · have hσ : swapIndex k m = m := by
+          simp [swapIndex, show m ≠ k from by omega, show m ≠ k + 1 from by omega]
       simp only [hσ]; exact getElem_swap_lt_ic l k m hk hm h1
     · by_cases h2 : m = k
-      · have hσ : σ_ic k m = k + 1 := by simp [σ_ic, h2]
+      · have hσ : swapIndex k m = k + 1 := by simp [swapIndex, h2]
         simp only [hσ]
         have := getElem_swap_eq_ic l k hk
         exact h2 ▸ this
       · by_cases h3 : m = k + 1
-        · have hσ : σ_ic k m = k := by
-              simp [σ_ic, h3]
+        · have hσ : swapIndex k m = k := by
+              simp [swapIndex, h3]
           simp only [hσ]
           have := getElem_swap_eq_succ_ic l k hk
           exact h3 ▸ this
-        · have hσ : σ_ic k m = m := by
-              simp [σ_ic, show m ≠ k from h2, show m ≠ k + 1 from h3]
+        · have hσ : swapIndex k m = m := by
+              simp [swapIndex, show m ≠ k from h2, show m ≠ k + 1 from h3]
           simp only [hσ]; exact getElem_swap_gt_ic l k m hk hm (by omega)
 
 /-- 核心: 隣接反転 swap で invCount が厳密に減少する -/
@@ -4925,7 +4925,7 @@ private theorem invCount_adj_swap_lt (l1 l2 : List FallingUnit)
     set l1' := l1.take k ++ l1[k + 1]'hk :: l1[k]'(by omega) :: l1.drop (k + 2)
     set n := l1.length
     have hl1'_len : l1'.length = n := swap_length_ic l1 k hk
-    rw [invCount_eq_pairsFoldl_ic l1 l2, invCount_eq_pairsFoldl_ic l1' l2]
+    rw [invCount_eq_pairsFoldl l1 l2, invCount_eq_pairsFoldl l1' l2]
     rw [hl1'_len]
     apply pairFoldl_decrease_ic n k (invContrib_ic l1 l2) (invContrib_ic l1' l2) hk
     · simp only [invContrib_ic, show k < l1.length from by omega, dite_true,
@@ -4943,17 +4943,17 @@ private theorem invCount_adj_swap_lt (l1 l2 : List FallingUnit)
       · omega
       · rfl
     · intro p hp
-      have ⟨hp_in, hp_ne⟩ := mem_erase_nodup_ic (pairsList_ic_nodup n) hp
-      rw [mem_pairsList_ic] at hp_in
-      have h_eq1 : l1'[p.1]'(by omega) = l1[σ_ic k p.1]'(σ_ic_lt_of_lt k p.1 n hk hp_in.1) :=
-          getElem_swap_σ_ic l1 k p.1 hk (by omega)
-      have h_eq2 : l1'[p.2]'(by omega) = l1[σ_ic k p.2]'(σ_ic_lt_of_lt k p.2 n hk hp_in.2.1) :=
-          getElem_swap_σ_ic l1 k p.2 hk (by omega)
-      simp only [invContrib_ic, σ_pair_ic,
+      have ⟨hp_in, hp_ne⟩ := mem_erase_nodup_ic (pairsList_nodup n) hp
+      rw [mem_pairsList] at hp_in
+      have h_eq1 : l1'[p.1]'(by omega) = l1[swapIndex k p.1]'(swapIndex_lt_of_lt k p.1 n hk hp_in.1) :=
+          getElem_swap_swapIndex l1 k p.1 hk (by omega)
+      have h_eq2 : l1'[p.2]'(by omega) = l1[swapIndex k p.2]'(swapIndex_lt_of_lt k p.2 n hk hp_in.2.1) :=
+          getElem_swap_swapIndex l1 k p.2 hk (by omega)
+      simp only [invContrib_ic, swapPair,
                   show p.1 < l1'.length from by omega, dite_true,
                   show p.2 < l1'.length from by omega,
-                  show (σ_ic k p.1) < l1.length from σ_ic_lt_of_lt k p.1 n hk hp_in.1,
-                  show (σ_ic k p.2) < l1.length from σ_ic_lt_of_lt k p.2 n hk hp_in.2.1,
+                  show (swapIndex k p.1) < l1.length from swapIndex_lt_of_lt k p.1 n hk hp_in.1,
+                  show (swapIndex k p.2) < l1.length from swapIndex_lt_of_lt k p.2 n hk hp_in.2.1,
                   h_eq1, h_eq2]
       congr 1
 
@@ -4996,7 +4996,7 @@ private theorem adj_swap_perm (l : List FallingUnit) (k : Nat) (hk : k + 1 < l.l
 -- ================================================================
 
 /-- floatingUnits の異なる要素は位置非共有 -/
-private theorem fU_elem_positions_disjoint (s : Shape)
+private theorem floatingUnits_elem_positions_disjoint (s : Shape)
         (u v : FallingUnit) (hu : u ∈ floatingUnits s) (hv : v ∈ floatingUnits s)
         (h_ne : u ≠ v) :
         ∀ p, p ∈ u.positions → v.positions.any (· == p) = false := by
@@ -5036,7 +5036,7 @@ private theorem pin_minLayerAtDir_self (p : QuarterPos) :
     isStructurallyBonded s p1 p2 = true であれば、
     p2 も u のクラスタに属する（GenericReachable + 完全性）。
     p2 が別の v.positions にも属すると位置非共有に矛盾する。 -/
-private theorem fU_bonded_positions_absurd (s : Shape)
+private theorem floatingUnits_bonded_positions_absurd (s : Shape)
         (u v : FallingUnit) (hu : u ∈ floatingUnits s) (hv : v ∈ floatingUnits s)
         (h_ne : u ≠ v)
         (ps_u : List QuarterPos) (h_u_eq : u = .cluster ps_u)
@@ -5067,7 +5067,7 @@ private theorem fU_bonded_positions_absurd (s : Shape)
     -- p2 ∈ u.positions (since u = cluster ps_u → positions = ps_u)
     have hp2_u : p2 ∈ u.positions := h_u_eq ▸ hp2_in_psu
     -- 位置非共有: p2 ∈ u.positions → v.positions.any (· == p2) = false
-    have h_disj := fU_elem_positions_disjoint s u v hu hv h_ne p2 hp2_u
+    have h_disj := floatingUnits_elem_positions_disjoint s u v hu hv h_ne p2 hp2_u
     -- だが p2 ∈ v.positions → v.positions.any (· == p2) = true
     have h_p2_v : v.positions.any (· == p2) = true :=
         List.any_eq_true.mpr ⟨p2, hp2, BEq.rfl⟩
@@ -5248,7 +5248,7 @@ private theorem horizontal_pair_blocks_layer (s : Shape)
           have h1 : pv.layer = pa.layer := hpv_layer.trans hpa_layer.symm
           have h2 : pv.dir = pa.dir := hpv_dir.symm.trans (h_eq_a.trans hpa_dir.symm)
           cases pv; cases pa; simp_all
-      have h_disj := fU_elem_positions_disjoint s u v hu hv h_ne pa (h_u_eq ▸ hpa_mem)
+      have h_disj := floatingUnits_elem_positions_disjoint s u v hu hv h_ne pa (h_u_eq ▸ hpa_mem)
       have : v.positions.any (· == pa) = true :=
           List.any_eq_true.mpr ⟨pv, h_v_eq ▸ hpv_mem, by rw [h_eq]; exact BEq.rfl⟩
       rw [h_disj] at this; exact absurd this (by decide)
@@ -5257,11 +5257,11 @@ private theorem horizontal_pair_blocks_layer (s : Shape)
           have h1 : pv.layer = pb.layer := hpv_layer.trans hpb_layer.symm
           have h2 : pv.dir = pb.dir := hpv_dir.symm.trans (h_eq_b.trans hpb_dir.symm)
           cases pv; cases pb; simp_all
-      have h_disj := fU_elem_positions_disjoint s u v hu hv h_ne pb (h_u_eq ▸ hpb_mem)
+      have h_disj := floatingUnits_elem_positions_disjoint s u v hu hv h_ne pb (h_u_eq ▸ hpb_mem)
       have : v.positions.any (· == pb) = true :=
           List.any_eq_true.mpr ⟨pv, h_v_eq ▸ hpv_mem, by rw [h_eq]; exact BEq.rfl⟩
       rw [h_disj] at this; exact absurd this (by decide)
-    · -- d_c adj d_a → isStructurallyBonded s pa pv = true → fU_bonded_positions_absurd
+    · -- d_c adj d_a → isStructurallyBonded s pa pv = true → floatingUnits_bonded_positions_absurd
       have h_pa_bond := allStructuralClustersList_all_bondable s ps_u h_psu_mem pa hpa_any
       have h_pv_bond := allStructuralClustersList_all_bondable s ps_v h_psv_mem pv hpv_any
       obtain ⟨q_a, hq_a_get, hq_a_bond⟩ := h_pa_bond
@@ -5272,7 +5272,7 @@ private theorem horizontal_pair_blocks_layer (s : Shape)
           simp only [hq_a_bond, hq_v_bond, Bool.true_and, Bool.or_eq_true, Bool.and_eq_true]
           left; exact ⟨by simp [hpa_layer, hpv_layer],
               by rw [hpa_dir]; exact (Direction.adjacent_symm pv.dir d_a).symm ▸ h_adj_a⟩
-      exact fU_bonded_positions_absurd s u v hu hv h_ne ps_u h_u_eq h_psu_mem pa pv
+      exact floatingUnits_bonded_positions_absurd s u v hu hv h_ne ps_u h_u_eq h_psu_mem pa pv
           hpa_mem (h_v_eq ▸ hpv_mem) h_isb
     · -- d_c adj d_b → 同様に isStructurallyBonded s pb pv → 矛盾
       have h_pb_bond := allStructuralClustersList_all_bondable s ps_u h_psu_mem pb hpb_any
@@ -5285,7 +5285,7 @@ private theorem horizontal_pair_blocks_layer (s : Shape)
           simp only [hq_b_bond, hq_v_bond, Bool.true_and, Bool.or_eq_true, Bool.and_eq_true]
           left; exact ⟨by simp [hpb_layer, hpv_layer],
               by rw [hpb_dir]; exact (Direction.adjacent_symm pv.dir d_b).symm ▸ h_adj_b⟩
-      exact fU_bonded_positions_absurd s u v hu hv h_ne ps_u h_u_eq h_psu_mem pb pv
+      exact floatingUnits_bonded_positions_absurd s u v hu hv h_ne ps_u h_u_eq h_psu_mem pb pv
           hpb_mem (h_v_eq ▸ hpv_mem) h_isb
 
 -- ================================================================
@@ -5293,7 +5293,7 @@ private theorem horizontal_pair_blocks_layer (s : Shape)
 -- ================================================================
 
 /-- floatingUnits のクラスタは allStructuralClustersList のメンバーである -/
-private theorem fU_cluster_in_allStructuralClustersList (s : Shape) (ps : List QuarterPos)
+private theorem floatingUnits_cluster_in_allStructuralClustersList (s : Shape) (ps : List QuarterPos)
         (h : FallingUnit.cluster ps ∈ floatingUnits s) :
         ps ∈ allStructuralClustersList s := by
     rw [floatingUnits_eq_append, List.mem_append] at h
@@ -5408,16 +5408,16 @@ private theorem minLayerAtDir_le_of_mem (u : FallingUnit) (dir : Direction) (l :
     exact foldMinOption_none_le _ l h p.layer this
 
 -- ================================================================
--- spb の mutual 不可性 (位置非共有 → 双方向 spb 不可)
+-- shouldProcessBefore の mutual 不可性 (位置非共有 → 双方向 shouldProcessBefore 不可)
 -- ================================================================
 
 /-- 位置非共有な要素間で shouldProcessBefore が双方向 true にはならない。
-    spb(u,v)=true は ∃ dir, u.minLayer@dir < v.minLayer@dir を意味する。
-    spb(v,u)=true は ∃ dir', v.minLayer@dir' < u.minLayer@dir' を意味する。
+    shouldProcessBefore(u,v)=true は ∃ dir, u.minLayer@dir < v.minLayer@dir を意味する。
+    shouldProcessBefore(v,u)=true は ∃ dir', v.minLayer@dir' < u.minLayer@dir' を意味する。
     minLayer の witness は対応する位置を持ち、
     tied_no_shared_dir の証明パターンにより同一 (layer, dir) が共有されて矛盾する。 -/
--- spb true の展開による方角 witness の抽出
-private theorem spb_true_witness (u v : FallingUnit)
+-- shouldProcessBefore true の展開による方角 witness の抽出
+private theorem shouldProcessBefore_true_witness (u v : FallingUnit)
         (h : shouldProcessBefore u v = true) :
         ∃ d lu lv, u.minLayerAtDir d = some lu ∧ v.minLayerAtDir d = some lv ∧ lu < lv := by
     simp only [shouldProcessBefore, Direction.all, List.any_cons, List.any_nil,
@@ -5443,14 +5443,14 @@ private theorem spb_true_witness (u v : FallingUnit)
       rcases u_nw with _ | lu <;> rcases v_nw with _ | lv <;> simp at h
       exact ⟨.nw, lu, lv, hnw_u, hnw_v, h⟩
 
-private theorem spb_no_mutual (s : Shape)
+private theorem shouldProcessBefore_no_mutual (s : Shape)
         (u v : FallingUnit) (hu : u ∈ floatingUnits s) (hv : v ∈ floatingUnits s)
         (h_ne : u ≠ v)
         (h_spb_uv : shouldProcessBefore u v = true)
         (h_spb_vu : shouldProcessBefore v u = true) : False := by
-    -- spb(u,v) と spb(v,u) から方角 witness を抽出
-    obtain ⟨d1, lu1, lv1, hu1, hv1, h_lt1⟩ := spb_true_witness u v h_spb_uv
-    obtain ⟨d2, lv2, lu2, hv2, hu2, h_lt2⟩ := spb_true_witness v u h_spb_vu
+    -- shouldProcessBefore(u,v) と shouldProcessBefore(v,u) から方角 witness を抽出
+    obtain ⟨d1, lu1, lv1, hu1, hv1, h_lt1⟩ := shouldProcessBefore_true_witness u v h_spb_uv
+    obtain ⟨d2, lv2, lu2, hv2, hu2, h_lt2⟩ := shouldProcessBefore_true_witness v u h_spb_vu
     -- d1 = d2 の場合: 同方角で lu < lv かつ lv < lu → omega 矛盾
     by_cases h_dir : d1 = d2
     · subst h_dir
@@ -5494,10 +5494,10 @@ private theorem spb_no_mutual (s : Shape)
       obtain ⟨pv2, hpv2_mem, hpv2_dir, hpv2_layer⟩ := minLayerAtDir_some_witness _ d2 lv2 hv2
       obtain ⟨pu2, hpu2_mem, hpu2_dir, hpu2_layer⟩ := minLayerAtDir_some_witness _ d2 lu2 hu2
       -- 位置非共有
-      have h_disj := fU_elem_positions_disjoint s _ _ hu hv h_ne
+      have h_disj := floatingUnits_elem_positions_disjoint s _ _ hu hv h_ne
       -- ps_u, ps_v ∈ allStructuralClustersList
-      have h_psu_mem := fU_cluster_in_allStructuralClustersList s ps_u hu
-      have h_psv_mem := fU_cluster_in_allStructuralClustersList s ps_v hv
+      have h_psu_mem := floatingUnits_cluster_in_allStructuralClustersList s ps_u hu
+      have h_psv_mem := floatingUnits_cluster_in_allStructuralClustersList s ps_v hv
       -- u, v の d1/d2 間 GenericReachable
       have h_gr_u12 := cluster_genReachable s ps_u h_psu_mem pu1 pu2 hpu1_mem hpu2_mem
       have h_gr_u21 := cluster_genReachable s ps_u h_psu_mem pu2 pu1 hpu2_mem hpu1_mem
@@ -5596,13 +5596,13 @@ private theorem spb_no_mutual (s : Shape)
       have h_LV_lt_LU' : L_v < L'_u := h_V_lt_LU' a_v h_av_mem
       omega
 
-/-- floatingUnits の要素間で spb の連鎖 (a→b→c) は生じない。
-    すなわち、spb(a,b)=true ∧ spb(b,c)=true となる 3 元組は存在しない。
+/-- floatingUnits の要素間で shouldProcessBefore の連鎖 (a→b→c) は生じない。
+    すなわち、shouldProcessBefore(a,b)=true ∧ shouldProcessBefore(b,c)=true となる 3 元組は存在しない。
 
     計算検証: 2L 全 3 色・3L 全 2 色で qualifying triples = 0。
     位置非共有制約により中間要素は 2 方角以上で他要素との大小関係が必要だが、
     floatingUnits の構造（cluster の連結性 + pin の単一方角性）により不可能。 -/
-private theorem spb_no_chain (s : Shape)
+private theorem shouldProcessBefore_no_chain (s : Shape)
         (a b c : FallingUnit)
         (ha : a ∈ floatingUnits s) (hb : b ∈ floatingUnits s) (hc : c ∈ floatingUnits s)
         (h_ab : a ≠ b) (h_bc : b ≠ c) (h_ac : a ≠ c)
@@ -5789,16 +5789,16 @@ private theorem foldl_eq_of_perm_tied_adj_comm (s : Shape)
         exact ih (invCount l1'' l2) h_inv_lt l1'' rfl h_perm'' h_nodup'' h_tied_comm''
 
 -- ================================================================
--- insertSorted の spb 順序保存
+-- insertSorted の shouldProcessBefore 順序保存
 -- ================================================================
 
-/-- spb(a, b) = true かつ b ∈ sorted ならば、
+/-- shouldProcessBefore(a, b) = true かつ b ∈ sorted ならば、
     insertSorted a sorted fuel で a は b より前に配置される。
-    証明: sorted を先頭から走査し、spb a head を判定。
-    - spb a head = true: a を挿入 → b は head 以降にあるので a < b
-    - spb a head = false: head ≠ b (もし head = b なら spb a b = true ≠ false で矛盾)
+    証明: sorted を先頭から走査し、shouldProcessBefore a head を判定。
+    - shouldProcessBefore a head = true: a を挿入 → b は head 以降にあるので a < b
+    - shouldProcessBefore a head = false: head ≠ b (もし head = b なら shouldProcessBefore a b = true ≠ false で矛盾)
       → b ∈ rest, 帰納法で成立 -/
-private theorem insertSorted_before_spb (a b : FallingUnit) (sorted : List FallingUnit)
+private theorem insertSorted_before_shouldProcessBefore (a b : FallingUnit) (sorted : List FallingUnit)
         (fuel : Nat) (h_fuel : fuel ≥ sorted.length)
         (h_mem : b ∈ sorted) (h_spb : shouldProcessBefore a b = true) :
         ∃ prefix_ suffix_,
@@ -5812,16 +5812,16 @@ private theorem insertSorted_before_spb (a b : FallingUnit) (sorted : List Falli
         -- sorted = [] → b ∈ [] 矛盾
         simp at h_mem
     | case3 fuel v rest h_spb_v =>
-        -- spb(a, v) = true → a :: v :: rest, b ∈ v :: rest
+        -- shouldProcessBefore(a, v) = true → a :: v :: rest, b ∈ v :: rest
         simp only [insertSorted, h_spb_v, ite_true]
         exact ⟨[], v :: rest, rfl, h_mem⟩
     | case4 fuel v rest h_not_spb ih =>
-        -- spb(a, v) = false → v :: insertSorted a rest fuel
+        -- shouldProcessBefore(a, v) = false → v :: insertSorted a rest fuel
         simp only [insertSorted, h_not_spb]
         -- b ∈ v :: rest
         cases h_mem with
         | head =>
-            -- b = v だが spb a b = true ≠ false = spb a v → 矛盾
+            -- b = v だが shouldProcessBefore a b = true ≠ false = shouldProcessBefore a v → 矛盾
             simp_all
         | tail _ hb_rest =>
             -- b ∈ rest, 帰納法
@@ -5848,12 +5848,12 @@ private theorem insertSorted_preserves_relative_order (u : FallingUnit)
         -- sorted = [] → a ∈ [] 矛盾
         nomatch ha
     | case3 fuel v rest h_spb =>
-        -- spb(u, v) = true → result = u :: v :: rest = u :: sorted
+        -- shouldProcessBefore(u, v) = true → result = u :: v :: rest = u :: sorted
         obtain ⟨p, m, s_, h_eq⟩ := h_before
         simp only [insertSorted, h_spb, ite_true]
         exact ⟨u :: p, m, s_, congrArg (u :: ·) h_eq⟩
     | case4 fuel v rest h_not_spb ih =>
-        -- spb(u, v) = false → result = v :: insertSorted u rest fuel
+        -- shouldProcessBefore(u, v) = false → result = v :: insertSorted u rest fuel
         simp only [insertSorted]
         rw [if_neg h_not_spb]
         obtain ⟨p, m, s_, h_eq⟩ := h_before
@@ -5894,12 +5894,12 @@ private theorem insertSorted_preserves_relative_order (u : FallingUnit)
             exact ⟨v :: p'', m'', s_'', congrArg (v :: ·) h_result⟩
 
 -- ================================================================
--- sortFU 出力の反転ペアが tied であることの補題
+-- sortFallingUnits 出力の反転ペアが tied であることの補題
 -- ================================================================
 
-/-- spb(u,v)=false が sorted の全要素に対して成立するとき、
+/-- shouldProcessBefore(u,v)=false が sorted の全要素に対して成立するとき、
     insertSorted は u を末尾に追加する。 -/
-private theorem insertSorted_append_when_no_spb (u : FallingUnit) (sorted : List FallingUnit)
+private theorem insertSorted_append_when_no_shouldProcessBefore (u : FallingUnit) (sorted : List FallingUnit)
         (fuel : Nat) (h_fuel : fuel ≥ sorted.length)
         (h_no_spb : ∀ v, v ∈ sorted → shouldProcessBefore u v = false) :
         insertSorted u sorted fuel = sorted ++ [u] := by
@@ -5916,10 +5916,10 @@ private theorem insertSorted_append_when_no_spb (u : FallingUnit) (sorted : List
         -- sorted = [] → [u] = [] ++ [u]
         simp [insertSorted]
     | case3 fuel v rest h_spb =>
-        -- spb(u, v) = true → 矛盾 (h_no_spb v)
+        -- shouldProcessBefore(u, v) = true → 矛盾 (h_no_spb v)
         simp_all
     | case4 fuel v rest h_not_spb ih =>
-        -- spb(u, v) = false → v :: insertSorted u rest fuel
+        -- shouldProcessBefore(u, v) = false → v :: insertSorted u rest fuel
         simp [insertSorted, h_not_spb]
         have h_fuel' : fuel ≥ rest.length := by simp_all
         have h_no_spb' : ∀ w, w ∈ rest → shouldProcessBefore u w = false := by
@@ -5927,9 +5927,9 @@ private theorem insertSorted_append_when_no_spb (u : FallingUnit) (sorted : List
             exact h_no_spb w (List.mem_cons_of_mem v hw)
         rw [ih h_fuel' h_no_spb']
 
-/-- foldl insertSorted の不変条件: spb(a,b)=true の a,b が共に結果に含まれれば
+/-- foldl insertSorted の不変条件: shouldProcessBefore(a,b)=true の a,b が共に結果に含まれれば
     result = prefix_ ++ [a] ++ suffix_ かつ b ∈ suffix_ が成立。 -/
-private theorem foldl_insertSorted_preserves_spb_order (s : Shape)
+private theorem foldl_insertSorted_preserves_shouldProcessBefore_order (s : Shape)
         (a b : FallingUnit) (h_ne : a ≠ b)
         (h_spb : shouldProcessBefore a b = true)
         (todo : List FallingUnit) (acc : List FallingUnit)
@@ -6036,23 +6036,23 @@ private theorem foldl_insertSorted_preserves_spb_order (s : Shape)
                     exfalso; exact h_ne (h_a_eq_u.trans h_b_eq_u.symm)
                 | inr h_b_in_acc =>
                     -- Case 2: a = u, b ∈ acc
-                    -- spb(a, b) = true ∧ b ∈ acc → insertSorted_before_spb
+                    -- shouldProcessBefore(a, b) = true ∧ b ∈ acc → insertSorted_before_shouldProcessBefore
                     subst h_a_eq_u
                     have h_fuel : acc.length + 1 ≥ acc.length := Nat.le_succ _
                     obtain ⟨p, s_, h_eq, h_b_s⟩ :=
-                        insertSorted_before_spb a b acc (acc.length + 1) h_fuel
+                        insertSorted_before_shouldProcessBefore a b acc (acc.length + 1) h_fuel
                             h_b_in_acc h_spb
                     exact ⟨p, s_, h_eq, h_b_s⟩
             | inr h_a_in_acc =>
                 cases hb_ua with
                 | inl h_b_eq_u =>
                     -- Case 3: a ∈ acc, b = u
-                    -- spb_no_chain: spb(a,b)=true → ∀ w ∈ acc, spb(b,w)=false
+                    -- shouldProcessBefore_no_chain: shouldProcessBefore(a,b)=true → ∀ w ∈ acc, shouldProcessBefore(b,w)=false
                     subst h_b_eq_u
-                    -- b = u, spb(a, u) = true → ∀ w ∈ acc, spb(u, w) = false
+                    -- b = u, shouldProcessBefore(a, u) = true → ∀ w ∈ acc, shouldProcessBefore(u, w) = false
                     have h_no_spb_u : ∀ w, w ∈ acc → shouldProcessBefore b w = false := by
                         intro w hw
-                        -- spb(b, w) = true と仮定して矛盾を導く
+                        -- shouldProcessBefore(b, w) = true と仮定して矛盾を導く
                         by_contra h_contra
                         simp only [Bool.not_eq_false] at h_contra
                         -- w ∈ floatingUnits s
@@ -6062,19 +6062,19 @@ private theorem foldl_insertSorted_preserves_spb_order (s : Shape)
                             h_sub_todo b (List.mem_cons.mpr (Or.inl rfl))
                         -- a ≠ w ?
                         by_cases h_aw : a = w
-                        · -- a = w → spb(b, a) = true ∧ spb(a, b) = true → mutual 矛盾
+                        · -- a = w → shouldProcessBefore(b, a) = true ∧ shouldProcessBefore(a, b) = true → mutual 矛盾
                           subst h_aw
-                          exact spb_no_mutual s a b ha_fu hb_fu h_ne h_spb h_contra
-                        · -- a ≠ w → spb_no_chain(a, b, w)
+                          exact shouldProcessBefore_no_mutual s a b ha_fu hb_fu h_ne h_spb h_contra
+                        · -- a ≠ w → shouldProcessBefore_no_chain(a, b, w)
                           have h_bw : b ≠ w := by
                             intro h; subst h
                             exact h_u_notin_acc hw
-                          exact spb_no_chain s a b w ha_fu hb_fu hw_fu h_ne h_bw h_aw
+                          exact shouldProcessBefore_no_chain s a b w ha_fu hb_fu hw_fu h_ne h_bw h_aw
                             h_spb h_contra
-                    -- insertSorted_append_when_no_spb: b が末尾に追加
+                    -- insertSorted_append_when_no_shouldProcessBefore: b が末尾に追加
                     have h_fuel : acc.length + 1 ≥ acc.length := Nat.le_succ _
                     have h_acc'_eq : acc' = acc ++ [b] :=
-                        insertSorted_append_when_no_spb b acc (acc.length + 1) h_fuel h_no_spb_u
+                        insertSorted_append_when_no_shouldProcessBefore b acc (acc.length + 1) h_fuel h_no_spb_u
                     -- a ∈ acc → acc = l1 ++ [a] ++ l2 → acc ++ [b] = l1 ++ [a] ++ (l2 ++ [b])
                     obtain ⟨l1, l2, h_split⟩ := List.append_of_mem h_a_in_acc
                     refine ⟨l1, l2 ++ [b], ?_, List.mem_append_right _ (List.mem_cons.mpr (Or.inl rfl))⟩
@@ -6158,7 +6158,7 @@ private theorem sortFallingUnits_spb_order_preserving (s : Shape)
         (a b : FallingUnit) (ha : a ∈ l) (hb : b ∈ l)
         (h_spb : shouldProcessBefore a b = true) :
         posIn a (sortFallingUnits l) < posIn b (sortFallingUnits l) := by
-    -- a ≠ b: spb は irreflexive (la < la は偽)
+    -- a ≠ b: shouldProcessBefore は irreflexive (la < la は偽)
     have h_ne : a ≠ b := by
         intro h_eq; subst h_eq
         -- shouldProcessBefore a a は各方角で la < la = false → any は false
@@ -6178,7 +6178,7 @@ private theorem sortFallingUnits_spb_order_preserving (s : Shape)
     have h_inv_nil : a ∈ ([] : List FallingUnit) → b ∈ ([] : List FallingUnit) →
         ∃ prefix_ suffix_, ([] : List FallingUnit) = prefix_ ++ [a] ++ suffix_ ∧ b ∈ suffix_ :=
         fun ha_nil _ => nomatch ha_nil
-    obtain ⟨p, s_, h_eq, h_b_in⟩ := foldl_insertSorted_preserves_spb_order s a b h_ne h_spb
+    obtain ⟨p, s_, h_eq, h_b_in⟩ := foldl_insertSorted_preserves_shouldProcessBefore_order s a b h_ne h_spb
         l [] List.nodup_nil h_nodup h_sub_nil h_sub h_disjoint_nil h_a_in_l h_b_in_l h_inv_nil
     -- 分解表現から posIn 不等式へ変換
     have h_nodup_result : (l.foldl (fun sorted u =>
@@ -6188,10 +6188,10 @@ private theorem sortFallingUnits_spb_order_preserving (s : Shape)
         exact h_perm.nodup_iff.mpr h_nodup
     exact posIn_lt_of_decomposition a b _ h_nodup_result p s_ h_eq h_b_in
 
-/-- sortFU(l1) と sortFU(l2) の反転ペアは tied (spb 双方 false) である。
+/-- sortFallingUnits(l1) と sortFallingUnits(l2) の反転ペアは tied (shouldProcessBefore 双方 false) である。
     sortFallingUnits_spb_order_preserving により、one-way ペアは
-    sortFU 出力で常に正しい順序を保つ。よって反転ペアは tied のみ。 -/
-private theorem sortFU_inversion_is_tied (s : Shape)
+    sortFallingUnits 出力で常に正しい順序を保つ。よって反転ペアは tied のみ。 -/
+private theorem sortFallingUnits_inversion_is_tied (s : Shape)
         (l1 l2 : List FallingUnit)
         (h_perm : l1.Perm l2)
         (h_nodup : l1.Nodup)
@@ -6202,7 +6202,7 @@ private theorem sortFU_inversion_is_tied (s : Shape)
         (h_order : posIn a (sortFallingUnits l1) < posIn b (sortFallingUnits l1))
         (h_inv_a : posIn a (sortFallingUnits l2) > posIn b (sortFallingUnits l2)) :
         shouldProcessBefore a b = false ∧ shouldProcessBefore b a = false := by
-    -- a, b ∈ l1 (sortFU は perm)
+    -- a, b ∈ l1 (sortFallingUnits は perm)
     have ha_l1 : a ∈ l1 := (sortFallingUnits_perm l1).mem_iff.mp ha
     have hb_l1 : b ∈ l1 := (sortFallingUnits_perm l1).mem_iff.mp hb
     -- a, b ∈ l2 (l1 ~ l2)
@@ -6213,25 +6213,25 @@ private theorem sortFU_inversion_is_tied (s : Shape)
     have h_sub2 : ∀ u, u ∈ l2 → u ∈ floatingUnits s :=
         fun u hu => h_sub u (h_perm.symm.mem_iff.mp hu)
     refine ⟨?_, ?_⟩
-    · -- spb(a,b) = false: 背理法
-      -- spb(a,b) = true と仮定すると sortFU(l2) で a が b より前 → h_inv_a と矛盾
+    · -- shouldProcessBefore(a,b) = false: 背理法
+      -- shouldProcessBefore(a,b) = true と仮定すると sortFallingUnits(l2) で a が b より前 → h_inv_a と矛盾
       match h_eq : shouldProcessBefore a b with
       | false => rfl
       | true =>
         have h_order2 := sortFallingUnits_spb_order_preserving s l2 h_nodup2 h_sub2 a b ha_l2 hb_l2 h_eq
         omega
-    · -- spb(b,a) = false: 背理法
-      -- spb(b,a) = true と仮定すると sortFU(l1) で b が a より前 → h_order と矛盾
+    · -- shouldProcessBefore(b,a) = false: 背理法
+      -- shouldProcessBefore(b,a) = true と仮定すると sortFallingUnits(l1) で b が a より前 → h_order と矛盾
       match h_eq : shouldProcessBefore b a with
       | false => rfl
       | true =>
         have h_order1 := sortFallingUnits_spb_order_preserving s l1 h_nodup h_sub b a hb_l1 ha_l1 h_eq
         omega
 
-/-- sortFU(l1) と sortFU(l2) の反転ペアは方角素 (direction-disjoint) である。
-    tied (sortFU_inversion_is_tied) + position-disjoint (fU_elem_positions_disjoint)
+/-- sortFallingUnits(l1) と sortFallingUnits(l2) の反転ペアは方角素 (direction-disjoint) である。
+    tied (sortFallingUnits_inversion_is_tied) + position-disjoint (floatingUnits_elem_positions_disjoint)
     → direction-disjoint (tied_no_shared_dir) の導出。 -/
-private theorem sortFU_inversion_dir_disjoint (s : Shape)
+private theorem sortFallingUnits_inversion_dir_disjoint (s : Shape)
         (l1 l2 : List FallingUnit)
         (h_perm : l1.Perm l2)
         (h_nodup : l1.Nodup)
@@ -6256,27 +6256,27 @@ private theorem sortFU_inversion_dir_disjoint (s : Shape)
     -- a ≠ b (NoDup + 異なる添字)
     have h_ne : a ≠ b := fun h_eq =>
         absurd (h_nodup_sl.getElem_inj_iff.mp h_eq) (Nat.ne_of_lt h_ij)
-    -- posIn a (sortFU l1) < posIn b (sortFU l1) — i < j から導出
+    -- posIn a (sortFallingUnits l1) < posIn b (sortFallingUnits l1) — i < j から導出
     have h_order : posIn a (sortFallingUnits l1) < posIn b (sortFallingUnits l1) := by
         rw [ha_def, hb_def]
         rw [posIn_getElem_self _ h_nodup_sl i hi, posIn_getElem_self _ h_nodup_sl j hj]
         exact h_ij
     -- 反転ペアは tied
-    have h_tied := sortFU_inversion_is_tied s l1 l2 h_perm h_nodup h_sub a b
+    have h_tied := sortFallingUnits_inversion_is_tied s l1 l2 h_perm h_nodup h_sub a b
         (List.getElem_mem hi) (List.getElem_mem hj) h_ne h_order h_inv
     -- 位置非共有
-    have h_disj := fU_elem_positions_disjoint s a b ha_mem hb_mem h_ne
-    have h_disj_rev := fU_elem_positions_disjoint s b a hb_mem ha_mem (Ne.symm h_ne)
+    have h_disj := floatingUnits_elem_positions_disjoint s a b ha_mem hb_mem h_ne
+    have h_disj_rev := floatingUnits_elem_positions_disjoint s b a hb_mem ha_mem (Ne.symm h_ne)
     -- tied + 位置非共有 → 方角素
     exact ⟨tied_no_shared_dir a b h_tied.1 h_tied.2 h_disj,
            tied_no_shared_dir_rev a b h_tied.1 h_tied.2 h_disj_rev⟩
 
-/-- sortFU 出力の foldl は入力の Perm で不変。
+/-- sortFallingUnits 出力の foldl は入力の Perm で不変。
     floatingUnits の要素は pairwise position-disjoint であり、
-    sortFU の反転ペアは tied (spb 双方 false) かつ方角素 (direction-disjoint)。
+    sortFallingUnits の反転ペアは tied (shouldProcessBefore 双方 false) かつ方角素 (direction-disjoint)。
     方角素なペアは foldl 下で交換可能 (foldl_settle_swap_at) であるため、
     バブルソート帰納法により foldl 結果は入力順序に依存しない。 -/
-private theorem sortFU_foldl_perm_input_eq (s : Shape)
+private theorem sortFallingUnits_foldl_perm_input_eq (s : Shape)
         (l1 l2 : List FallingUnit) (obs : List Layer)
         (h_perm : l1.Perm l2)
         (h_nodup : l1.Nodup)
@@ -6299,11 +6299,11 @@ private theorem sortFU_foldl_perm_input_eq (s : Shape)
         fun x hx => h_sub x (h_perm_sl1_l1.mem_iff.mp hx)
     exact foldl_eq_of_perm_tied_adj_comm s sl1 sl2 obs h_perm_sl1_sl2 h_nodup_sl1
         (fun i j hi hj h_ij h_inv =>
-            sortFU_inversion_dir_disjoint s l1 l2 h_perm h_nodup h_sub i j hi hj h_ij h_inv)
+            sortFallingUnits_inversion_dir_disjoint s l1 l2 h_perm h_nodup h_sub i j hi hj h_ij h_inv)
 
 /-- (fU s).map r180 と fU s.r180 のソート後 foldl 結果は等しい。
     Phase 1: l_mid を経由して sorted_foldl_pointwise_eq を適用
-    Phase 2: sortFU(l_mid) と sortFU(l2) の Perm 不変性を方角素性から証明 -/
+    Phase 2: sortFallingUnits(l_mid) と sortFallingUnits(l2) の Perm 不変性を方角素性から証明 -/
 private theorem settle_foldl_eq (s : Shape) (obs : List Layer) :
         Shape.ofLayers
           ((sortFallingUnits ((floatingUnits s).map FallingUnit.rotate180)).foldl
@@ -6339,7 +6339,7 @@ private theorem settle_foldl_eq (s : Shape) (obs : List Layer) :
         exact (hg_ex u hu).choose_spec.2
     -- l_mid = (fU s).map g
     set l_mid := (floatingUnits s).map g with hl_mid_def
-    -- Phase 1: sortFU(l1).foldl f obs = sortFU(l_mid).foldl f obs
+    -- Phase 1: sortFallingUnits(l1).foldl f obs = sortFallingUnits(l_mid).foldl f obs
     -- l1 と l_mid は pointwise .any 等価
     have h_phase1 : (sortFallingUnits l1).foldl
             (fun obs u => placeFallingUnit s.rotate180 obs u (landingDistance u obs)) obs =
@@ -6395,13 +6395,13 @@ private theorem settle_foldl_eq (s : Shape) (obs : List Layer) :
         have h_subperm : l_mid.Subperm l2 :=
             List.subperm_of_subset h_nodup_mid (fun u hu => h_sub_fU u hu)
         exact h_subperm.perm_of_length_le (by omega)
-    -- Phase 2: sortFU(l_mid).foldl = sortFU(l2).foldl
-    -- sortFU_foldl_perm_input_eq を適用: l_mid と l2 は Perm で fU(s.r180) の要素
+    -- Phase 2: sortFallingUnits(l_mid).foldl = sortFallingUnits(l2).foldl
+    -- sortFallingUnits_foldl_perm_input_eq を適用: l_mid と l2 は Perm で fU(s.r180) の要素
     have h_phase2 : (sortFallingUnits l_mid).foldl
             (fun obs u => placeFallingUnit s.rotate180 obs u (landingDistance u obs)) obs =
             (sortFallingUnits l2).foldl
             (fun obs u => placeFallingUnit s.rotate180 obs u (landingDistance u obs)) obs :=
-        sortFU_foldl_perm_input_eq s.rotate180 l_mid l2 obs h_l_mid_perm h_nodup_mid h_sub_fU
+        sortFallingUnits_foldl_perm_input_eq s.rotate180 l_mid l2 obs h_l_mid_perm h_nodup_mid h_sub_fU
     congr 1
     exact h_phase1.trans h_phase2
 

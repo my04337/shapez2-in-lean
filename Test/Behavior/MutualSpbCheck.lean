@@ -1,5 +1,5 @@
--- mutual spb の不可能性チェック
--- 同一シェイプの異なる floatingUnit 間で spb(a,b)=true ∧ spb(b,a)=true が成立するか
+-- mutual shouldProcessBefore の不可能性チェック
+-- 同一シェイプの異なる floatingUnit 間で shouldProcessBefore(a,b)=true ∧ shouldProcessBefore(b,a)=true が成立するか
 import S2IL.Behavior.Gravity
 
 open Gravity
@@ -28,7 +28,7 @@ private def allLayers2 : List (Layer × Layer) :=
         (⟨ne1, se1, sw1, nw1⟩, ⟨ne2, se2, sw2, nw2⟩)
 
 def main : IO Unit := do
-    IO.println "=== mutual spb チェック ==="
+    IO.println "=== mutual shouldProcessBefore チェック ==="
     let mut mutualCount := 0
     let mut totalShapes := 0
     let mut totalPairs := 0
@@ -44,7 +44,7 @@ def main : IO Unit := do
                     totalPairs := totalPairs + 1
                     if spb a b && spb b a then
                         mutualCount := mutualCount + 1
-                        IO.println s!"MUTUAL SPB: shape={s.toString}"
+                        IO.println s!"MUTUAL shouldProcessBefore: shape={s.toString}"
 
     IO.println s!"2-layer: shapes={totalShapes}, pairs={totalPairs}, mutual={mutualCount}"
 
@@ -62,7 +62,7 @@ def main : IO Unit := do
             for a in fus do
                 for b in fus do
                     if a != b && spb a b && spb b a then
-                        IO.println s!"MUTUAL SPB: {code}"
+                        IO.println s!"MUTUAL shouldProcessBefore: {code}"
 
     -- 3レイヤ: サンプリング（全探索は 3^12 ≈ 500K）
     -- 各象限を3種で、3レイヤ → 3^12 = 531441。時間かかるので省略

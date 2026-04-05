@@ -1,5 +1,5 @@
--- sortFU_later_not_spb_earlier の反例チェック
--- sortFU 出力で j > i のとき spb(output[j], output[i]) = false を検証
+-- sortFallingUnits_later_not_shouldProcessBefore_earlier の反例チェック
+-- sortFallingUnits 出力で j > i のとき shouldProcessBefore(output[j], output[i]) = false を検証
 import S2IL.Behavior.Gravity
 
 open Gravity
@@ -13,7 +13,7 @@ private def spb (a b : FallingUnit) : Bool :=
         | some la, some lb => la < lb
         | _, _ => false
 
--- sortFU 出力で sortFU_later_not_spb_earlier が成り立つかチェック
+-- sortFallingUnits 出力で sortFallingUnits_later_not_shouldProcessBefore_earlier が成り立つかチェック
 private def checkLaterNotSpb (label : String) (fus : List FallingUnit) : IO Unit := do
     -- 全順列を生成してチェック
     let perms := fus.permutations
@@ -28,7 +28,7 @@ private def checkLaterNotSpb (label : String) (fus : List FallingUnit) : IO Unit
                         IO.println s!"FAIL {label}: perm input order matters, i={i}, j={j}, spb(sorted[{j}], sorted[{i}])=true"
 
 def main : IO Unit := do
-    IO.println "=== sortFU_later_not_spb_earlier 反例チェック ==="
+    IO.println "=== sortFallingUnits_later_not_shouldProcessBefore_earlier 反例チェック ==="
 
     -- テストシェイプのコード文字列
     let testShapes : List (String × String) := [

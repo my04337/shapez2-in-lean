@@ -1,4 +1,4 @@
--- sortFU((fU s).map r180) vs sortFU(fU(s.r180)) の pointwise .any 比較
+-- sortFallingUnits((floatingUnits s).map r180) vs sortFallingUnits(floatingUnits(s.r180)) の pointwise .any 比較
 import S2IL.Behavior.Gravity
 
 open Gravity
@@ -15,7 +15,7 @@ private def r180fu (u : FallingUnit) : FallingUnit :=
     | .pin p => .pin p.rotate180
 
 def main : IO Unit := do
-    IO.println "=== sortFU output pointwise .any 比較 ===\n"
+    IO.println "=== sortFallingUnits output pointwise .any 比較 ===\n"
 
     let codes := [
         "--------:P-------:CrCr----:--P-----",
