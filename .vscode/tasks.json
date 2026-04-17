@@ -4,7 +4,10 @@
         {
             "label": "lean-run",
             "type": "shell",
-            "command": ".github/skills/lean-run/scripts/run.ps1",
+            "command": ".github/skills/lean-run/scripts/run.sh",
+            "windows": {
+                "command": ".github/skills/lean-run/scripts/run.ps1"
+            },
             "group": {
                 "kind": "build",
                 "isDefault": true

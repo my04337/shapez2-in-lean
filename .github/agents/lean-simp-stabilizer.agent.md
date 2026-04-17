@@ -1,7 +1,7 @@
 ---
-description: "Lean 4 の simp タクティクを simp only [...] に自動安定化する。REPL で simp? を実行し、使用された補題リストを抽出してコードを生成する。Use when: stabilize simp, simp to simp only, replace simp, simp? automation, simp lemma list, make simp deterministic, simp only migration, fix unstable simp."
+description: "Auto-stabilize Lean 4 simp to simp only [...] via REPL-extracted lemma list. Use when: stabilize simp, simp to simp only, replace simp, simp? automation, simp lemma list, make simp deterministic, simp only migration, fix unstable simp."
 tools: [execute, read, edit, search]
-argument-hint: "ファイルパスと行番号を渡してください（例: S2IL/Behavior/Gravity.lean:42）"
+argument-hint: "Pass file path and line number (e.g. S2IL/Behavior/Gravity.lean:42)"
 ---
 
 あなたは Lean 4 コード中の `simp` を `simp only [...]` に自動安定化するスペシャリストです。
@@ -40,7 +40,13 @@ REPL で `simp?` を実行して使用された補題リストを取得し、安
 **実行**:
 
 ```powershell
-.github/skills/lean-repl/scripts/repl.ps1 -InputFile Scratch/simp_stabilizer.jsonl
+# Windows — Persistent モード（推奨・~600ms/回）
+.github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId simp -CmdFile Scratch/simp_stabilizer.jsonl
+```
+
+```bash
+# macOS / Linux
+.github/skills/lean-repl/scripts/repl.sh --send --session-id simp --cmd-file Scratch/simp_stabilizer.jsonl
 ```
 
 ### Step 3: 補題リストの抽出
@@ -110,7 +116,9 @@ simp only [Lemma1, Lemma2, extra_lemma]
 
 ## 複数行の一括処理
 
-ファイル全体の `simp` を一括安定化したい場合:
+### 小規模（10 行以下）: REPL 方式
+
+ファイル内の `simp` を REPL で個別に安定化する:
 
 1. `grep_search` でファイル内の全 `simp` 行を列挙
 2. 各行に対して Step 1〜5 を繰り返す
@@ -122,6 +130,30 @@ simp only [Lemma1, Lemma2, extra_lemma]
 | 58 | `simp [foo]` | `simp only [foo, bar]` | ✅ |
 | 73 | `simp only [...]` | — (安定化済み) | — |
 
+### 大規模（10 行超）: バルクパイプライン方式
+
+**`lean --json` パイプライン**を使用する。永続化スクリプトが利用可能:
+
+```powershell
+.github/skills/lean-simp-guide/scripts/simp-stabilize.ps1 -File <対象ファイル>
+```
+
+**手順**:
+1. スクリプトが bare simp → simp? に一括変換
+2. `lake env lean --json` で位置付き提案を取得（.NET ProcessStartInfo で UTF-8 安全に処理）
+3. 提案を行番号でマッピングし、ソースに適用
+4. チェーン行（`<;> simp`）は複数提案の補題を和集合でマージ
+5. ネスト括弧（`simp [show ... from by ...]`）はスキップされるため手動修正が必要
+6. `lake build` で検証
+
+**バルクモード使用時のチェックリスト**:
+- [ ] 対象ファイルが `lake build` でエラー 0 の状態から開始
+- [ ] スクリプト実行後に `lake build` で検証
+- [ ] `unused simp argument` 警告がある場合は REPL/ビルドで検証後に除去
+- [ ] ネスト括弧パターンの手動修正
+
+詳細は `lean-simp-guide` スキルの「ファイル全体のバルク安定化パイプライン」セクションを参照。
+
 ## Gotchas
 
 - `simp?` は探索用タクティクで遅い場合がある。REPL のタイムアウトに注意
@@ -131,4 +163,4 @@ simp only [Lemma1, Lemma2, extra_lemma]
 
 ## 関連
 
-**lean-simp-guide** スキル / **lean-repl** スキル / **lean-goal-advisor** サブエージェント
+**lean-simp-guide** スキル / **lean-repl** スキル / **lean-goal-advisor** エージェント

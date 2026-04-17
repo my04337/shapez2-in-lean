@@ -48,9 +48,10 @@ $lakeDir = Join-Path $PSScriptRoot "..\..\..\..\.lake"
 $lakeDir = [System.IO.Path]::GetFullPath($lakeDir)
 if (-not (Test-Path $lakeDir)) { New-Item -ItemType Directory -Path $lakeDir -Force | Out-Null }
 
-# 全ログ保存
+# 全ログ保存（BOM なし UTF-8）
 $logPath = Join-Path $lakeDir "build-log.txt"
-$rawOutput | Out-File -FilePath $logPath -Encoding utf8
+[System.IO.File]::WriteAllText($logPath, ($rawOutput -join "`n") + "`n",
+    [System.Text.UTF8Encoding]::new($false))
 
 # --- 診断メッセージのパース ---
 # Lake 出力形式: "severity: file:line:col: message"
@@ -72,8 +73,18 @@ foreach ($line in $rawOutput) {
 }
 
 # JSONL 保存
-$jsonlPath = Join-Path $lakeDir "build-diagnostics.jsonl"
-$diagnostics | ForEach-Object {
+# セッション ID を読み込んでセッション固有パスで出力する
+$sessionIdFile = Join-Path $lakeDir "session-id.tmp"
+
+$sessionJsonlPath = Join-Path $lakeDir "build-diagnostics.jsonl"  # デフォルトは固定名
+if (Test-Path $sessionIdFile) {
+    $sid = ([System.IO.File]::ReadAllText($sessionIdFile, [System.Text.Encoding]::UTF8)).Trim()
+    if ($sid) {
+        $sessionJsonlPath = Join-Path $lakeDir "build-diagnostics-$sid.jsonl"
+    }
+}
+
+$jsonlContent = $diagnostics | ForEach-Object {
     @{
         file     = $_.file
         line     = $_.line
@@ -82,7 +93,17 @@ $diagnostics | ForEach-Object {
         message  = $_.message
         isSorry  = $_.isSorry
     } | ConvertTo-Json -Compress
-} | Out-File -FilePath $jsonlPath -Encoding utf8
+}
+# BOM なし UTF-8 で書き出し（PowerShell 5/7 共通で安全）
+$utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+$jsonlText = ($jsonlContent -join "`n") + "`n"
+[System.IO.File]::WriteAllText($sessionJsonlPath, $jsonlText, $utf8NoBom)
+
+# 固定名ファイルにもコピー（lake build 直接実行時の下位互換用）
+$jsonlPath = Join-Path $lakeDir "build-diagnostics.jsonl"
+if ($sessionJsonlPath -ne $jsonlPath) {
+    [System.IO.File]::WriteAllText($jsonlPath, $jsonlText, $utf8NoBom)
+}
 
 # --- カウント ---
 $errorCount   = @($diagnostics | Where-Object { $_.severity -eq "error" }).Count
@@ -103,7 +124,7 @@ Write-Output "sorries: $sorryCount"
 Write-Output "warnings: $warningCount"
 Write-Output "info: $infoCount"
 Write-Output "log: $logPath"
-Write-Output "diagnostics: $jsonlPath"
+Write-Output "diagnostics: $sessionJsonlPath"
 Write-Output ""
 
 # トリアージ順: error > sorry > warning > info (最大20件)

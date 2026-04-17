@@ -64,7 +64,8 @@ Write-Output "target: $Target"
 Write-Output "log: $runLogPath"
 
 # stdout 出力（最大50行に制限）
-$outputLines = $runOutput
+# 単一行出力時でも Count を安全に参照できるよう常に配列化する
+$outputLines = @($runOutput)
 if ($outputLines.Count -gt 50) {
     Write-Output "output_lines: $($outputLines.Count) (先頭50行を表示)"
     Write-Output "---"

@@ -1,8 +1,9 @@
 ---
 name: lean-setup
-description: 'Lean 4 ツールチェイン (elan/lake/lean) のパスを解決し、ターミナルやタスクから利用可能にする。Use when: lean or lake command is not found, PATH setup, elan toolchain resolution, environment configuration.'
+description: 'Resolve Lean 4 toolchain (elan/lake/lean) PATH for terminals and tasks. Use when: lean or lake command is not found, PATH setup, elan toolchain resolution, environment configuration.'
 metadata:
-  argument-hint: 'ツールチェインのセットアップや PATH 問題のトラブルシュートを行います'
+  argument-hint: 'Describe the PATH or toolchain issue'
+disable-model-invocation: true
 ---
 
 # Lean ツールチェインセットアップ

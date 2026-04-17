@@ -1,7 +1,11 @@
 ---
-description: "Lean 4 の証明ゴールから Mathlib / Batteries の補題を自動検索し、ゴールを閉じる補題名と使い方を返す。exact? / apply? / #leansearch / #loogle を段階的に実行し、実際に適用が成功した候補のみを報告する。Use when: find lemma, search mathlib, which lemma, lemma finder, auto search lemma, exact? automation, apply? automation, loogle automation, leansearch automation, what lemma closes this, lemma for goal, find matching theorem, unknown lemma name."
+description: "Search Mathlib/Batteries for lemmas that close a Lean 4 proof goal; reports only verified candidates. Use when: find lemma, search mathlib, which lemma, lemma finder, auto search lemma, exact? automation, apply? automation, loogle automation, leansearch automation, what lemma closes this, lemma for goal, find matching theorem, unknown lemma name."
 tools: [execute, read, search]
-argument-hint: "sorry を含む定理コード、ゴール文字列、またはファイル:行番号を渡してください"
+argument-hint: "Pass theorem code with sorry, goal string, or file:line"
+handoffs:
+  - label: Try tactics
+    agent: lean-goal-advisor
+    prompt: 上記で見つかった補題を踏まえ、ゴールに対してタクティクを試行してください。
 ---
 
 あなたは Lean 4 の証明ゴールに対して Mathlib / Batteries の補題を自動検索し、
@@ -40,10 +44,14 @@ JSONL ファイル `Scratch/lemma_finder.jsonl` を作成:
 **実行**:
 
 ```powershell
-.github/skills/lean-repl/scripts/repl.ps1 -InputFile Scratch/lemma_finder.jsonl
+# Windows — Persistent モード（推奨・~600ms/回）
+.github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId lemma -CmdFile Scratch/lemma_finder.jsonl
 ```
 
-> pickle が `.repl/s2il.olean` に存在しない場合は `-RebuildPickle` で再生成する。
+```bash
+# macOS / Linux
+.github/skills/lean-repl/scripts/repl.sh --send --session-id lemma --cmd-file Scratch/lemma_finder.jsonl
+```
 
 結果から取得:
 - `sorries[].goal` — ゴール文字列
@@ -106,7 +114,13 @@ Round 1 で見つからない場合、自然言語・型パターンで広く検
 - 複数条件は `, ` で結合
 
 ```powershell
-.github/skills/lean-repl/scripts/repl.ps1 -InputFile Scratch/lemma_finder_r2.jsonl
+# Windows — Persistent モード（推奨・~600ms/回）
+.github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId lemma -CmdFile Scratch/lemma_finder_r2.jsonl
+```
+
+```bash
+# macOS / Linux
+.github/skills/lean-repl/scripts/repl.sh --send --session-id lemma --cmd-file Scratch/lemma_finder_r2.jsonl
 ```
 
 候補が得られたら、Step 5 で検証する。
