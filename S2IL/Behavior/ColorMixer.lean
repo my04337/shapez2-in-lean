@@ -17,8 +17,8 @@ import S2IL.Shape.Color
 
 - 原色同士の混色は二次色を生成する (例: Red + Green = Yellow)
 - 同色同士の混色は元の色を返す (冪等性)
-- White は恒等元として振る舞う (White + X = X)
-- 二次色と原色の混色は、共通成分に応じて原色を返す
+- Uncolored は恒等元として振る舞う (Uncolored + X = X)
+- 補色ペアの混色は White (Red + Cyan = White 等)
 - 混色は可換だが結合的ではない
 -/
 

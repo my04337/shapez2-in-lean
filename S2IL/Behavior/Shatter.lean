@@ -2,6 +2,7 @@
 -- SPDX-License-Identifier: MIT
 
 import S2IL.Behavior.CrystalBond
+import S2IL.Behavior.Gravity
 import S2IL.Behavior.Rotate
 import S2IL.Behavior.Rotate180Lemmas
 import Mathlib.Data.Finset.Image
@@ -88,52 +89,13 @@ def shatterOnFall (s : Shape) (fallingPositions : List QuarterPos) : Shape :=
 -- Rotate180Lemmas.lean に共通補題を集約済み
 -- ============================================================
 
-open QuarterPos (getQuarter_rotate180 getQuarter_rotate180_inv)
+open QuarterPos (getQuarter_rotate180 getQuarter_rotate180_inv
+    getQuarter_rotateCW getQuarter_rotateCW_inv)
+open Gravity (any_map_rotate180_beq)
 
 -- ============================================================
 -- 180° 回転と shatterOnCut の可換性
 -- ============================================================
-
--- ------------------------------------------------------------
--- List.any ヘルパー補題群
--- ------------------------------------------------------------
-
-/-- List.map の any と BEq の関係: (ps.map f).any (· == p) = ps.any (fun q => f q == p) -/
-private theorem any_map_beq {α : Type} [BEq α] (ps : List α) (f : α → α) (p : α) :
-        (ps.map f).any (· == p) = ps.any (fun q => f q == p) := by
-    induction ps with
-    | nil => simp only [List.map_nil, List.any_nil]
-    | cons x xs ih => simp only [List.map_cons, List.any_cons, ih]
-
-/-- rotate180 は BEq に対して involution として振る舞う -/
-private theorem beq_rotate180_iff (q p : QuarterPos) :
-        (q.rotate180 == p) = (q == p.rotate180) := by
-    cases h : (q == p.rotate180) with
-    | true =>
-        have := eq_of_beq h
-        subst this
-        show (p.rotate180.rotate180 == p) = true
-        rw [QuarterPos.rotate180_rotate180]; exact BEq.rfl
-    | false =>
-        show (q.rotate180 == p) = false
-        rw [Bool.eq_false_iff]
-        intro h2
-        have := eq_of_beq h2
-        -- q.r180 = p → q = p.r180
-        have hq : q = p.rotate180 := by
-            have := congrArg QuarterPos.rotate180 this
-            rw [QuarterPos.rotate180_rotate180] at this
-            exact this
-        rw [hq, show (p.rotate180 == p.rotate180) = true from BEq.rfl] at h
-        exact Bool.noConfusion h
-
-/-- rotate180 の involution 性を使った any の変換 -/
-private theorem any_map_rotate180_beq (ps : List QuarterPos) (p : QuarterPos) :
-        (ps.map QuarterPos.rotate180).any (· == p) =
-        ps.any (· == p.rotate180) := by
-    rw [any_map_beq]
-    congr 1; ext q
-    exact beq_rotate180_iff q p
 
 -- ------------------------------------------------------------
 -- isEast / isWest の rotate180 交換
@@ -354,7 +316,7 @@ private theorem clearPositions_shatterTargetsOnFall_rotate180_eq (s : Shape)
 /-- 切断砕け散りと 180° 回転は可換である。
     すなわち、先に砕け散らせてから 180° 回転しても、
     先に 180° 回転してから砕け散らせても結果は同じである -/
-theorem shatterOnCut_rotate180_comm (s : Shape) :
+@[aesop norm simp] theorem shatterOnCut_rotate180_comm (s : Shape) :
         s.shatterOnCut.rotate180 = s.rotate180.shatterOnCut := by
     simp only [shatterOnCut]
     rw [clearPositions_rotate180]
@@ -362,7 +324,7 @@ theorem shatterOnCut_rotate180_comm (s : Shape) :
 
 /-- 落下砕け散りと 180° 回転は可換である。
     落下位置も一緒に 180° 回転する必要がある -/
-theorem shatterOnFall_rotate180_comm (s : Shape) (ps : List QuarterPos) :
+@[aesop norm simp] theorem shatterOnFall_rotate180_comm (s : Shape) (ps : List QuarterPos) :
         (s.shatterOnFall ps).rotate180 =
         s.rotate180.shatterOnFall (ps.map QuarterPos.rotate180) := by
     simp only [shatterOnFall]
@@ -447,9 +409,8 @@ theorem shatterOnFall_ext (s : Shape) (ps1 ps2 : List QuarterPos)
         cases q <;> try rfl
         case crystal c =>
             -- decide (∃ q ∈ cc, q ∈ filter1) = decide (∃ q ∈ cc, q ∈ filter2)
-            show decide _ = decide _
-            congr 1
-            exact propext ⟨fun ⟨q, hq, hm⟩ => ⟨q, hq, (h_frag_mem q).mp hm⟩,
+            simp only [decide_eq_decide]
+            exact ⟨fun ⟨q, hq, hm⟩ => ⟨q, hq, (h_frag_mem q).mp hm⟩,
                    fun ⟨q, hq, hm⟩ => ⟨q, hq, (h_frag_mem q).mpr hm⟩⟩
 
 -- ============================================================
@@ -462,4 +423,178 @@ def shatterOnTruncate (s : Shape) (maxLayers : Nat) : Shape :=
     let truncatedPositions := (QuarterPos.allValid s).filter fun p =>
         p.layer ≥ maxLayers
     s.shatterOnFall truncatedPositions
+
+/-- shatterOnTruncate は rotate180 と可換 -/
+@[aesop norm simp] theorem shatterOnTruncate_rotate180 (s : Shape) (maxLayers : Nat) :
+        (s.shatterOnTruncate maxLayers).rotate180 =
+        s.rotate180.shatterOnTruncate maxLayers := by
+    simp only [shatterOnTruncate]
+    rw [shatterOnFall_rotate180_comm]
+    apply shatterOnFall_ext
+    intro p
+    rw [Gravity.any_map_rotate180_beq, CrystalBond.allValid_rotate180,
+        filter_any_eq, filter_any_eq, CrystalBond.allValid_any_rotate180]
+    simp only [QuarterPos.rotate180]
+    rfl
+
+-- ============================================================
+-- rotateCW 等変性
+-- ============================================================
+
+/-- List.map QuarterPos.rotateCW 後の .any (LayerPerm 基盤から導出) -/
+private theorem any_map_rotateCW_beq (ps : List QuarterPos) (p : QuarterPos) :
+        (ps.map QuarterPos.rotateCW).any (· == p) =
+        ps.any (· == p.rotateCCW) := by
+    have h := LayerPerm.list_any_map .rotateCW ps p.rotateCCW
+    simp only [QuarterPos.rotateCCW_rotateCW] at h
+    exact h
+
+/-- crystalCluster 上の decide-exists は rCW で述語変換に対応する。
+    P q ↔ Q q.rCCW なら decide (∃ q ∈ cc s.rCW p, P q) = decide (∃ q ∈ cc s p.rCCW, Q q)。
+    Finset.image (cluster_rotateCW) を使って証明。 -/
+private theorem crystalCluster_decide_exists_rotateCW (s : Shape) (p : QuarterPos)
+        (P Q : QuarterPos → Prop) [DecidablePred P] [DecidablePred Q]
+        (h_pq : ∀ q, P q ↔ Q q.rotateCCW) :
+        decide (∃ q ∈ CrystalBond.cluster s.rotateCW p, P q) =
+        decide (∃ q ∈ CrystalBond.cluster s p.rotateCCW, Q q) := by
+    have h_cc : CrystalBond.cluster s.rotateCW p =
+        (CrystalBond.cluster s p.rotateCCW).image QuarterPos.rotateCW := by
+      have := CrystalBond.cluster_rotateCW s p.rotateCCW
+      simp only [QuarterPos.rotateCCW_rotateCW] at this; exact this
+    suffices h_iff : (∃ q ∈ CrystalBond.cluster s.rotateCW p, P q) ↔
+                     (∃ q ∈ CrystalBond.cluster s p.rotateCCW, Q q) by
+      cases h1 : decide (∃ q ∈ CrystalBond.cluster s.rotateCW p, P q) <;>
+        cases h2 : decide (∃ q ∈ CrystalBond.cluster s p.rotateCCW, Q q) <;>
+        simp_all only [decide_eq_true_eq, decide_eq_false_iff_not]
+    rw [h_cc]
+    constructor
+    · rintro ⟨q, hq, hpq⟩
+      rw [Finset.mem_image] at hq
+      obtain ⟨r, hr, rfl⟩ := hq
+      have hpq' : Q r := by
+        have := (h_pq r.rotateCW).mp hpq
+        simp only [QuarterPos.rotateCW_rotateCCW] at this
+        exact this
+      exact ⟨r, hr, hpq'⟩
+    · rintro ⟨q, hq, hqq⟩
+      have hqq' : P q.rotateCW := by
+        apply (h_pq q.rotateCW).mpr
+        simp only [QuarterPos.rotateCW_rotateCCW]
+        exact hqq
+      exact ⟨q.rotateCW, Finset.mem_image_of_mem _ hq, hqq'⟩
+
+/-- fragilePositions の getQuarter 判定は rCW で不変 -/
+private theorem fragile_pred_rotateCW (s : Shape) (p : QuarterPos) :
+        (match p.rotateCW.getQuarter s.rotateCW with
+         | some q => q.isFragile | none => false) =
+        (match p.getQuarter s with
+         | some q => q.isFragile | none => false) := by
+    rw [getQuarter_rotateCW]
+
+/-- fragilePositions(s.rCW, ps.map rCW) = fragilePositions(s, ps).map rCW -/
+private theorem fragilePositions_map_rotateCW (s : Shape) (ps : List QuarterPos) :
+        (ps.map QuarterPos.rotateCW).filter (fun p =>
+            match p.getQuarter s.rotateCW with | some q => q.isFragile | none => false) =
+        (ps.filter (fun p =>
+            match p.getQuarter s with | some q => q.isFragile | none => false)).map
+            QuarterPos.rotateCW := by
+    induction ps with
+    | nil => simp only [List.map_nil, List.filter_nil]
+    | cons x xs ih =>
+        simp only [List.map_cons, List.filter_cons]
+        rw [fragile_pred_rotateCW]
+        cases match x.getQuarter s with | some q => q.isFragile | none => false with
+        | true => simp only [↓reduceIte, ih, List.map_cons]
+        | false => simp only [Bool.false_eq_true, ↓reduceIte, ih]
+
+/-- shatterTargetsOnFall の判定述語は rCW で等変 -/
+private theorem shatterFallPred_rotateCW (s : Shape) (ps : List QuarterPos)
+        (p : QuarterPos) :
+        (match p.getQuarter s.rotateCW with
+         | some (.crystal _) =>
+            decide (∃ q ∈ CrystalBond.cluster s.rotateCW p,
+                q ∈ (ps.map QuarterPos.rotateCW).filter (fun (rr : QuarterPos) =>
+                    match rr.getQuarter s.rotateCW with | some w => w.isFragile | none => false))
+         | _ => false) =
+        (match p.rotateCCW.getQuarter s with
+         | some (.crystal _) =>
+            decide (∃ q ∈ CrystalBond.cluster s p.rotateCCW,
+                q ∈ ps.filter (fun (rr : QuarterPos) =>
+                    match rr.getQuarter s with | some w => w.isFragile | none => false))
+         | _ => false) := by
+    rw [getQuarter_rotateCW_inv]
+    cases h : p.rotateCCW.getQuarter s with
+    | none => rfl
+    | some q =>
+        cases q with
+        | crystal _ =>
+            simp only
+            have h_frag := fragilePositions_map_rotateCW s ps
+            let fragOrig := ps.filter (fun rr =>
+                match rr.getQuarter s with | some w => w.isFragile | none => false)
+            exact crystalCluster_decide_exists_rotateCW s p
+                (fun qq => qq ∈ (ps.map QuarterPos.rotateCW).filter (fun (rr : QuarterPos) =>
+                    match rr.getQuarter s.rotateCW with | some w => w.isFragile | none => false))
+                (fun qq => qq ∈ fragOrig)
+                (fun qq => by
+                    simp only [h_frag, List.mem_map]
+                    constructor
+                    · rintro ⟨r, hr, rfl⟩
+                      rwa [QuarterPos.rotateCW_rotateCCW]
+                    · intro hq
+                      exact ⟨qq.rotateCCW, hq, QuarterPos.rotateCCW_rotateCW qq⟩)
+        | _ => rfl
+
+/-- allValid の filter 後 any が rCW で等変 -/
+private theorem filter_any_rotateCW (s : Shape)
+        (pred_r : QuarterPos → Bool) (pred_s : QuarterPos → Bool)
+        (h_pred : ∀ q, pred_r q = pred_s q.rotateCCW)
+        (p : QuarterPos) :
+        ((QuarterPos.allValid s).filter pred_r).any (· == p) =
+        ((QuarterPos.allValid s).filter pred_s).any (· == p.rotateCCW) := by
+    simp only [List.any_filter]
+    rw [any_and_beq, any_and_beq]
+    rw [h_pred p, CrystalBond.allValid_any_rotateCCW]
+
+/-- shatterTargetsOnFall の any-membership は rotateCW で等変 -/
+private theorem shatterTargetsOnFall_any_rotateCW (s : Shape)
+        (ps : List QuarterPos) (p : QuarterPos) :
+        (shatterTargetsOnFall s.rotateCW (ps.map QuarterPos.rotateCW)).any (· == p) =
+        (shatterTargetsOnFall s ps).any (· == p.rotateCCW) := by
+    simp only [shatterTargetsOnFall, CrystalBond.allValid_rotateCW]
+    exact filter_any_rotateCW s _ _ (fun q => shatterFallPred_rotateCW s ps q) p
+
+/-- 落下砕け散り対象の clearPositions 結果は rotateCW で等変 -/
+private theorem clearPositions_shatterTargetsOnFall_rotateCW_eq (s : Shape)
+        (ps : List QuarterPos) :
+        (s.rotateCW).clearPositions
+            (s.rotateCW.shatterTargetsOnFall (ps.map QuarterPos.rotateCW)) =
+        (s.rotateCW).clearPositions
+            ((s.shatterTargetsOnFall ps).map QuarterPos.rotateCW) := by
+    apply Shape.clearPositions_ext
+    intro p
+    rw [any_map_rotateCW_beq, shatterTargetsOnFall_any_rotateCW]
+
+/-- 落下砕け散りと rotateCW は可換 -/
+@[aesop norm simp] theorem shatterOnFall_rotateCW_comm (s : Shape) (ps : List QuarterPos) :
+        (s.shatterOnFall ps).rotateCW =
+        s.rotateCW.shatterOnFall (ps.map QuarterPos.rotateCW) := by
+    simp only [shatterOnFall]
+    rw [clearPositions_rotateCW]
+    exact (clearPositions_shatterTargetsOnFall_rotateCW_eq s ps).symm
+
+/-- shatterOnTruncate は rotateCW と可換 -/
+@[aesop norm simp] theorem shatterOnTruncate_rotateCW (s : Shape) (maxLayers : Nat) :
+        (s.shatterOnTruncate maxLayers).rotateCW =
+        s.rotateCW.shatterOnTruncate maxLayers := by
+    simp only [shatterOnTruncate]
+    rw [shatterOnFall_rotateCW_comm]
+    apply shatterOnFall_ext
+    intro p
+    rw [any_map_rotateCW_beq, CrystalBond.allValid_rotateCW,
+        filter_any_eq, filter_any_eq, CrystalBond.allValid_any_rotateCCW]
+    simp only [QuarterPos.rotateCCW]
+    rfl
+
 end Shape
+

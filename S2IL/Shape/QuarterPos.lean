@@ -2,6 +2,7 @@
 -- SPDX-License-Identifier: MIT
 
 import S2IL.Shape.Shape
+import Aesop
 
 /-!
 # QuarterPos (象限位置)
@@ -110,17 +111,59 @@ theorem isWest_eq_not_isEast (d : Direction) : d.isWest = !d.isEast := by
     cases d <;> rfl
 
 /-- 180° 回転後の isEast は元の isWest と等しい -/
-theorem isEast_rotate180 (d : Direction) : d.rotate180.isEast = d.isWest := by
+@[aesop norm simp] theorem isEast_rotate180 (d : Direction) : d.rotate180.isEast = d.isWest := by
     cases d <;> rfl
 
 /-- 180° 回転後の isWest は元の isEast と等しい -/
-theorem isWest_rotate180 (d : Direction) : d.rotate180.isWest = d.isEast := by
+@[aesop norm simp] theorem isWest_rotate180 (d : Direction) : d.rotate180.isWest = d.isEast := by
     cases d <;> rfl
 
 /-- 隣接関係は 180° 回転で保存される -/
-theorem adjacent_rotate180 (d1 d2 : Direction) :
+@[aesop norm simp] theorem adjacent_rotate180 (d1 d2 : Direction) :
         d1.rotate180.adjacent d2.rotate180 = d1.adjacent d2 := by
     cases d1 <;> cases d2 <;> rfl
+
+/-- 方角を時計回りに 90° 回転させる (NE→SE→SW→NW→NE) -/
+def rotateCW : Direction → Direction
+    | ne => se
+    | se => sw
+    | sw => nw
+    | nw => ne
+
+/-- 方角を反時計回りに 90° 回転させる (NE→NW→SW→SE→NE) -/
+def rotateCCW : Direction → Direction
+    | ne => nw
+    | se => ne
+    | sw => se
+    | nw => sw
+
+/-- rotateCW と rotateCCW は逆操作 -/
+@[simp] theorem rotateCW_rotateCCW (d : Direction) : d.rotateCW.rotateCCW = d := by
+    cases d <;> rfl
+
+/-- rotateCCW と rotateCW は逆操作 -/
+@[simp] theorem rotateCCW_rotateCW (d : Direction) : d.rotateCCW.rotateCW = d := by
+    cases d <;> rfl
+
+/-- rotateCW 2回 = rotate180 -/
+@[aesop norm simp] theorem rotateCW_rotateCW (d : Direction) : d.rotateCW.rotateCW = d.rotate180 := by
+    cases d <;> rfl
+
+/-- 隣接関係は rotateCW で保存される -/
+@[aesop norm simp] theorem adjacent_rotateCW (d1 d2 : Direction) :
+        d1.rotateCW.adjacent d2.rotateCW = d1.adjacent d2 := by
+    cases d1 <;> cases d2 <;> rfl
+
+/-- 方角を Fin 4 に変換する (ne=0, se=1, sw=2, nw=3) -/
+def toFin : Direction → Fin 4
+    | ne => 0
+    | se => 1
+    | sw => 2
+    | nw => 3
+
+/-- toFin は単射である -/
+theorem toFin_injective : Function.Injective toFin := by
+    intro a b h; cases a <;> cases b <;> (first | rfl | (simp only [toFin] at h; omega))
 
 instance : LawfulBEq Direction where
     eq_of_beq {a b} h := by cases a <;> cases b <;> first | rfl | contradiction
@@ -176,6 +219,13 @@ def getDir (l : Layer) : Direction → Quarter
     | .sw => l.sw
     | .nw => l.nw
 
+/-- ある方角の象限が非空なら、レイヤ全体も空ではない -/
+theorem getDir_nonEmpty_implies_not_isEmpty (l : Layer) (d : Direction)
+        (hne : (getDir l d).isEmpty = false) :
+        l.isEmpty = false := by
+    cases d <;> simp only [getDir] at hne <;>
+    simp only [Layer.isEmpty, hne, Bool.and_false, Bool.false_and]
+
 /-- Layer の外延性: 全方角の getDir が一致すれば Layer は等しい -/
 theorem Layer.ext_getDir {l₁ l₂ : Layer}
         (h : ∀ d : Direction, getDir l₁ d = getDir l₂ d) :
@@ -227,6 +277,22 @@ def rotate180 (p : QuarterPos) : QuarterPos :=
 /-- 180° 回転を 2 回適用すると元に戻る -/
 @[simp] theorem rotate180_rotate180 (p : QuarterPos) : p.rotate180.rotate180 = p := by
     simp only [rotate180, Direction.rotate180_rotate180]
+
+/-- 象限位置を時計回り 90° 回転させる（方角のみ回転、レイヤは変わらない） -/
+def rotateCW (p : QuarterPos) : QuarterPos :=
+    { layer := p.layer, dir := p.dir.rotateCW }
+
+/-- 象限位置を反時計回り 90° 回転させる（方角のみ回転、レイヤは変わらない） -/
+def rotateCCW (p : QuarterPos) : QuarterPos :=
+    { layer := p.layer, dir := p.dir.rotateCCW }
+
+/-- rotateCW と rotateCCW は逆操作 -/
+@[simp] theorem rotateCW_rotateCCW (p : QuarterPos) : p.rotateCW.rotateCCW = p := by
+    simp only [rotateCW, rotateCCW, Direction.rotateCW_rotateCCW]
+
+/-- rotateCCW と rotateCW は逆操作 -/
+@[simp] theorem rotateCCW_rotateCW (p : QuarterPos) : p.rotateCCW.rotateCW = p := by
+    simp only [rotateCCW, rotateCW, Direction.rotateCCW_rotateCW]
 
 instance : LawfulBEq QuarterPos where
     eq_of_beq {a b} h := by
@@ -318,9 +384,9 @@ theorem setQuarter_empty_comm (s : Shape) (p q : QuarterPos) :
             (l.set i a).getD j Layer.empty =
             if i = j ∧ i < l.length then a else l.getD j Layer.empty := by
         simp only [List.getD_eq_getElem?_getD, List.getElem?_set]
-        split <;> split <;> simp_all only [Option.getD_some, and_self, ↓reduceIte,
+        split <;> split <;> (simp_all only [Option.getD_some, and_self, ↓reduceIte,
             Nat.not_lt, Option.getD_none, true_and, not_false_eq_true, getElem?_neg,
-            right_eq_ite_iff, not_true_eq_false, false_and] <;> omega
+            right_eq_ite_iff, not_true_eq_false, false_and]; try omega)
     simp only [getD_set]
     by_cases h_layer : p.layer = q.layer
     · rw [h_layer]
@@ -477,5 +543,43 @@ theorem clearPositions_ext (s : Shape) (ps1 ps2 : List QuarterPos)
                List.getElem?_eq_getElem h2,
                List.getElem?_eq_getElem h_lt] at gq1 gq2
     exact Option.some.inj (gq1.trans gq2.symm)
+
+/-- `normalize` で得られるシェイプと元のシェイプで、有効な位置の `getQuarter` は一致する -/
+theorem normalize_getQuarter_eq (s : Shape) (s' : Shape)
+        (h : s.normalize = some s')
+        (p : QuarterPos) (h_valid : p.layer < s'.layerCount) :
+        p.getQuarter s' = p.getQuarter s := by
+    obtain ⟨t, ht⟩ := normalize_layers_eq_append s s' h
+    have h_v : p.layer < s'.layers.length := by
+        simp only [Shape.layerCount] at h_valid; exact h_valid
+    have h_eq : s'.layers[p.layer]? = s.layers[p.layer]? := by
+        rw [ht]; exact (List.getElem?_append_left h_v).symm
+    simp only [QuarterPos.getQuarter, h_eq]
+
+/-- `normalize` の結果で非空象限を持つ位置は、正規化後のシェイプでも有効 -/
+theorem normalize_nonEmpty_layer_lt (s : Shape) (s' : Shape)
+        (h_norm : s.normalize = some s')
+        (p : QuarterPos) (q : Quarter)
+        (hq : p.getQuarter s = some q) (hne : q.isEmpty = false) :
+        p.layer < s'.layerCount := by
+    -- Step 1: p.layer < s.layers.length（getQuarter が some を返すので）
+    have h_lt : p.layer < s.layers.length := by
+        if h_ge : s.layers.length ≤ p.layer then
+            exfalso
+            have h_none := List.getElem?_eq_none_iff.mpr h_ge
+            have h_eq : p.getQuarter s = none := by
+                unfold QuarterPos.getQuarter; rw [h_none]
+            rw [h_eq] at hq
+            exact absurd hq (by intro h; cases h)
+        else
+            omega
+    -- Step 2: s.layers[p.layer] は空でない
+    have h_idx_ne : s.layers[p.layer].isEmpty = false := by
+        have h_some := List.getElem?_eq_getElem h_lt
+        simp only [QuarterPos.getQuarter, h_some, Option.some.injEq] at hq
+        rw [← hq] at hne
+        exact QuarterPos.getDir_nonEmpty_implies_not_isEmpty _ p.dir hne
+    -- Step 3: normalize_preserves_nonEmpty_index を使用
+    exact normalize_preserves_nonEmpty_index s s' h_norm p.layer h_lt h_idx_ne
 
 end Shape

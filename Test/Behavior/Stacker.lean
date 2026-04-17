@@ -114,6 +114,14 @@ private def bottomWithGap : Shape :=
 -- Rg はクラスタ{L2:NE,L2:SE} → L2:NE の直下L1:NE(Cr) → 接地 → 落下しない
 #guard stackTest "Cr------" "RgRg----" "Cr------:RgRg----"
 
+-- 垂直構造結合が落下を防ぐケース（ゲーム内検証済み 2026-04-11）
+-- B1: L1:SE(Cr)↔L2:SE(Rg) 垂直ボンド + L2:SW(Rg)↔L2:SE(Rg) 水平接地 → クラスタ全体接地→落下なし
+#guard stackTest "CrCr----" "--RgRg--" "CrCr----:--RgRg--"
+
+-- 垂直構造結合がないケース（ゲーム内検証済み 2026-04-11）
+-- B2: L2:{SW(Rg),NW(Rg)} は L1:SW,NW ともに空 → 非接地→落下して L1 に合流
+#guard stackTest "CrCr----" "----RgRg" "CrCrRgRg"
+
 -- ============================================================
 -- truncate: レイヤ上限超過（vanilla4 = 4レイヤ）
 -- ============================================================
@@ -170,6 +178,12 @@ private def top2full : Shape :=
 -- ピンは水平接地接触を伝播しないため、Rg は非接地で落下する
 #guard stackTest "Cr------" "P-Rg----" "CrRg----:P-------"
 
+-- ピンが部分的に落下：底面の空き象限（SW, NW）に落下（ゲーム内検証済み 2026-04-11）
+-- bottom=CrCr----: NE,SE が Cr で SW,NW 空。top=P-P-P-P-: 全ピン
+-- L2:NE(Pin)→L1:NE(Cr)垂直→接地。L2:SE(Pin)→L1:SE(Cr)垂直→接地
+-- L2:SW(Pin) は L1:SW 空 → 非接地→落下。L2:NW(Pin) は L1:NW 空 → 非接地→落下
+#guard stackTest "CrCr----" "P-P-P-P-" "CrCrP-P-:P-P-----"
+
 -- ============================================================
 -- エッジケース
 -- ============================================================
@@ -198,3 +212,44 @@ private def stackV5 (bottomCode topCode : String) : Option String :=
 -- 4レイヤ + 1レイヤ → 5レイヤに収まる（vanilla5 なら truncate 不要）
 #guard stackV5 "CrCrCrCr:RgRgRgRg:SbSbSbSb:WuWuWuWu" "CyCyCyCy"
     == some "CrCrCrCr:RgRgRgRg:SbSbSbSb:WuWuWuWu:CyCyCyCy"
+
+-- ============================================================
+-- rotate180 等変性の検証（ゲーム内検証済み 2026-04-11）
+-- stack(b, t).rotate180 = stack(b.rotate180, t.rotate180) を検証する
+-- ============================================================
+
+/-- stack(b, t).rotate180 = stack(b.rotate180, t.rotate180) を検証するヘルパー（vanilla4）-/
+private def stackR180Test (bottomCode topCode : String) : Bool :=
+    match Shape.ofString? bottomCode, Shape.ofString? topCode with
+    | some b, some t =>
+        match Shape.stack b t GameConfig.vanilla4,
+              Shape.stack b.rotate180 t.rotate180 GameConfig.vanilla4 with
+        | some r1, some r2 => r1.rotate180.toString == r2.toString
+        | none, none => true
+        | _, _ => false
+    | _, _ => false
+
+-- E1: 部分落下（垂直ボンドなし）
+-- stack(CrCr----, ----RgRg) = CrCrRgRg → r180 = RgRgCrCr
+-- stack(----CrCr, RgRg----) = RgRgCrCr ✓
+#guard stackR180Test "CrCr----" "----RgRg"
+
+-- E2: ピン落下（部分的ピン）
+-- stack(CrCr----, P-P-P-P-) = CrCrP-P-:P-P----- → r180 = P-P-CrCr:----P-P-
+-- stack(----CrCr, P-P-P-P-) = P-P-CrCr:----P-P- ✓
+#guard stackR180Test "CrCr----" "P-P-P-P-"
+
+-- E3: ピン水平遮断により Rg が落下
+-- stack(Cr------, P-Rg----) = CrRg----:P------- → r180 = ----CrRg:----P---
+-- stack(----Cr--, ----P-Rg) = ----CrRg:----P--- ✓
+#guard stackR180Test "Cr------" "P-Rg----"
+
+-- E4: settled ベース + 非対称 top（sorry #3 関連）
+-- stack(P-P-P-P-:CrCrCrCr, SbSb----) = P-P-P-P-:CrCrCrCr:SbSb---- → r180 = P-P-P-P-:CrCrCrCr:----SbSb
+-- P-P-P-P-:CrCrCrCr は r180 対称 → stack(P-P-P-P-:CrCrCrCr, ----SbSb) = P-P-P-P-:CrCrCrCr:----SbSb ✓
+#guard stackR180Test "P-P-P-P-:CrCrCrCr" "SbSb----"
+
+-- E5: 2レイヤ bottom + 非対称 top
+-- stack(CrCr----:RgRg----, ----SbSb) = CrCrSbSb:RgRg---- → r180 = SbSbCrCr:----RgRg
+-- stack(----CrCr:----RgRg, SbSb----) = SbSbCrCr:----RgRg ✓
+#guard stackR180Test "CrCr----:RgRg----" "----SbSb"

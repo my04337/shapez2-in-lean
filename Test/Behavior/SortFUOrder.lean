@@ -1,7 +1,7 @@
 -- sortFallingUnits_shouldProcessBefore_order の反例チェック（insertSorted 修正後）
 import S2IL.Behavior.Gravity
 
-open Gravity
+open Gravity (FallingUnit sortFallingUnits floatingUnits)
 
 private def spb (a b : FallingUnit) : Bool :=
     Direction.all.any fun dir =>

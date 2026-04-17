@@ -82,36 +82,39 @@ instance : ToString Color where
 
 ### 混色モデル
 
-各色を RGB 原色の重み付き成分で表し、等体積混合後に
-各原色成分が閾値 (≥ 2/3) を超えるかで結果の色を判定する。
+各色を RGB 原色のビット表現で表す。
 
-| 色 | R 成分 | G 成分 | B 成分 |
+| 色 | R | G | B |
 |---|---|---|---|
-| Red       | 1   | 0   | 0   |
-| Green     | 0   | 1   | 0   |
-| Blue      | 0   | 0   | 1   |
-| Yellow    | 1/2 | 1/2 | 0   |
-| Cyan      | 0   | 1/2 | 1/2 |
-| Magenta   | 1/2 | 0   | 1/2 |
-| White     | 1/3 | 1/3 | 1/3 |
-| Uncolored | 0   | 0   | 0   |
+| Red       | 1 | 0 | 0 |
+| Green     | 0 | 1 | 0 |
+| Blue      | 0 | 0 | 1 |
+| Yellow    | 1 | 1 | 0 |
+| Cyan      | 0 | 1 | 1 |
+| Magenta   | 1 | 0 | 1 |
+| White     | 1 | 1 | 1 |
+| Uncolored | 0 | 0 | 0 |
 
-等体積混合: 各成分を平均し、≥ 1/3 なら原色ありと判定する。
+**混色規則**: `mix(a, b) = if (a AND b ≠ 0) then (a AND b) else (a OR b)`
 
-**注意**: `uncolored` の液剤はゲーム上存在しないため、`uncolored` を含む
-混色はゲーム上未定義である。ここでは数学的な拡張としてモデルに基づく値を定義する。
+つまり共通の原色成分があれば交集合、なければ和集合を取る。
+
+- `Uncolored` は恒等元（`mix uncolored x = x`）
+- `White` は `Uncolored` 以外に対して恒等的（`mix white x = x` for `x ≠ uncolored`）
+- 補色ペア（共通成分なし）の混色は `White`
+  （例: `red + cyan = white`, `green + magenta = white`）
 -/
 
 /-- 2つの色を等体積で混合した結果を返す。
     ゲーム上の混色機 (Color Mixer) の動作に対応する。
-    `uncolored` を含む混色はゲーム上未定義だが、数学的拡張として定義する。 -/
+    混色規則: 共通原色成分があれば交集合、なければ和集合。 -/
 def mix : Color → Color → Color
     -- Red × 各色
     | red,       red       => red
     | red,       green     => yellow
     | red,       blue      => magenta
     | red,       yellow    => red
-    | red,       cyan      => red
+    | red,       cyan      => white
     | red,       magenta   => red
     | red,       white     => red
     | red,       uncolored => red
@@ -121,14 +124,14 @@ def mix : Color → Color → Color
     | green,     blue      => cyan
     | green,     yellow    => green
     | green,     cyan      => green
-    | green,     magenta   => green
+    | green,     magenta   => white
     | green,     white     => green
     | green,     uncolored => green
     -- Blue × 各色
     | blue,      red       => magenta
     | blue,      green     => cyan
     | blue,      blue      => blue
-    | blue,      yellow    => blue
+    | blue,      yellow    => white
     | blue,      cyan      => blue
     | blue,      magenta   => blue
     | blue,      white     => blue
@@ -136,30 +139,30 @@ def mix : Color → Color → Color
     -- Yellow × 各色
     | yellow,    red       => red
     | yellow,    green     => green
-    | yellow,    blue      => blue
+    | yellow,    blue      => white
     | yellow,    yellow    => yellow
     | yellow,    cyan      => green
     | yellow,    magenta   => red
     | yellow,    white     => yellow
-    | yellow,    uncolored => uncolored
+    | yellow,    uncolored => yellow
     -- Cyan × 各色
-    | cyan,      red       => red
+    | cyan,      red       => white
     | cyan,      green     => green
     | cyan,      blue      => blue
     | cyan,      yellow    => green
     | cyan,      cyan      => cyan
     | cyan,      magenta   => blue
     | cyan,      white     => cyan
-    | cyan,      uncolored => uncolored
+    | cyan,      uncolored => cyan
     -- Magenta × 各色
     | magenta,   red       => red
-    | magenta,   green     => green
+    | magenta,   green     => white
     | magenta,   blue      => blue
     | magenta,   yellow    => red
     | magenta,   cyan      => blue
     | magenta,   magenta   => magenta
     | magenta,   white     => magenta
-    | magenta,   uncolored => uncolored
+    | magenta,   uncolored => magenta
     -- White × 各色
     | white,     red       => red
     | white,     green     => green
@@ -168,15 +171,15 @@ def mix : Color → Color → Color
     | white,     cyan      => cyan
     | white,     magenta   => magenta
     | white,     white     => white
-    | white,     uncolored => uncolored
+    | white,     uncolored => white
     -- Uncolored × 各色
     | uncolored, red       => red
     | uncolored, green     => green
     | uncolored, blue      => blue
-    | uncolored, yellow    => uncolored
-    | uncolored, cyan      => uncolored
-    | uncolored, magenta   => uncolored
-    | uncolored, white     => uncolored
+    | uncolored, yellow    => yellow
+    | uncolored, cyan      => cyan
+    | uncolored, magenta   => magenta
+    | uncolored, white     => white
     | uncolored, uncolored => uncolored
 
 /-!
@@ -191,12 +194,12 @@ theorem mix_comm (a b : Color) : mix a b = mix b a := by
 @[simp] theorem mix_self (a : Color) : mix a a = a := by
     cases a <;> rfl
 
-/-- White は混色の左恒等元: `mix white a = a` -/
-@[simp] theorem mix_white_left (a : Color) : mix white a = a := by
+/-- Uncolored は混色の左恒等元: `mix uncolored a = a` -/
+@[simp] theorem mix_uncolored_left (a : Color) : mix uncolored a = a := by
     cases a <;> rfl
 
-/-- White は混色の右恒等元: `mix a white = a` -/
-@[simp] theorem mix_white_right (a : Color) : mix a white = a := by
+/-- Uncolored は混色の右恒等元: `mix a uncolored = a` -/
+@[simp] theorem mix_uncolored_right (a : Color) : mix a uncolored = a := by
     cases a <;> rfl
 
 /-!
@@ -213,16 +216,16 @@ instance : Std.Commutative Color.mix where
 instance : Std.IdempotentOp Color.mix where
     idempotent := mix_self
 
-instance : Std.LeftIdentity Color.mix Color.white := ⟨⟩
-instance : Std.LawfulLeftIdentity Color.mix Color.white where
-    left_id := mix_white_left
+instance : Std.LeftIdentity Color.mix Color.uncolored := ⟨⟩
+instance : Std.LawfulLeftIdentity Color.mix Color.uncolored where
+    left_id := mix_uncolored_left
 
-instance : Std.RightIdentity Color.mix Color.white := ⟨⟩
-instance : Std.LawfulRightIdentity Color.mix Color.white where
-    right_id := mix_white_right
+instance : Std.RightIdentity Color.mix Color.uncolored := ⟨⟩
+instance : Std.LawfulRightIdentity Color.mix Color.uncolored where
+    right_id := mix_uncolored_right
 
-/-- 混色は結合的でない: `mix (mix red green) blue ≠ mix red (mix green blue)` の反例 -/
-theorem mix_not_assoc : mix (mix red green) blue ≠ mix red (mix green blue) := by
+/-- 混色は結合的でない: `mix (mix red yellow) cyan ≠ mix red (mix yellow cyan)` の反例 -/
+theorem mix_not_assoc : mix (mix red yellow) cyan ≠ mix red (mix yellow cyan) := by
     decide
 
 end Color
