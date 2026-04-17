@@ -55,12 +55,36 @@ try {
     # sorry カウント（コメント行を除外）
     $sorryLines = @(Select-String -Pattern '\bsorry\b' -Path $filePath |
         Where-Object { $_.Line -notmatch '^\s*--' })
-    $count = $sorryLines.Count
+    $sorryCount = $sorryLines.Count
 
-    if ($count -gt 0) {
-        $fileName = Split-Path $filePath -Leaf
+    # 裸 simp 検知: simp/simp_all が only なしで使われている場合に警告
+    # 除外: simp only, simp_all only, simp?, simp_all?, コメント行
+    $bareSimpLines = @(Select-String -Pattern '\bsimp(_all)?\b' -Path $filePath |
+        Where-Object {
+            $_.Line -notmatch '^\s*--' -and         # コメント行を除外
+            $_.Line -notmatch '\bsimp(_all)?\s+only\b' -and  # simp only を除外
+            $_.Line -notmatch '\bsimp(_all)?\?' -and          # simp? を除外
+            $_.Line -notmatch '\bsimp(_all)?\s*\(config' -and # simp (config:=...) only を除外（only は前のルールで）
+            $_.Line -notmatch 'simpa\b' -and                  # simpa は別タクティク
+            $_.Line -notmatch 'dsimp\b'                       # dsimp は別タクティク
+        })
+    $bareSimpCount = $bareSimpLines.Count
+
+    $messages = [System.Collections.ArrayList]::new()
+    $fileName = Split-Path $filePath -Leaf
+
+    if ($sorryCount -gt 0) {
+        $null = $messages.Add("sorry count: $sorryCount")
+    }
+
+    if ($bareSimpCount -gt 0) {
+        $lineNums = ($bareSimpLines | ForEach-Object { $_.LineNumber }) -join ", "
+        $null = $messages.Add("⚠ bare simp detected: $bareSimpCount (L$lineNums). Please stabilize with simp only [...]")
+    }
+
+    if ($messages.Count -gt 0) {
         $result = @{
-            systemMessage = "[Hook] $fileName の sorry 数: $count 件。証明の完了を目指してください。"
+            systemMessage = "[Hook] $fileName — $($messages -join '. ')"
         }
     } else {
         $result = @{}

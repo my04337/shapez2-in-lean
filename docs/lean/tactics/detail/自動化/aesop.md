@@ -74,6 +74,7 @@ example (h : P → Q) (hp : P) : Q := by
 | `exact?` | 検索 | 単一補題の検索 |
 
 ## 参照
+- [Aesop 活用ガイド（S2IL プロジェクト向け）](../../aesop-guide.md) — ルール設計基準・良い/悪い使い方・デバッグ方法
 - [Aesop リポジトリ](https://github.com/leanprover-community/aesop)
 
 ---

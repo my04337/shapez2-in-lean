@@ -111,17 +111,17 @@ private def testLayer1 : Layer := Layer.mk
     Shape.single emptyLayer
 
 -- 仕様書の例2: "crRgSbcr" → "--RgSb--"
--- NE(cr) と NW(cr) が隣接同色で結合 → 東西に跨がる
+-- NE(cr) と NW(cr) が隣接結晶で結合（色不問）→ 東西に跨がる
 #guard (Shape.single (Layer.mk (.crystal .red) (.colored .rectangle .green) (.colored .star .blue) (.crystal .red))).shatterOnCut ==
     Shape.single (Layer.mk .empty (.colored .rectangle .green) (.colored .star .blue) .empty)
 
 -- 仕様書の例3: "CrcgcgWu" → "Cr----Wu"
--- SE(cg) と SW(cg) が隣接同色で結合 → 東西に跨がる
+-- SE(cg) と SW(cg) が隣接結晶で結合（色不問）→ 東西に跨がる
 #guard (Shape.single (Layer.mk (.colored .circle .red) (.crystal .green) (.crystal .green) (.colored .windmill .uncolored))).shatterOnCut ==
     Shape.single (Layer.mk (.colored .circle .red) .empty .empty (.colored .windmill .uncolored))
 
 -- 仕様書の例4: "crcrP---:--cgcg--" → "----P---:--------"
--- L1:NE(cr)-SE(cr) 同色同レイヤ結合, L2:SE(cg)-SW(cg) 同色同レイヤ結合
+-- L1:NE(cr)-SE(cr) 同レイヤ結合（色不問）, L2:SE(cg)-SW(cg) 同レイヤ結合（色不問）
 -- L1:SE(cr)-L2:SE(cg) 上下結合 → 全結晶が1クラスタ → 東西に跨がる
 #guard (Shape.double
     (Layer.mk (.crystal .red) (.crystal .red) .pin .empty)
@@ -130,15 +130,15 @@ private def testLayer1 : Layer := Layer.mk
     (Layer.mk .empty .empty .pin .empty)
     emptyLayer
 
--- 仕様書の非砕け例1: "crcgcrcg" (異色交互) → 変化なし
--- 4つの独立結晶、東西に跨がらない
+-- 仕様書の例 (CrystalBond修正後): "crcgcrcg" (異色交互) → 全砕け
+-- NE(cr)-SE(cg) 結合, SE(cg)-SW(cr) 結合, SW(cr)-NW(cg) 結合 → 全1クラスタ → 東西跨ぎ
 #guard (Shape.single (Layer.mk (.crystal .red) (.crystal .green) (.crystal .red) (.crystal .green))).shatterOnCut ==
-    Shape.single (Layer.mk (.crystal .red) (.crystal .green) (.crystal .red) (.crystal .green))
+    Shape.single emptyLayer
 
--- 仕様書の非砕け例2: "crcrcgcg" → 変化なし
--- {NE(cr), SE(cr)} = East のみ, {SW(cg), NW(cg)} = West のみ
+-- 仕様書の例 (CrystalBond修正後): "crcrcgcg" → 全砕け
+-- SE(cr)-SW(cg) が色不問で結合 → 全1クラスタ → 東西跨ぎ
 #guard (Shape.single (Layer.mk (.crystal .red) (.crystal .red) (.crystal .green) (.crystal .green))).shatterOnCut ==
-    Shape.single (Layer.mk (.crystal .red) (.crystal .red) (.crystal .green) (.crystal .green))
+    Shape.single emptyLayer
 
 -- ============================================================
 -- shatterOnCut: 追加テスト
@@ -202,6 +202,16 @@ private def testLayer1 : Layer := Layer.mk
     (Layer.mk .empty .empty .empty .empty)
 
 -- ============================================================
+-- ゲーム実機検証テスト (結晶結合色不問修正の検証)
+-- ============================================================
+
+-- テストA: 異色隣接結晶 + カッター → 全砕け
+-- crcgcb-- : NE(cr)-SE(cg)-SW(cb) が色不問で全結合 → 東西跨ぎ → 全砕け
+-- ゲーム結果: "" (空)
+#guard (Shape.single (Layer.mk (.crystal .red) (.crystal .green) (.crystal .blue) .empty)).shatterOnCut ==
+    Shape.single emptyLayer
+
+-- ============================================================
 -- shatterOnCut のレイヤ数保存
 -- ============================================================
 
@@ -235,11 +245,11 @@ private def testLayer1 : Layer := Layer.mk
     (Layer.mk (.crystal .red) (.crystal .red) .pin .empty)
     (Layer.mk .empty (.crystal .green) (.crystal .green) .empty)).rotate180.shatterOnCut
 
--- 非砕け例1: "crcgcrcg" (異色交互)
+-- 等変性テスト1: "crcgcrcg" (異色交互 → CrystalBond修正後は全砕け)
 #guard (Shape.single (Layer.mk (.crystal .red) (.crystal .green) (.crystal .red) (.crystal .green))).shatterOnCut.rotate180
     == (Shape.single (Layer.mk (.crystal .red) (.crystal .green) (.crystal .red) (.crystal .green))).rotate180.shatterOnCut
 
--- 非砕け例2: "crcrcgcg" (東西分離)
+-- 等変性テスト2: "crcrcgcg" (色不問結合 → CrystalBond修正後は全砕け)
 #guard (Shape.single (Layer.mk (.crystal .red) (.crystal .red) (.crystal .green) (.crystal .green))).shatterOnCut.rotate180
     == (Shape.single (Layer.mk (.crystal .red) (.crystal .red) (.crystal .green) (.crystal .green))).rotate180.shatterOnCut
 

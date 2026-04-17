@@ -14,17 +14,12 @@ S2IL プロジェクトの開発計画・マイルストーン・証明アプロ
 |---|---|
 | [MILESTONES.md](MILESTONES.md) | マイルストーン チェックシート。フェーズ 0〜 の各タスクと達成状況を管理 |
 
-### 証明チートシート
+### 証明計画
 
 | ファイル | 概要 |
 |---|---|
-| [gravity-proof-cheatsheet.md](gravity-proof-cheatsheet.md) | Gravity 証明チートシート。`process_rotate180` の証明状態・ファイル構造・禁止パターン・作業計画をコンパクトに集約 |
-
-### 証明計画・アプローチ
-
-| ファイル | 概要 |
-|---|---|
-| [proof-cleanup-plan.md](proof-cleanup-plan.md) | 証明リファクタリング計画。裸 simp の安定化・巨大証明の分割・タクティク活用の改善を Wave 0〜4 で段階実施。レイヤ数制約の撤廃、安定状態の適切な反映、ドメインドキュメント改善も含む |
+| [gravity-proof-execution-plan.md](gravity-proof-execution-plan.md) | Gravity 証明 統合実行計画（Plan B）。axiom インベントリ・SettledShape 完了計画・rCW/rCCW 等変性・Wave Gravity Model ロードマップ・リファクタリング計画を統合 |
+| [codebase-restructure-plan.md](codebase-restructure-plan.md) | コード分割単位見直し計画。分割案 A〜D の比較、段階導入プラン、Appendix の具体ディレクトリ構成案を整理 |
 
 ---
 
@@ -35,7 +30,7 @@ S2IL プロジェクトの開発計画・マイルストーン・証明アプロ
 | 作業 | 参照先 |
 |---|---|
 | マイルストーンの確認・更新 | `MILESTONES.md` |
-| 落下処理に関わる実装・証明 | `../shapez2/falling.md` + `../shapez2/adjacency.md` + `gravity-proof-cheatsheet.md` |
+| 落下処理に関わる実装・証明 | `../shapez2/falling.md` + `../shapez2/adjacency.md` + `gravity-proof-execution-plan.md` |
 | 新しい証明に着手する前 | 既存の証明計画ファイルを確認し、関連する計画がないか調べる |
 | 証明が難航した場合 | 既存のアプローチ候補を確認し、代替戦略を検討 |
 | 証明が完了した場合 | 該当する計画ファイルとマイルストーンを更新 |
@@ -43,6 +38,6 @@ S2IL プロジェクトの開発計画・マイルストーン・証明アプロ
 ### 新規ファイルの追加基準
 
 - **追加する**: 新しい大規模な証明計画・アプローチ調査を開始する場合
-- **追加しない**: 小規模な証明（1〜2 sorry 程度）は `docs/knowledge/` に知見として記録する
+- **追加しない**: 小規模な証明（1〜2 sorry 程度）は `docs/s2il/` に知見として記録する
 - **ファイル名**: 対象をケバブケースで（例: `stacker-equivariance-proof-plan.md`）
 - 新規ファイルを追加した際は、この README のファイル一覧にも追記すること

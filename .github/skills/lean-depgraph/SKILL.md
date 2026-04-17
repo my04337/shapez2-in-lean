@@ -1,8 +1,9 @@
 ---
 name: lean-depgraph
-description: 'Lean 4 プロジェクトの証明依存グラフを生成する。Use when: visualize proof dependencies, analyze theorem relationships, generate dependency graph, mermaid diagram, proof structure, lemma dependencies.'
+description: 'Generate Lean 4 proof dependency graph as Mermaid/JSON. Use when: visualize proof dependencies, analyze theorem relationships, generate dependency graph, mermaid diagram, proof structure, lemma dependencies.'
 metadata:
-  argument-hint: '証明間の依存関係グラフを生成します'
+  argument-hint: 'Omit to generate full project dependency graph'
+disable-model-invocation: true
 ---
 
 # 証明依存グラフスキル

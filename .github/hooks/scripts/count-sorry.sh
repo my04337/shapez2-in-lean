@@ -44,7 +44,7 @@ COUNT=$((COUNT - COMMENT_COUNT))
 
 if [ "$COUNT" -gt 0 ]; then
     FILENAME=$(basename "$FILE_PATH")
-    echo "{\"systemMessage\":\"[Hook] ${FILENAME} の sorry 数: ${COUNT} 件。証明の完了を目指してください。\"}"
+    echo "{\"systemMessage\":\"[Hook] ${FILENAME}: ${COUNT} sorry(s). Please work toward completing the proofs.\"}"
 else
     echo '{}'
 fi

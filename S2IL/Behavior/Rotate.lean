@@ -167,6 +167,20 @@ def rotate180 (s : Shape) : Shape := s.mapLayers Layer.rotate180
 -- Shape の回転に関する定理
 -- ============================================================
 
+/-- `rotateCCW` は `rotateCW` の 3 回適用と等しい -/
+theorem rotateCCW_eq_rotateCW_rotateCW_rotateCW (s : Shape) :
+        s.rotateCCW = s.rotateCW.rotateCW.rotateCW := by
+    apply Shape.ext
+    simp only [rotateCCW, rotateCW, mapLayers]
+    rw [List.map_map, List.map_map]; congr 1
+
+/-- `rotate180` は `rotateCW` の 2 回適用と等しい -/
+theorem rotate180_eq_rotateCW_rotateCW (s : Shape) :
+        s.rotate180 = s.rotateCW.rotateCW := by
+    apply Shape.ext
+    simp only [rotate180, rotateCW, mapLayers]
+    rw [List.map_map]; congr 1
+
 /-- 時計回り 90° 回転を 4 回適用すると元に戻る -/
 @[simp] theorem rotateCW_four (s : Shape) :
         s.rotateCW.rotateCW.rotateCW.rotateCW = s := by

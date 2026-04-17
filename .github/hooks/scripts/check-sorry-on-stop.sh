@@ -33,9 +33,33 @@ if [ -z "$CWD" ]; then
 fi
 
 # ======================================================================
-# 1. build-diagnostics.jsonl から非 sorry warning を検出してブロック判定
+# 0. セッション内にビルドが実行されたかチェック（Q&A セッション等の誤ブロック防止）
+#    - .lake/session-id.tmp が存在 → セッションIDを取得
+#    - .lake/build-diagnostics-<sid>.jsonl が存在 → このセッションでビルドあり
+#    - どちらかが存在しない → このセッションではビルドしていない → スキップ
 # ======================================================================
-DIAG_FILE="$CWD/.lake/build-diagnostics.jsonl"
+SESSION_ID_FILE="$CWD/.lake/session-id.tmp"
+DIAG_FILE=""
+
+if [ -f "$SESSION_ID_FILE" ]; then
+    SID=$(cat "$SESSION_ID_FILE" | tr -d '[:space:]')
+    if [ -n "$SID" ]; then
+        CANDIDATE="$CWD/.lake/build-diagnostics-$SID.jsonl"
+        if [ -f "$CANDIDATE" ]; then
+            DIAG_FILE="$CANDIDATE"
+        fi
+    fi
+fi
+
+if [ -z "$DIAG_FILE" ]; then
+    # セッション内ビルドなし → スキップ（前セッション以前の診断を読まない）
+    echo '{"continue":true}'
+    exit 0
+fi
+
+# ======================================================================
+# 1. build-diagnostics-<sid>.jsonl から非 sorry warning を検出してブロック判定
+# ======================================================================
 NON_SORRY_COUNT=0
 NON_SORRY_LIST=""
 
@@ -66,38 +90,68 @@ fi
 
 if [ "$NON_SORRY_COUNT" -gt 0 ]; then
     if command -v jq &>/dev/null; then
-        REASON=$(printf '[Stop Hook] 前回ビルドで未解消の warning が %d 件あります。\nsorry に起因する warning は除外済みです。\n以下の warning を解消してから終了してください。\n\n%s' \
+        REASON=$(printf '[Stop Hook] %d unresolved warning(s) found in the last build.\nWarnings originating from sorry have been excluded.\nPlease resolve the following warnings before exiting.\n\n%s' \
             "$NON_SORRY_COUNT" "$(printf '%b' "$NON_SORRY_LIST")")
         REASON_JSON=$(printf '%s' "$REASON" | jq -Rs .)
         echo "{\"hookSpecificOutput\":{\"hookEventName\":\"Stop\",\"decision\":\"block\",\"reason\":${REASON_JSON}}}"
     else
-        echo "{\"hookSpecificOutput\":{\"hookEventName\":\"Stop\",\"decision\":\"block\",\"reason\":\"warning ${NON_SORRY_COUNT} 件未解消 (sorry 由来除外済み)\"}}"
+        echo "{\"hookSpecificOutput\":{\"hookEventName\":\"Stop\",\"decision\":\"block\",\"reason\":\"${NON_SORRY_COUNT} warning(s) unresolved (sorry-originating excluded)\"}}"
     fi
     exit 0
 fi
 
 # ======================================================================
-# 2. sorry の残存チェック (情報通知のみ、ブロックしない)
+# ======================================================================
+# 2. untracked ファイルの警告（意図しない新規ファイルの検出）
+# ======================================================================
+UNTRACKED_WARNINGS=""
+UNTRACKED_COUNT=0
+
+if command -v git &>/dev/null; then
+    cd "$CWD"
+    while IFS= read -r line; do
+        # "?? filename" から filename を抽出
+        FILE=$(echo "$line" | sed 's/^?? //' | tr -d '"')
+        # トップレベルの .lean/.md ファイルのみ対象
+        if echo "$FILE" | grep -qvE '/' && echo "$FILE" | grep -qE '\.(lean|md)$'; then
+            UNTRACKED_WARNINGS="${UNTRACKED_WARNINGS}  - ${FILE}\n"
+            UNTRACKED_COUNT=$((UNTRACKED_COUNT + 1))
+        fi
+    done < <(git status --porcelain 2>/dev/null | grep '^??')
+fi
+
+if [ "$UNTRACKED_COUNT" -gt 0 ]; then
+    if command -v jq &>/dev/null; then
+        REASON=$(printf '[Stop Hook] %d unexpected untracked file(s) found in the project root.\nPlace temporary files in Scratch/ or delete them if unnecessary.\n\n%s' \
+            "$UNTRACKED_COUNT" "$(printf '%b' "$UNTRACKED_WARNINGS")")
+        REASON_JSON=$(printf '%s' "$REASON" | jq -Rs .)
+        echo "{\"hookSpecificOutput\":{\"hookEventName\":\"Stop\",\"decision\":\"block\",\"reason\":${REASON_JSON}}}"
+    else
+        echo "{\"hookSpecificOutput\":{\"hookEventName\":\"Stop\",\"decision\":\"block\",\"reason\":\"${UNTRACKED_COUNT} untracked file(s) in the project root\"}}"
+    fi
+    exit 0
+fi
+
+# ======================================================================
+# 3. sorry の残存チェック (情報通知のみ、ブロックしない)
+#    build 診断の isSorry=true を唯一の情報源とする
 # ======================================================================
 SORRY_INFO=""
 TOTAL_SORRIES=0
 
-DIR_PATH="$CWD/S2IL"
-if [ -d "$DIR_PATH" ]; then
-    while IFS= read -r f; do
-        COUNT=$(grep -c '\bsorry\b' "$f" 2>/dev/null || echo "0")
-        COMMENT_COUNT=$(grep -c '^\s*--.*\bsorry\b' "$f" 2>/dev/null || echo "0")
-        COUNT=$((COUNT - COMMENT_COUNT))
-        if [ "$COUNT" -gt 0 ]; then
-            REL=$(echo "$f" | sed "s|$CWD/||")
-            SORRY_INFO="${SORRY_INFO}  - ${REL}: ${COUNT} 件\n"
-            TOTAL_SORRIES=$((TOTAL_SORRIES + COUNT))
-        fi
-    done < <(find "$DIR_PATH" -name "*.lean" 2>/dev/null)
+if [ -f "$DIAG_FILE" ] && command -v jq &>/dev/null; then
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        FILE=$(echo "$line" | jq -r '.file // ""' 2>/dev/null || echo "")
+        COUNT=$(echo "$line" | jq -r '.count // 0' 2>/dev/null || echo "0")
+        [ -z "$FILE" ] && continue
+        SORRY_INFO="${SORRY_INFO}  - ${FILE}: ${COUNT}\n"
+        TOTAL_SORRIES=$((TOTAL_SORRIES + COUNT))
+    done < <(jq -sc 'map(select(.isSorry == true)) | group_by(.file)[] | { file: .[0].file, count: length }' "$DIAG_FILE" 2>/dev/null)
 fi
 
 if [ "$TOTAL_SORRIES" -gt 0 ]; then
-    MSG="[Stop] sorry が ${TOTAL_SORRIES} 件残っています。セッション終了前に、証明の進捗状態をリポジトリメモリ (/memories/repo/) に記録することを推奨します。\\n\\n残存 sorry:\\n${SORRY_INFO}"
+    MSG="[Stop] ${TOTAL_SORRIES} sorry(s) remain. Recommended: record proof progress in /memories/repo/ before ending the session.\\n\\nRemaining sorrys:\\n${SORRY_INFO}"
     echo "{\"continue\":true,\"systemMessage\":\"${MSG}\"}"
 else
     echo '{"continue":true}'

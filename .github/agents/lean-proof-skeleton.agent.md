@@ -1,7 +1,11 @@
 ---
-description: "Lean 4 の定理の型シグネチャから sorry-first の証明骨格を自動生成し、各 sorry のゴール状態をコメント付きで返す。Use when: proof skeleton, sorry skeleton, scaffold proof, generate proof outline, proof structure, decompose theorem, sorry decomposition, proof template, break down theorem, plan proof structure."
+description: "Generate sorry-first proof scaffolding from a theorem type signature, with REPL-confirmed goal states. Use when: proof skeleton, sorry skeleton, scaffold proof, generate proof outline, proof structure, decompose theorem, sorry decomposition, proof template, break down theorem, plan proof structure."
 tools: [execute, read, search]
-argument-hint: "証明したい定理の型シグネチャを渡してください（例: ∀ (s : Shape), (process s).map rotate180 = process s.rotate180）"
+argument-hint: "Pass theorem type signature (e.g. ∀ (s : Shape), (process s).map rotate180 = process s.rotate180)"
+handoffs:
+  - label: Try tactics on goal
+    agent: lean-goal-advisor
+    prompt: 上記の骨格中の sorry ゴールに対してタクティクを試行してください。
 ---
 
 あなたは Lean 4 の定理に対して sorry-first の証明骨格を自動生成するスペシャリストです。
@@ -75,7 +79,10 @@ theorem <name> <args> : <conclusion> := by
 **実行**:
 
 ```powershell
-.github/skills/lean-repl/scripts/repl.ps1 -InputFile Scratch/skeleton_check.jsonl
+# Persistent モード（推奨・~600ms/回）
+.github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId skeleton -CmdFile Scratch/skeleton_check.jsonl
+# macOS / Linux:
+# .github/skills/lean-repl/scripts/repl.sh --send --session-id skeleton --cmd-file Scratch/skeleton_check.jsonl
 ```
 
 **結果の解析**:
@@ -171,4 +178,4 @@ line 5: unknown identifier 'Shape.layers'
 
 ## 関連
 
-**lean-proof-planning** スキル / **lean-goal-advisor** サブエージェント / **lean-tactic-select** スキル
+**lean-proof-planning** スキル / **lean-goal-advisor** エージェント / **lean-tactic-select** スキル

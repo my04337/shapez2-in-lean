@@ -51,6 +51,57 @@ theorem GenericReachable.symm {edge : α → α → Bool}
     | step h_edge _ ih =>
         exact ih.trans (.step (h_symm _ _ ▸ h_edge) .refl)
 
+/-- エッジの単調性: edge1 が成立するなら edge2 も成立する場合、到達可能性を転送 -/
+theorem GenericReachable.mono {edge1 edge2 : α → α → Bool}
+        (h_imp : ∀ a b, edge1 a b = true → edge2 a b = true)
+        (hr : GenericReachable edge1 seed p) :
+        GenericReachable edge2 seed p := by
+    induction hr with
+    | refl => exact .refl
+    | step h_edge _ ih => exact .step (h_imp _ _ h_edge) ih
+
+/-- 関数 f を通じて到達可能性をマッピングする -/
+theorem GenericReachable.map_step
+        {edge1 : α → α → Bool} {edge2 : β → β → Bool} {f : α → β}
+        (h_step : ∀ a b, edge1 a b = true → edge2 (f a) (f b) = true)
+        {x y : α}
+        (h_reach : GenericReachable edge1 x y) :
+        GenericReachable edge2 (f x) (f y) := by
+    induction h_reach with
+    | refl => exact .refl
+    | step h_edge _ ih => exact .step (h_step _ _ h_edge) ih
+
+/-- 不変量付きの到達可能性マッピング: 各ステップで P を保存しつつ edge2 へ変換する -/
+theorem GenericReachable.map_step_inv
+        {edge1 : α → α → Bool} {edge2 : β → β → Bool}
+        {f : α → β} {P : α → Prop}
+        (h_step : ∀ a b, P a → edge1 a b = true →
+            P b ∧ edge2 (f a) (f b) = true)
+        {x y : α} (hx : P x)
+        (h_reach : GenericReachable edge1 x y) :
+        P y ∧ GenericReachable edge2 (f x) (f y) := by
+    induction h_reach with
+    | refl => exact ⟨hx, .refl⟩
+    | step h_edge _ ih =>
+        have ⟨hb, h_gc⟩ := h_step _ _ hx h_edge
+        have ⟨hc, h_reach'⟩ := ih hb
+        exact ⟨hc, .step h_gc h_reach'⟩
+
+/-- 非ブリッジ辺の除去: 削除された辺の両端が edge2 で互いに到達可能なら、
+edge1 での到達可能性は edge2 でも保存される -/
+theorem GenericReachable.non_bridge_removal
+        {edge1 edge2 : α → α → Bool}
+        (h_reach : GenericReachable edge1 s x)
+        (h_cycle : ∀ a b, edge1 a b = true → edge2 a b = false →
+            GenericReachable edge2 a b) :
+        GenericReachable edge2 s x := by
+    induction h_reach with
+    | refl => exact .refl
+    | step h_edge _ ih =>
+        cases h2 : edge2 _ _
+        · exact (h_cycle _ _ h_edge h2).trans ih
+        · exact .step h2 ih
+
 -- ============================================================
 -- BFS エッジ合同
 -- ============================================================
@@ -166,7 +217,8 @@ def GenericBfsInv [BEq α] (edge : α → α → Bool)
         edge v n = true →
         vis.any (· == n) = true ∨ queue.any (· == n) = true
 
-/-- BFS 初期不変条件 -/
+/-- BFS 初期不変条件: 空の visited と [start] の queue で不変条件が成立する。
+    visited が空のため前提 `vis.any (· == v) = true` が偽となり自明に成立。 -/
 theorem GenericBfsInv_initial [BEq α] (edge : α → α → Bool)
         (allNodes : List α) (start : α) :
         GenericBfsInv edge allNodes [] [start] := by
@@ -324,7 +376,10 @@ private theorem fuel_key_estimate [BEq α] [LawfulBEq α]
 -- BFS 不変条件保存 (メイン定理)
 -- ============================================================
 
-/-- BFS が不変条件を保存する。燃料条件: fuel + 1 ≥ |queue| + |未訪問|² -/
+/-- BFS が不変条件を保存する。
+    BFS 実行後の結果 visited リストが閉包（queue = []）になることを示す。
+    前提: (1) 初期状態が不変条件を満たす、(2) 燃料が十分
+    （fuel + 1 ≥ |queue| + |未訪問|²）、(3) edge が allNodes 内のノードのみ返す -/
 theorem genericBfs_invariant_preserved [BEq α] [LawfulBEq α]
         (edge : α → α → Bool) (allNodes vis queue : List α) (fuel : Nat)
         (h_inv : GenericBfsInv edge allNodes vis queue)
@@ -467,7 +522,9 @@ theorem genericBfs_queue_in_result [BEq α] [LawfulBEq α]
 -- 閉包→到達可能性
 -- ============================================================
 
-/-- 閉じた集合は到達可能な全ノードを含む -/
+/-- 閉じた集合（queue = [] の不変条件）は start から到達可能な全ノードを含む。
+    edge の妥当性（結果が allNodes に含まれる）と、start が vis に含まれることを前提とする。
+    GenericReachable の帰納法で証明し、各ステップで不変条件の閉包性を適用する -/
 theorem genericBfs_closed_contains_reachable [BEq α] [LawfulBEq α]
         (edge : α → α → Bool) (allNodes vis : List α)
         (h_closed : GenericBfsInv edge allNodes vis [])
@@ -482,3 +539,64 @@ theorem genericBfs_closed_contains_reachable [BEq α] [LawfulBEq α]
         match h_closed _ h_start _ (h_valid _ _ h_edge) h_edge with
         | .inl h => exact ih h
         | .inr h => simp only [List.any, Bool.false_eq_true] at h
+
+-- ============================================================
+-- 置換下の等変性
+-- ============================================================
+
+private theorem any_map_eq [BEq α]
+        (σ : α → α) (h_beq : ∀ a b, (σ a == σ b) = (a == b))
+        (l : List α) (p : α) :
+        (l.map σ).any (· == σ p) = l.any (· == p) := by
+    rw [List.any_map]; congr 1; ext x; exact h_beq x p
+
+private theorem any_cons_map_eq [BEq α]
+        (σ : α → α) (h_beq : ∀ a b, (σ a == σ b) = (a == b))
+        (x : α) (l : List α) (p : α) :
+        (σ x :: l.map σ).any (· == σ p) = (x :: l).any (· == p) := by
+    simp only [List.any_cons, h_beq, any_map_eq σ h_beq]
+
+private theorem filter_map_comm [BEq α]
+        (edge edge' : α → α → Bool) (σ : α → α)
+        (h_edge : ∀ a b, edge' (σ a) (σ b) = edge a b)
+        (h_beq : ∀ a b, (σ a == σ b) = (a == b))
+        (allNodes : List α) (pos : α) (vis : List α) :
+        (allNodes.map σ).filter (fun p =>
+            edge' (σ pos) p && !((σ pos :: vis.map σ).any (· == p))) =
+        (allNodes.filter (fun p =>
+            edge pos p && !((pos :: vis).any (· == p)))).map σ := by
+    induction allNodes with
+    | nil => rfl
+    | cons a as ih =>
+        simp only [List.map, List.filter]
+        rw [h_edge, any_cons_map_eq σ h_beq]
+        cases edge pos a && !((pos :: vis).any (· == a)) with
+        | true => simp only [List.map]; exact congrArg _ ih
+        | false => exact ih
+
+/-- genericBfs は置換 σ の下で等変:
+    edge' (σ a) (σ b) = edge a b かつ (σ a == σ b) = (a == b) のとき、
+    allNodes/vis/queue を σ でマップした結果は、元の結果を σ でマップしたものに等しい -/
+theorem genericBfs_map_comm [BEq α] [LawfulBEq α]
+        (edge edge' : α → α → Bool) (σ : α → α)
+        (h_edge : ∀ a b, edge' (σ a) (σ b) = edge a b)
+        (h_beq : ∀ a b, (σ a == σ b) = (a == b))
+        (allNodes vis queue : List α) (fuel : Nat) :
+        genericBfs edge' (allNodes.map σ) (vis.map σ) (queue.map σ) fuel =
+        (genericBfs edge allNodes vis queue fuel).map σ := by
+    induction fuel generalizing vis queue with
+    | zero => rfl
+    | succ n ih =>
+        cases queue with
+        | nil => simp only [genericBfs, List.map_nil]
+        | cons pos rest =>
+            show genericBfs edge' (allNodes.map σ) (vis.map σ)
+                (σ pos :: rest.map σ) (n + 1) =
+                (genericBfs edge allNodes vis (pos :: rest) (n + 1)).map σ
+            simp only [genericBfs]
+            rw [any_map_eq σ h_beq]
+            split
+            · exact ih vis rest
+            · rw [filter_map_comm edge edge' σ h_edge h_beq, ← List.map_append]
+              exact ih (pos :: vis) (rest ++ allNodes.filter fun p =>
+                  edge pos p && !((pos :: vis).any (· == p)))

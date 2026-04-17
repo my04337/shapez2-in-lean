@@ -25,6 +25,10 @@ plausible (config := { numInst := 1000 })  -- テスト数を指定
 ```
 
 ## 必須 import
+
+> **S2IL REPL では import 不要**: REPL デフォルトに `import Plausible` が含まれるため、追加 import なしで `plausible` タクティクが使える。  
+> スタンドアロン Lean ファイルや `-NoPickle` モードでは以下が必要:
+
 ```lean
 import Mathlib.Tactic.Plausible   -- または import Plausible
 ```

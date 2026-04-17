@@ -8,6 +8,7 @@ import S2IL.Behavior.PinPusher
 import S2IL.Behavior.Stacker
 import S2IL.Behavior.Cutter
 import S2IL.Behavior.ColorMixer
+import S2IL.Behavior.SettledShape
 
 /-!
 # Machine (加工装置)
@@ -30,10 +31,10 @@ import S2IL.Behavior.ColorMixer
 
 ゲーム規定により、ベルトで搬送されるシェイプおよび各加工装置の入出力は
 常に安定状態 (`Shape.IsSettled`) であることが保証されている。
-現在の定義では安定状態を前提条件として含めていないが、
-将来的に安定状態保存定理を定理（theorem）レベルで追加する予定。
-定義（def）自体に前提を追加するのではなく、
-定理の仮定として `IsSettled` を使用するアプローチを取る。
+
+着色・回転・結晶化は `Shape.SettledShape` を入出力の型として採用済み。
+積層・切断・ピン押し等は `gravity_IsSettled` axiom を利用して SettledShape に段階的に移行済み。
+swap は `Shape.SettledShape.swap` により SettledShape 入出力へ移行済み。
 -/
 
 namespace Machine
@@ -43,19 +44,20 @@ namespace Machine
 -- ============================================================
 
 /-- 着色機を適用する。シェイプと色の両方が存在する場合のみ出力を生成する -/
-def paint (shape : Option Shape) (color : Option Color) : Option Shape :=
+def paint (shape : Option Shape.SettledShape) (color : Option Color) : Option Shape.SettledShape :=
     match shape, color with
-    | some s, some c => some (s.paint c)
+    | some ss, some c => some (ss.paint c)
     | _, _ => none
 
 -- ============================================================
 -- 結晶製造機 (CrystalGenerator)
 -- ============================================================
 
-/-- 結晶製造機を適用する。シェイプと色の両方が存在する場合のみ出力を生成する -/
-def crystallize (shape : Option Shape) (color : Option Color) : Option Shape :=
+/-- 結晶製造機を適用する。シェイプと色の両方が存在する場合のみ出力を生成する。
+    入力 Shape の安定状態に関わらず、出力は常に安定状態 -/
+def crystallize (shape : Option Shape) (color : Option Color) : Option Shape.SettledShape :=
     match shape, color with
-    | some s, some c => some (s.crystallize c)
+    | some s, some c => some (Shape.SettledShape.crystallize s c)
     | _, _ => none
 
 -- ============================================================
@@ -63,16 +65,16 @@ def crystallize (shape : Option Shape) (color : Option Color) : Option Shape :=
 -- ============================================================
 
 /-- 時計回り 90° 回転機を適用する。シェイプが存在する場合のみ出力を生成する -/
-def rotateCW (shape : Option Shape) : Option Shape :=
-    shape.map Shape.rotateCW
+def rotateCW (shape : Option Shape.SettledShape) : Option Shape.SettledShape :=
+    shape.map (·.rotateCW)
 
 /-- 反時計回り 90° 回転機を適用する。シェイプが存在する場合のみ出力を生成する -/
-def rotateCCW (shape : Option Shape) : Option Shape :=
-    shape.map Shape.rotateCCW
+def rotateCCW (shape : Option Shape.SettledShape) : Option Shape.SettledShape :=
+    shape.map (·.rotateCCW)
 
 /-- 180° 回転機を適用する。シェイプが存在する場合のみ出力を生成する -/
-def rotate180 (shape : Option Shape) : Option Shape :=
-    shape.map Shape.rotate180
+def rotate180 (shape : Option Shape.SettledShape) : Option Shape.SettledShape :=
+    shape.map (·.rotate180)
 
 -- ============================================================
 -- ピン押し機 (PinPusher)
@@ -119,9 +121,10 @@ def cut (shape : Option Shape) : Option Shape × Option Shape :=
 
 /-- スワップ機を適用する。2つのシェイプが存在する場合のみ出力を生成する。
     戻り値: (入れ替え後のシェイプ1, 入れ替え後のシェイプ2) -/
-def swap (shape1 shape2 : Option Shape) : Option Shape × Option Shape :=
+def swap (shape1 shape2 : Option Shape.SettledShape) :
+        Option Shape.SettledShape × Option Shape.SettledShape :=
     match shape1, shape2 with
-    | some s1, some s2 => s1.swap s2
+    | some ss1, some ss2 => ss1.swap ss2
     | _, _ => (none, none)
 
 -- ============================================================
@@ -133,5 +136,175 @@ def mixColor (color1 color2 : Option Color) : Option Color :=
     match color1, color2 with
     | some c1, some c2 => some (ColorMixer.mix c1 c2)
     | _, _ => none
+
+-- ============================================================
+-- 回転等変性定理
+-- ============================================================
+
+-- --------------------------------------------------------
+-- 内部ヘルパー：Option 2引数操作の回転等変性テンプレート
+-- --------------------------------------------------------
+
+/-- SettledShape 入出力の 2引数 Option 操作に対する rotation 等変性テンプレート。
+    paint 系3定理が共通して使う -/
+private theorem option_paint_rot_comm
+        (rotOut : Shape.SettledShape → Shape.SettledShape)
+        (rotIn : Shape.SettledShape → Shape.SettledShape)
+        (h : ∀ ss c, rotOut (ss.paint c) = (rotIn ss).paint c)
+        (shape : Option Shape.SettledShape) (color : Option Color) :
+        (paint shape color).map rotOut = paint (shape.map rotIn) color := by
+    cases shape with
+    | none => cases color <;> rfl
+    | some ss =>
+        cases color with
+        | none => rfl
+        | some c =>
+            simp only [paint, Option.map]
+            exact congrArg some (h ss c)
+
+/-- Shape → SettledShape の 2引数 Option 操作に対する rotation 等変性テンプレート。
+    crystallize 系3定理が共通して使う -/
+private theorem option_crystallize_rot_comm
+        (rotOut : Shape.SettledShape → Shape.SettledShape)
+        (rotIn : Shape → Shape)
+        (h : ∀ s c, rotOut (Shape.SettledShape.crystallize s c) = Shape.SettledShape.crystallize (rotIn s) c)
+        (shape : Option Shape) (color : Option Color) :
+        (crystallize shape color).map rotOut = crystallize (shape.map rotIn) color := by
+    cases shape with
+    | none => cases color <;> rfl
+    | some s =>
+        cases color with
+        | none => rfl
+        | some c =>
+            simp only [crystallize, Option.map]
+            exact congrArg some (h s c)
+
+/-- Machine.paint は rotateCW と可換 -/
+theorem paint_rotateCW_comm (shape : Option Shape.SettledShape) (color : Option Color) :
+        (paint shape color).map (·.rotateCW) =
+        paint (shape.map (·.rotateCW)) color :=
+    option_paint_rot_comm (·.rotateCW) (·.rotateCW) (fun ss c => Subtype.ext (Shape.paint_rotateCW_comm ss.val c)) shape color
+
+/-- Machine.paint は rotate180 と可換 -/
+theorem paint_rotate180_comm (shape : Option Shape.SettledShape) (color : Option Color) :
+        (paint shape color).map (·.rotate180) =
+        paint (shape.map (·.rotate180)) color :=
+    option_paint_rot_comm (·.rotate180) (·.rotate180) (fun ss c => Subtype.ext (Shape.paint_rotate180_comm ss.val c)) shape color
+
+/-- Machine.paint は rotateCCW と可換 -/
+theorem paint_rotateCCW_comm (shape : Option Shape.SettledShape) (color : Option Color) :
+        (paint shape color).map (·.rotateCCW) =
+        paint (shape.map (·.rotateCCW)) color :=
+    option_paint_rot_comm (·.rotateCCW) (·.rotateCCW) (fun ss c => Subtype.ext (Shape.paint_rotateCCW_comm ss.val c)) shape color
+
+/-- Machine.crystallize は rotateCW と可換 -/
+theorem crystallize_rotateCW_comm (shape : Option Shape) (color : Option Color) :
+        (crystallize shape color).map (·.rotateCW) =
+        crystallize (shape.map Shape.rotateCW) color :=
+    option_crystallize_rot_comm (·.rotateCW) Shape.rotateCW (fun s c => Subtype.ext (Shape.crystallize_rotateCW_comm s c)) shape color
+
+/-- Machine.crystallize は rotate180 と可換 -/
+theorem crystallize_rotate180_comm (shape : Option Shape) (color : Option Color) :
+        (crystallize shape color).map (·.rotate180) =
+        crystallize (shape.map Shape.rotate180) color :=
+    option_crystallize_rot_comm (·.rotate180) Shape.rotate180 (fun s c => Subtype.ext (Shape.crystallize_rotate180_comm s c)) shape color
+
+/-- Machine.crystallize は rotateCCW と可換 -/
+theorem crystallize_rotateCCW_comm (shape : Option Shape) (color : Option Color) :
+        (crystallize shape color).map (·.rotateCCW) =
+        crystallize (shape.map Shape.rotateCCW) color :=
+    option_crystallize_rot_comm (·.rotateCCW) Shape.rotateCCW (fun s c => Subtype.ext (Shape.crystallize_rotateCCW_comm s c)) shape color
+
+-- ============================================================
+-- pinPush 回転等変性
+-- ============================================================
+
+/-- Machine.pinPush は rotateCW と可換 -/
+theorem pinPush_rotateCW_comm (shape : Option Shape) (config : GameConfig)
+        (h_config : config.maxLayers ≤ 5) :
+        (pinPush shape config).map Shape.rotateCW =
+        pinPush (shape.map Shape.rotateCW) config := by
+    cases shape with
+    | none => rfl
+    | some s =>
+        show (s.pinPush config).map Shape.rotateCW = s.rotateCW.pinPush config
+        exact Shape.pinPush_rotateCW_comm _ _ h_config
+
+/-- Machine.pinPush は rotate180 と可換 -/
+theorem pinPush_rotate180_comm (shape : Option Shape) (config : GameConfig)
+        (h_config : config.maxLayers ≤ 5) :
+        (pinPush shape config).map Shape.rotate180 =
+        pinPush (shape.map Shape.rotate180) config := by
+    cases shape with
+    | none => rfl
+    | some s =>
+        show (s.pinPush config).map Shape.rotate180 = s.rotate180.pinPush config
+        exact Shape.pinPush_rotate180_comm _ _ h_config
+
+/-- Machine.pinPush は rotateCCW と可換 -/
+theorem pinPush_rotateCCW_comm (shape : Option Shape) (config : GameConfig)
+        (h_config : config.maxLayers ≤ 5) :
+        (pinPush shape config).map Shape.rotateCCW =
+        pinPush (shape.map Shape.rotateCCW) config := by
+    cases shape with
+    | none => rfl
+    | some s =>
+        show (s.pinPush config).map Shape.rotateCCW = s.rotateCCW.pinPush config
+        exact Shape.pinPush_rotateCCW_comm _ _ h_config
+
+-- ============================================================
+-- stack 回転等変性
+-- ============================================================
+
+/-- Machine.stack は rotateCW と可換（settled 入力が必要） -/
+theorem stack_rotateCW_comm (bottom top : Option Shape) (config : GameConfig)
+        (h_config : config.maxLayers ≤ 5)
+        (h_bottom : ∀ s, bottom = some s → s.IsSettled)
+        (h_top : ∀ s, top = some s → s.IsSettled) :
+        (stack bottom top config).map Shape.rotateCW =
+        stack (bottom.map Shape.rotateCW) (top.map Shape.rotateCW) config := by
+    cases bottom with
+    | none => cases top <;> rfl
+    | some b =>
+        cases top with
+        | none => rfl
+        | some t =>
+            simp only [stack, Option.map]
+            exact Shape.stack_rotateCW_comm b t config h_config
+                (h_bottom b rfl) (h_top t rfl)
+
+/-- Machine.stack は rotate180 と可換（settled 入力が必要） -/
+theorem stack_rotate180_comm (bottom top : Option Shape) (config : GameConfig)
+        (h_config : config.maxLayers ≤ 5)
+        (h_bottom : ∀ s, bottom = some s → s.IsSettled)
+        (h_top : ∀ s, top = some s → s.IsSettled) :
+        (stack bottom top config).map Shape.rotate180 =
+        stack (bottom.map Shape.rotate180) (top.map Shape.rotate180) config := by
+    cases bottom with
+    | none => cases top <;> rfl
+    | some b =>
+        cases top with
+        | none => rfl
+        | some t =>
+            simp only [stack, Option.map]
+            exact Shape.stack_rotate180_comm b t config h_config
+                (h_bottom b rfl) (h_top t rfl)
+
+/-- Machine.stack は rotateCCW と可換（settled 入力が必要） -/
+theorem stack_rotateCCW_comm (bottom top : Option Shape) (config : GameConfig)
+        (h_config : config.maxLayers ≤ 5)
+        (h_bottom : ∀ s, bottom = some s → s.IsSettled)
+        (h_top : ∀ s, top = some s → s.IsSettled) :
+        (stack bottom top config).map Shape.rotateCCW =
+        stack (bottom.map Shape.rotateCCW) (top.map Shape.rotateCCW) config := by
+    cases bottom with
+    | none => cases top <;> rfl
+    | some b =>
+        cases top with
+        | none => rfl
+        | some t =>
+            simp only [stack, Option.map]
+            exact Shape.stack_rotateCCW_comm b t config h_config
+                (h_bottom b rfl) (h_top t rfl)
 
 end Machine

@@ -16,6 +16,14 @@
         "timeout": 5
       }
     ],
+    "PreCompact": [
+      {
+        "type": "command",
+        "command": ".github/hooks/scripts/pre-compact.sh",
+        "windows": "pwsh -ExecutionPolicy Bypass -NoProfile -File .github/hooks/scripts/pre-compact.ps1",
+        "timeout": 5
+      }
+    ],
     "Stop": [
       {
         "type": "command",

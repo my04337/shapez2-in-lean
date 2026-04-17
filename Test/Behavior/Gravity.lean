@@ -217,3 +217,51 @@ private def gravityIdempotent (input : String) : Bool :=
 
 -- 複数の孤立ピンの落下
 #guard gravityTest "--------:P-P-P-P-" "P-P-P-P-"
+
+-- ============================================================
+-- ピン接地ルールの詳細検証（ゲーム内検証済み 2026-04-11）
+-- ============================================================
+
+-- A3: 非ピンを経由した水平接地接触
+-- L2:NE(Cr)→L1:NE(Cr) 垂直→接地。L2:SE(Rg)↔L2:NE(Cr) 水平接地接触（非ピン同士）→接地
+-- → 変化なし
+#guard gravityNoChange "Cr------:CrRg----"
+
+-- A4: ピンは水平接地接触を伝播しない（Sb パーツによる確認）
+-- L2:NE(Pin)→L1:NE(Cr) 垂直→接地。L2:SE(Sb) は Pin 経由の水平接触不可 + L1:SE 空 → 非接地→落下
+#guard gravityTest "Cr------:P-Sb----" "CrSb----:P-------"
+
+-- A5: ピン連鎖（3レイヤ）による垂直接地チェーン
+-- L3:NE(Pin)→L2:NE(Pin)→L1:NE(Cr) の垂直接地接触チェーン → 変化なし
+#guard gravityNoChange "Cr------:P-------:P-------"
+
+-- A6: ピン2段連鎖（4レイヤ）による垂直接地チェーン
+-- L4:各Rg → L3:各Pin → L2:各Pin → L1:各Cr の垂直チェーン。さらに Rg 同士が水平接地可 → 変化なし
+#guard gravityNoChange "CrCrCrCr:P-P-P-P-:P-P-P-P-:RgRgRgRg"
+
+-- A7: ピンが隣接しても、Rg 直下に Cr があれば垂直接地する
+-- L2:NE(Pin)→L1:NE(Cr) 垂直→接地。L2:SE(Rg)→L1:SE(Cr) 垂直→接地（Pin の存在に無関係）
+-- → 変化なし
+#guard gravityNoChange "CrCr----:P-Rg----"
+
+-- ============================================================
+-- §0 バグ修正回帰テスト: isUpwardGroundingContact（2026-04-13）
+-- 旧 isGroundingContact（双方向 BFS）では下記 S1〜S4 でピンが誤接地されていた。
+-- ゲーム実機でピン落下を確認済み。修正後は正しく落下することを検証する。
+-- ============================================================
+
+-- S1: L0:SE が空のため L1:SE(P) は非接地 → L0:SE へ落下
+-- Rr------:RrP-----:RrRr---- → のち RrP-----:Rr------:RrRr----
+#guard gravityTest "Rr------:RrP-----:RrRr----" "RrP-----:Rr------:RrRr----"
+
+-- S2: L0:SE/SW が空のため L1:SE(P), L1:SW(P) は非接地 → 各々 L0 へ落下
+-- Rr------:RrP-P---:RrRrRr-- → RrP-P---:Rr------:RrRrRr--
+#guard gravityTest "Rr------:RrP-P---:RrRrRr--" "RrP-P---:Rr------:RrRrRr--"
+
+-- S3: L0:SE/NW が空のため L1:SE(P), L1:NW(P) は非接地 → 各々 L0 へ落下
+-- Rr------:RrP---P-:RrRrRrRr → RrP---P-:Rr------:RrRrRrRr
+#guard gravityTest "Rr------:RrP---P-:RrRrRrRr" "RrP---P-:Rr------:RrRrRrRr"
+
+-- S4: L0:SE/SW/NW が空のため L1 の全ピンが非接地 → 各々 L0 へ落下
+-- Rr------:RrP-P-P-:RrRrRrRr → RrP-P-P-:Rr------:RrRrRrRr
+#guard gravityTest "Rr------:RrP-P-P-:RrRrRrRr" "RrP-P-P-:Rr------:RrRrRrRr"

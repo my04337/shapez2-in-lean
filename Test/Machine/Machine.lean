@@ -11,22 +11,30 @@ import S2IL.Machine.Machine
 /-- シェイプコードをパースして Option Shape にするヘルパー -/
 private def s (code : String) : Option Shape := Shape.ofString? code
 
+/-- シェイプコードをパースして Option SettledShape にするヘルパー。
+    安定状態でない場合は none を返すが、通常のシェイプコードは常に安定状態 -/
+private def ss (code : String) : Option Shape.SettledShape :=
+    (s code).bind (fun shape =>
+        if h : shape.isSettled = true then
+            some ⟨shape, (Shape.IsSettled_iff_isSettled shape).mpr h⟩
+        else none)
+
 /-- Machine.paint の結果を文字列比較するヘルパー -/
 private def mpaintTest (shapeCode : String) (color : Color) (expected : String) : Bool :=
-    match Machine.paint (s shapeCode) (some color) with
-    | some result => result.toString == expected
+    match Machine.paint (ss shapeCode) (some color) with
+    | some result => result.val.toString == expected
     | none => false
 
 /-- Machine.crystallize の結果を文字列比較するヘルパー -/
 private def mcrystallizeTest (shapeCode : String) (color : Color) (expected : String) : Bool :=
     match Machine.crystallize (s shapeCode) (some color) with
-    | some result => result.toString == expected
+    | some result => result.val.toString == expected
     | none => false
 
 /-- Machine.rotateCW の結果を文字列比較するヘルパー -/
 private def mrotateCWTest (shapeCode expected : String) : Bool :=
-    match Machine.rotateCW (s shapeCode) with
-    | some result => result.toString == expected
+    match Machine.rotateCW (ss shapeCode) with
+    | some result => result.val.toString == expected
     | none => false
 
 /-- Machine.pinPush の結果を文字列比較するヘルパー（vanilla4）-/
@@ -53,7 +61,7 @@ private def mstackTest (bottomCode topCode expected : String) : Bool :=
 #guard (Machine.paint none (some Color.red)).isNone
 
 -- シェイプあり、色なし → none
-#guard (Machine.paint (s "CuCuCuCu") none).isNone
+#guard (Machine.paint (ss "CuCuCuCu") none).isNone
 
 -- 両方なし → none
 #guard (Machine.paint none none).isNone
@@ -122,8 +130,8 @@ private def mstackTest (bottomCode topCode expected : String) : Bool :=
 #guard mpaintTest "CrCrCrCr" .green "CgCgCgCg"
 
 -- コア関数との等価性
-#guard Machine.paint (s "CuCuCuCu") (some Color.red) ==
-    (s "CuCuCuCu").map (·.paint .red)
+#guard Machine.paint (ss "CuCuCuCu") (some Color.red) ==
+    (ss "CuCuCuCu").map (·.paint .red)
 
 -- ============================================================
 -- 結晶製造機: 有効入力
@@ -136,10 +144,10 @@ private def mstackTest (bottomCode topCode expected : String) : Bool :=
 #guard mcrystallizeTest "P-P-P-P-" .red "crcrcrcr"
 
 -- コア関数との等価性
-#guard Machine.crystallize (s "CuCuCuCu") (some Color.red) ==
+#guard (Machine.crystallize (s "CuCuCuCu") (some Color.red)).map (·.val) ==
     (s "CuCuCuCu").map (·.crystallize .red)
 
-#guard Machine.crystallize (s "P-P-P-P-") (some Color.blue) ==
+#guard (Machine.crystallize (s "P-P-P-P-") (some Color.blue)).map (·.val) ==
     (s "P-P-P-P-").map (·.crystallize .blue)
 
 -- ============================================================
@@ -150,15 +158,15 @@ private def mstackTest (bottomCode topCode expected : String) : Bool :=
 #guard mrotateCWTest "Cr------" "--Cr----"
 
 -- コア関数との等価性 (CW)
-#guard Machine.rotateCW (s "Cr------") ==
+#guard (Machine.rotateCW (ss "Cr------")).map (·.val) ==
     (s "Cr------").map Shape.rotateCW
 
 -- コア関数との等価性 (CCW)
-#guard Machine.rotateCCW (s "Cr------") ==
+#guard (Machine.rotateCCW (ss "Cr------")).map (·.val) ==
     (s "Cr------").map Shape.rotateCCW
 
 -- コア関数との等価性 (180°)
-#guard Machine.rotate180 (s "Cr------") ==
+#guard (Machine.rotate180 (ss "Cr------")).map (·.val) ==
     (s "Cr------").map Shape.rotate180
 
 -- ============================================================
@@ -246,7 +254,7 @@ private def mstackTest (bottomCode topCode expected : String) : Bool :=
 #guard mrotateCWTest "CrCrCrCr" "CrCrCrCr"
 
 -- 180° 回転で不変な対称シェイプ
-#guard (Machine.rotate180 (s "CrRgCrRg")) == s "CrRgCrRg"
+#guard (Machine.rotate180 (ss "CrRgCrRg")).map (·.val) == s "CrRgCrRg"
 
 -- ============================================================
 -- ピン押し機: 結果が none にはならないが有効入力のケース
@@ -279,8 +287,8 @@ private def mstackTest (bottomCode topCode expected : String) : Bool :=
 -- ############################################################
 
 -- 片方 none
-#guard Machine.swap none (s "CrCrCrCr") == (none, none)
-#guard Machine.swap (s "CrCrCrCr") none == (none, none)
+#guard Machine.swap none (ss "CrCrCrCr") == (none, none)
+#guard Machine.swap (ss "CrCrCrCr") none == (none, none)
 -- 両方 none
 #guard Machine.swap none none == (none, none)
 
@@ -339,13 +347,13 @@ private def mcutTest (shapeCode : String) (expectedEast expectedWest : Option St
 
 /-- Machine.swap の結果を文字列ペアで比較するヘルパー -/
 private def mswapTest (code1 code2 : String) (expected1 expected2 : Option String) : Bool :=
-    let (r1, r2) := Machine.swap (s code1) (s code2)
+    let (r1, r2) := Machine.swap (ss code1) (ss code2)
     let ok1 := match r1, expected1 with
-        | some r, some exp => r.toString == exp
+        | some r, some exp => r.val.toString == exp
         | none, none => true
         | _, _ => false
     let ok2 := match r2, expected2 with
-        | some r, some exp => r.toString == exp
+        | some r, some exp => r.val.toString == exp
         | none, none => true
         | _, _ => false
     ok1 && ok2
@@ -354,7 +362,8 @@ private def mswapTest (code1 code2 : String) (expected1 expected2 : Option Strin
 #guard mswapTest "CrCrCrCr" "RgRgRgRg" (some "CrCrRgRg") (some "RgRgCrCr")
 
 -- コア関数との等価性
-#guard Machine.swap (s "CrCrCrCr") (s "RgRgRgRg") ==
+#guard let (a1, a2) := Machine.swap (ss "CrCrCrCr") (ss "RgRgRgRg")
+    (a1.map (·.val), a2.map (·.val)) ==
     match s "CrCrCrCr", s "RgRgRgRg" with
     | some s1, some s2 => s1.swap s2
     | _, _ => (none, none)

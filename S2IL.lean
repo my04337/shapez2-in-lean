@@ -5,6 +5,7 @@
 import S2IL.Shape.Shape
 import S2IL.Shape.QuarterPos
 import S2IL.Shape.GameConfig
+import S2IL.Shape.Arbitrary
 
 -- Behavior: シェイプの振る舞い
 import S2IL.Behavior.Rotate
@@ -20,6 +21,7 @@ import S2IL.Behavior.Painter
 import S2IL.Behavior.Cutter
 import S2IL.Behavior.ColorMixer
 import S2IL.Behavior.SettledState
+import S2IL.Behavior.SettledShape
 
 -- Machine: 加工装置
 import S2IL.Machine.Machine

@@ -83,7 +83,7 @@ def Quarter.canFormBond : Quarter → Bool
 
 ### 3.3 アルゴリズム
 
-シェイプは最大 4 レイヤ × 4 象限 = 16 象限であるため、BFS / DFS の素朴な探索で十分である。
+シェイプは最大 `config.maxLayers` レイヤ × 4 象限（vanilla4 で 16、vanilla5 で 20）であるため、BFS / DFS の素朴な探索で十分である。
 既存の [`CrystalBond.lean`](../../S2IL/Processing/CrystalBond.lean) と同じ BFS パターンを流用する。
 
 ---
@@ -118,9 +118,27 @@ def Quarter.canFormBond : Quarter → Bool
 非空象限が **接地 (Grounded)** しているとは、以下のいずれかを満たすことである:
 
 1. その象限が **レイヤ 0（最下層）** に位置し、非空である（**直接接地**）
-2. その象限から **接地接触の連鎖** を辿って、レイヤ 0 の非空象限に到達できる（**間接接地**）
+2. その象限から **接地エッジ (Grounding Edge)** の連鎖を辻って、レイヤ 0 の非空象限に到達できる（**間接接地**）
 
 接地していない非空象限は **非接地 (Ungrounded)** である。
+
+**接地エッジ (Grounding Edge)** は、以下のいずれかを満たす位置ペア (A, B) である:
+
+1. **上方向接地接触 (Upward Grounding Contact)**: A と B が接地接触（§4.1）を満たし、かつ `A.layer ≤ B.layer`（上方向または同層）
+2. **構造結合 (Structural Bond)**: A と B が構造結合（§2.2）を満たす（方向制約なし、双方向）
+
+Lean での実装:
+
+```lean
+def groundingEdge (s : Shape) (a b : QuarterPos) : Bool :=
+    isUpwardGroundingContact s a b || isStructurallyBonded s a b
+```
+
+> **構造クラスタと接地の関係**: 構造結合が接地エッジに含まれるため、**構造クラスタ内のいずれかの象限が接地していれば、クラスタ全体が接地する**。クラスタは剛体として振る舞うため、上位レイヤ経由で接地済みのメンバーから、構造結合を通じて下位レイヤのメンバーへも接地が伝播する。
+>
+> **ピンの咫外**: ピンは `canFormBond = false` であるため構造結合を形成できず、**接地エッジの構造結合側の恩恵を受けない**。ピンの接地は上方向接地接触のみに依存する。したがって、垂直方向で上位レイヤから下方向にピンへ接地が伝播することはない。
+
+> **例**: `Rr------:RgP-P-P-:RuRuRuRu` において、L1:SE のピンは L0:NE(Rr) → L1:NE(Rg) → L2:NE(Ru) → L2:SE(Ru) → L1:SE(P) という下方向の垂直接触を含むパスでは接地されない。L2:SE(Ru) と L1:SE(P) の間には上方向接地接触がなく（下方向）、かつピンは構造結合を形成できないため、L1:SE は非接地（浮遊）と判定される。
 
 ### 4.3 接地の例
 
@@ -472,6 +490,8 @@ d({L3:SE, L3:SW}):
 
 **理由**: 各落下単位の落下距離 d(U) は 1 以上の有限値であり、落下処理はアルゴリズム 6.2 のとおり 1 パスで全落下単位の目標位置を算出して適用するため、反復は不要である。
 
+> **注意（≥6L の制限）**: 上記「反復は不要」の主張は **layerCount ≤ 5 のシェイプに限り正しい**。6 層以上のシェイプでは、foldl 中の pin 配置が水平接地接触を切断し、隣接方向の crystal が非接地のまま残存するケースが存在する（反例: `L0=[--,--], L1=[--,cr], L2=[--,P], L3=[cr,P], L4=[cr,P], L5=[cr,cr]` → gravity 出力に浮遊クラスタが残る）。§10.4 の「繰り返される」記述と矛盾するため、**現行実装 `Gravity.process` は 1 パス方式を採用し、`gravity_IsSettled` 定理には `s.layerCount ≤ 5` の仮説が付与されている**。将来的に反復方式への移行が必要（MILESTONES.md 参照）。
+
 ### 7.2 決定性 (Determinism)
 
 落下処理の結果は入力シェイプに対して一意に定まる。
@@ -500,6 +520,34 @@ d({L3:SE, L3:SW}):
 ### 7.5 正規化との関係
 
 落下により最上位レイヤが全て空になる場合がある。落下処理の最終ステップで `Shape.normalize` を適用し、末尾の空レイヤを除去する。
+
+### 7.6 foldl 方式のレイヤ数制限（≤5L）
+
+> **正式決定（2026-04-13）**: 現行の foldl（1 パス）方式による落下処理の形式検証は、**`layerCount ≤ 5` のシェイプのみ**を対象とする。
+
+#### 根拠
+
+1. **反例の存在**: `Gravity.process` の回転等変性 `process_rotate180` は 6 層以上のシェイプに対して反例が存在する（§7.1 参照）。同 minLayer の FU が同一方角を共有する場合、カスケード障害物効果によりソート順序が結果に影響する
+2. **安定性の破綻**: `gravity_IsSettled`（落下処理の出力が安定状態であること）も 6 層以上で偽。pin 配置が水平接地接触を切断し、浮遊クラスタが残存するケースが存在する
+3. **ゲーム上の到達可能性**: vanilla4（maxLayers=4）および vanilla5（maxLayers=5）では、各加工装置の入力は常に `layerCount ≤ maxLayers ≤ 5` である。6 層以上のシェイプが `Gravity.process` に渡されるのは Stacker の 1st gravity（`placeAbove` 後）のみであり、この場合は `IsSettled` 仮説による別定理で対応する（§10.4 参照）
+4. **計算的検証**: ≤5L のシェイプ 1.9M+ 個で回転等変性 0 failures、65K+ 個で CW 回転等変性 0 failures
+
+#### 影響範囲
+
+以下の定理に `s.layerCount ≤ 5` 仮説が付与されている:
+
+| 定理 | ファイル | 内容 |
+|---|---|---|
+| `process_rotate180` | Gravity.lean | 180° 回転等変性 |
+| `process_rotateCW` | Gravity.lean | 90° 回転等変性 |
+| `gravity_rotate180_comm` | Gravity.lean | Shape API レベルの 180° 回転可換性 |
+| `gravity_rotateCW_comm` | Gravity.lean | Shape API レベルの 90° 回転可換性 |
+| `gravity_IsSettled` | SettledState.lean | 落下処理出力の安定性 |
+| `all_grounded_settle_foldl` | SettledState.lean | foldl 帰納法での接地不変量 |
+
+#### 将来的な拡張
+
+6 層以上のシェイプのサポートには、反復方式（波動モデル）への移行が必要である（MILESTONES.md 参照）。反復方式では `settle_foldl_eq`（ソート不変性）の証明資産は不要になるが、着地位置の性質に関する証明（sorry #4b 相当）は引き続き必要。
 
 ---
 
@@ -543,8 +591,8 @@ d({L3:SE, L3:SW}):
 | 砕け散りの適用（落下時） | `Shape.shatterOnFall` | 同上 |
 | 砕け散り対象の算出（切断時） | `Shape.shatterTargetsOnCut` | 同上 |
 | 砕け散りの適用（切断時） | `Shape.shatterOnCut` | 同上 |
-| 構造結合・接地・浮遊・落下処理 | `Gravity.process`, `Shape.gravity` | [`Gravity.lean`](../../S2IL/Behavior/Gravity.lean) |
-| 落下処理の 180° 回転等変性 | `Gravity.process_rotate180` | 同上（sorry 2 箇所を含む） |
+| 構造結合・接地・浮遊・落下処理 | `Gravity.process`, `Shape.gravity` | [`Gravity/Defs.lean`](../../S2IL/Behavior/Gravity/Defs.lean), [`Gravity.lean`](../../S2IL/Behavior/Gravity.lean) |
+| 落下処理の 180° 回転等変性 | `Gravity.process_rotate180` | [`Gravity/Equivariance.lean`](../../S2IL/Behavior/Gravity/Equivariance.lean) |
 
 ---
 
@@ -607,14 +655,15 @@ def Shape.isSettled (s : Shape) : Bool := (Gravity.floatingUnits s).isEmpty
 
 ### 10.4 落下処理の保証
 
-落下処理 `Gravity.process` の出力は（空でない限り）常に安定状態である。
-これは落下アルゴリズムの終了条件そのものであり、全ての浮遊落下単位が着地するまで処理が繰り返される。
+落下処理 `Gravity.process` の出力は（空でない限り）常に安定状態である（**layerCount ≤ 5 の場合**）。
+
+> **注意**: 原文「全ての浮遊落下単位が着地するまで処理が繰り返される」は反復方式を前提とした記述だが、現行実装は 1 パス方式（foldl）である。§7.1 で述べたとおり、≤5L では 1 パスで十分であるが、≥6L では不十分。この矛盾の解消は将来課題（MILESTONES.md「gravity_IsSettled の layerCount ≤ 5 制約解消」参照）。
 
 ---
 
-## 11. 今後の Lean 実装方針
+## 11. Lean 実装状況
 
-### 11.1 追加予定の定義
+### 11.1 実装済みの定義
 
 **`S2IL/Shape/Quarter.lean`**:
 
@@ -628,23 +677,34 @@ def Quarter.canFormBond : Quarter → Bool
     | colored _ _ => true
 ```
 
-### 11.2 新規ファイル
+### 11.2 実装ファイル
 
-**`S2IL/Processing/Gravity.lean`**:
+**`S2IL/Behavior/Gravity/Defs.lean`**:
 
-| 関数 | 役割 |
-|---|---|
-| `isStructurallyBonded` | 2象限間の構造結合判定 |
-| `structuralCluster` | BFS による構造クラスタ算出 |
-| `allStructuralClusters` | 全構造クラスタの列挙 |
-| `isGroundingContact` | 2象限間の接地接触判定 |
-| `isGrounded` | 象限の接地判定（BFS from layer 0） |
-| `floatingUnits` | 全落下単位の列挙 |
-| `gravity` | 落下シミュレーション（本仕様 6 節のアルゴリズム） |
+| 関数 | 役割 | 状態 |
+|---|---|---|
+| `isStructurallyBonded` | 2象限間の構造結合判定 | ✅ 実装済み |
+| `structuralCluster` | BFS による構造クラスタ算出 | ✅ 実装済み |
+| `allStructuralClusters` | 全構造クラスタの列挙 | ✅ 実装済み |
+| `isGroundingContact` | 2象限間の接地接触判定 | ✅ 実装済み |
+| `isUpwardGroundingContact` | 上方向接地接触（BFS 用） | ✅ 実装済み |
+| `groundingEdge` | 接地 BFS の合成エッジ（上方向接触 ∥ 構造結合） | ✅ 実装済み |
+| `isGrounded` | 象限の接地判定（BFS from layer 0） | ✅ 実装済み |
+| `floatingUnits` | 全落下単位の列挙 | ✅ 実装済み |
+| `process` | 落下シミュレーション（本仕様 6 節のアルゴリズム） | ✅ 実装済み |
 
-**`Test/Processing/Gravity.lean`**:
+**`S2IL/Behavior/Gravity.lean`** (facade):
 
-本仕様の全例を `#guard` テストとして検証する。
+| 関数 | 役割 | 状態 |
+|---|---|---|
+| `Shape.gravity` | `Gravity.process` のラッパー | ✅ 実装済み |
+| `Shape.IsSettled` / `Shape.isSettled` | 安定状態の判定 | ✅ 実装済み |
+| `gravity_rotate180_comm` | 180° 回転等変性（≤5L） | ✅ 実装済み |
+| `gravity_rotateCW_comm` | 90° 回転等変性（≤5L） | ✅ 実装済み |
+
+**`Test/Behavior/Gravity.lean`**:
+
+本仕様の例を `#guard` テストとして検証済み。
 
 ---
 
@@ -652,14 +712,16 @@ def Quarter.canFormBond : Quarter → Bool
 
 | 本仕様での用語 | glossary.md での用語 | Lean コード上の対応 |
 |---|---|---|
-| 構造結合 (Structural Bond) | — | `isStructurallyBonded`（未実装） |
-| 結合能力 (Bond Capability) | — | `Quarter.canFormBond`（未実装） |
-| 構造クラスタ (Structural Cluster) | — | `structuralCluster`（未実装） |
-| 接地接触 (Grounding Contact) | — | `isGroundingContact`（未実装） |
-| 接地 (Grounded) | — | `isGrounded`（未実装） |
-| 浮遊 (Floating) | — | `floatingUnits`（未実装） |
-| 落下単位 (Falling Unit) | — | `floatingUnits` の各要素（未実装） |
-| 落下 (Falling / Gravity) | 落下 | `gravity`（未実装） |
+| 構造結合 (Structural Bond) | — | `Gravity.isStructurallyBonded` |
+| 結合能力 (Bond Capability) | — | `Quarter.canFormBond` |
+| 構造クラスタ (Structural Cluster) | — | `Gravity.structuralCluster` |
+| 接地接触 (Grounding Contact) | — | `Gravity.isGroundingContact` |
+| 上方向接地接触 (Upward Grounding Contact) | — | `Gravity.isUpwardGroundingContact` |
+| 接地エッジ (Grounding Edge) | — | `Gravity.groundingEdge` |
+| 接地 (Grounded) | — | `Gravity.isGrounded` |
+| 浮遊 (Floating) | — | `Gravity.floatingUnits` |
+| 落下単位 (Falling Unit) | — | `Gravity.FallingUnit` |
+| 落下 (Falling / Gravity) | 落下 | `Shape.gravity` / `Gravity.process` |
 | 安定状態 (Settled State) | 安定状態 (Settled State) | `Shape.IsSettled`, `Shape.isSettled` |
 | 結合凍結 (Bond Freezing) | — | アルゴリズムの設計原則として反映 |
 | 結晶結合 (Crystal Bond) | — | `CrystalBond.isBonded` |

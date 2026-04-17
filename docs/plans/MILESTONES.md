@@ -40,7 +40,7 @@ Shapez2 in Lean (S2IL) の開発マイルストーンと達成状況を管理す
 | 1-2-1 | **Half-Destroyer** (切断処理機): West Half を削除する関数 | ✅ 完了 | |
 | 1-2-2 | **Cutter** (切断機): West Half と East Half に分割する関数 | ✅ 完了 | |
 | 1-2-3 | **Swapper** (スワップ機): 2 つのシェイプの West Half を入れ替える関数 | ✅ 完了 | |
-| 1-2-4 | 切断系操作の基本性質の証明 | 🔄 進行中 | `eastHalf_westHalf_combine` ✅, `swap_self` ✅, `combineHalves_self` ✅, `cut_rotate180_comm` sorry（`process_rotate180` の sorry 1件に依存。証明チェーン再構築中。詳細: [gravity-proof-execution-plan.md](gravity-proof-execution-plan.md) Wave 3〜5） |
+| 1-2-4 | 切断系操作の基本性質の証明 | ✅ 完了 | `eastHalf_westHalf_combine` ✅, `swap_self` ✅, `combineHalves_self` ✅, `cut_rotate180_comm` ✅ (≤5L), `stack_rotate180_comm` ✅ (≤5L + IsSettled 仮説付き, Plan B-1 で axiom 化により sorry 解消済み), `pinPush_rotate180_comm` ✅ (≤5L), `paint_rotate180_comm` ✅, `crystallize_rotate180_comm` ✅, `gravity_rotate180_comm` ✅ (≤5L), `gravity_rotateCW_comm` ✅ (≤5L), `halfDestroy_rotate180` ✅, `swap_rotate180_comm` ✅。**Wave 7: process_rotate180 は ≥6L で偽（反例確認済み）**。sorry 全件解消（Plan B-1, 2026-04-14）。詳細: [gravity-proof-execution-plan.md](gravity-proof-execution-plan.md) |
 
 #### 回転 (Rotating)
 
@@ -152,28 +152,50 @@ Shapez2 in Lean (S2IL) の開発マイルストーンと達成状況を管理す
 
 ---
 
-## Appendix ツールチェイン整備計画
+## 将来課題
 
-証明計画とは独立した、エージェント支援・開発基盤の整備項目。
+### stress8 (maxLayers > 5) の等変性サポート
 
-| # | 整備項目 | 優先 | 概要 |
-|---|---|---|---|
-| T-1 | `lean-mathlib-search` スキルの新設 | ✅ 完了 | SKILL.md・`lean-lemma-finder` エージェント・`references/` (mathlib-search-guide.md, batteries-catalog.md) を整備済み。`#leansearch` / `#loogle` / `exact?` / `apply?` の4段階パイプライン・命名規則予測・Fin/Iff ゴールパターンを収録。 |
-| T-2 | S2IL 補題インデックスの整備 | 中→**高** | `docs/lean/s2il-lemma-index.md` を新設。`gravity-proof-cheatsheet.md` 廃止に伴いその内容を吸収。詳細: [gravity-proof-execution-plan.md](gravity-proof-execution-plan.md) Wave 0 (0-1〜0-5) |
-| T-3 | 等変性・交換則証明パターン集の拡充 | 中→**高** | `docs/knowledge/equivariance-proof-patterns.md` を新設し、既存の個別 knowledge を統合。詳細: [gravity-proof-execution-plan.md](gravity-proof-execution-plan.md) Wave 0 (0-6〜0-9) |
-| T-4 | `lean-mathlib-search` — `lean-lsp-mcp` 統合評価 | 低 | MCP ツール `lean_state_search` 等を用いた REPL 不要の補題検索と既存フローの比較・移行判断。REPL は現在デフォルトモードで全 Mathlib タクティク・検索操作が利用可能（`-NoPickle` ~60s の制約は解消済み）なので優先度は低い（要 MCP サーバー導入評価）。 |
-| T-5 | `batteries-catalog.md` の継続的更新フロー整備 | 低 | `lean-lemma-finder` で新補題を発見した際に `batteries-catalog.md` へ追記する運用を定着させる。Phase 2 以降で `List`・`Finset` 系補題が増えた時点で特に有効。`lean-proof-progress` スキルとの連携セッション終了チェックリストへの組み込みを検討。 |
+> 出典: [gravity-proof-execution-plan.md](gravity-proof-execution-plan.md) §3.9
+
+現行の `layerCount ≤ 5` 仮説は vanilla4/5 でのみ有効。stress8（maxLayers=8）では PinPusher・Cutter 等の gravity 入力が ≤ 8L となり `gravity_rotate180_comm` の適用不可。IsSettled アプローチで解決可能な箇所もあるが、各装置の構造的特殊性の調査が必要。現時点では優先度外（ストレステスト専用）。
+
+### gravity_IsSettled の layerCount ≤ 5 制約解消
+
+`gravity_IsSettled` は ≥6L のシェイプに対して偽であることが判明した（2026-04-12 反例発見）。
+現在は `h_lc : s.layerCount ≤ 5` 制約付きで定理を述べている。
+
+**反例**: 6L シェイプ `L0=[--,--], L1=[--,cr], L2=[--,P], L3=[cr,P], L4=[cr,P], L5=[cr,cr]`
+- gravity 出力: `[[--,cr],[cr,P],[cr,P],[cr,P]]` — 浮遊クラスタ(3) が残る → NOT settled
+- 根本原因: foldl 中の pin 配置が水平接地接触を切断し、隣接方向の crystal が非接地に
+
+**仕様書の矛盾**: `falling.md` §7.1「反復は不要」vs §10.4「繰り返される」。≥6L では §7.1 が偽。
+
+**解消方針（2段階）**:
+1. `Gravity.process` を反復方式に変更（foldl 1パス → iterate until `floatingUnits = []`）
+2. 反復版に対する `gravity_IsSettled` を `layerCount` 制約なしで証明
+
+**前提条件**: 反復版 gravity の等変性証明（`process_rotate180` 等）の再構築が必要。
+等変性証明自体は `layerCount ≤ 5` 制約付きで完了済みだが、反復版では新たな帰納法パターンが必要。
+
+### sorry #4b の完全解消
+
+`one_step_all_grounded_pin` の pin 着地位置非空ケース (crystal→pin 上書き) の sorry。
+
+**困難の源泉**: `foldl_grounded_induction` の `∀ obs'` パターンでは証明不可能。
+理由: ANEG(obs) + crystal→pin → ANEG(obs') は任意の ANEG obs に対しては偽（12768/53218 failures）。
+foldl の中間状態に限れば真（16/16 = 0 failures at 5L 2dir）だが、中間状態の構造的情報（FVT等）が必要。
+
+**計算検証済みの事実**:
+| 条件 | 結果 |
+|---|---|
+| ANEG + FVT → crystal→pin → ANEG | 0 failures (19878 tests, ≤5L 2dir) |
+| FVT は foldl 不変量 | ❌ (base: 3424 fail, step: 4760 fail) |
+| pin NE 時に FVT 成立 (foldl中) | ✅ (16/16 = 0 fail, 5L 2dir) |
+
+**解消方針候補**:
+1. `foldl_grounded_induction` を拡張し、foldl prefix 構造を追跡する stronger invariant (FVT at pin NE moments) を導入
+2. `all_grounded_settle_foldl` を `foldl_grounded_induction` なしで直接証明し、各ステップの具体的構造を利用
+3. gravity を反復方式に変更すれば、sorry #4b の構造自体が変わり、別のアプローチが可能に
 
 
-### T-1 詳細: `lean-mathlib-search` スキル
-
-> 旧 `docs/lean/repl-guide.md` の `[IDEA-1]` より移管。
-
-現在 UC-8 として `#leansearch` / `#loogle` / `exact?` / `apply?` の使い方を `repl-guide.md` に収録しているが、
-Mathlib 補題の探索が証明作業の主要ボトルネックになる段階（`stack_rotate180_comm` 等、`List`・`Finset`・`Nat` 系補題を大量に必要とするフェーズ）では、
-専用スキル `.github/skills/lean-mathlib-search/SKILL.md` を設けて以下を体系化することを検討する。
-
-- クエリ生成ガイド（ゴール状態 → 自然言語クエリへの変換パターン）
-- `#leansearch` / `#loogle` / `exact?` / `apply?` の優先順位と使い分けフロー
-- `mathlib-reference-guide.md` との連携（分野別 API 索引の活用方法）
-- 外部 MCP（`lean-lsp-mcp` の `lean_state_search` 等）との機能比較と移行基準

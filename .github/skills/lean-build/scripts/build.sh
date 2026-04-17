@@ -72,8 +72,18 @@ WARNING_COUNT=0
 SORRY_COUNT=0
 INFO_COUNT=0
 
+# セッション固有パスを決定
+SESSION_ID_FILE="$LAKE_DIR/session-id.tmp"
+SESSION_JSONL_PATH="$JSONL_PATH"  # デフォルトは固定名
+if [ -f "$SESSION_ID_FILE" ]; then
+    SID=$(cat "$SESSION_ID_FILE" | tr -d '[:space:]')
+    if [ -n "$SID" ]; then
+        SESSION_JSONL_PATH="$LAKE_DIR/build-diagnostics-$SID.jsonl"
+    fi
+fi
+
 # JSONL ファイルを初期化
-> "$JSONL_PATH"
+> "$SESSION_JSONL_PATH"
 
 # 診断行を一時ファイルに分類
 DIAG_ERRORS=""
@@ -100,7 +110,7 @@ while IFS= read -r line; do
         d_message_escaped="${d_message//\\/\\\\}"
         d_message_escaped="${d_message_escaped//\"/\\\"}"
 
-        echo "{\"file\":\"$d_file\",\"line\":$d_line,\"col\":$d_col,\"severity\":\"$d_severity\",\"message\":\"$d_message_escaped\",\"isSorry\":$is_sorry}" >> "$JSONL_PATH"
+        echo "{\"file\":\"$d_file\",\"line\":$d_line,\"col\":$d_col,\"severity\":\"$d_severity\",\"message\":\"$d_message_escaped\",\"isSorry\":$is_sorry}" >> "$SESSION_JSONL_PATH"
 
         # カウントと分類
         case "$d_severity" in
@@ -131,6 +141,11 @@ else
     STATUS="failure"
 fi
 
+# セッション固有ファイルを固定名にもコピー（下位互換）
+if [ "$SESSION_JSONL_PATH" != "$JSONL_PATH" ]; then
+    cp "$SESSION_JSONL_PATH" "$JSONL_PATH"
+fi
+
 # --- 構造化サマリー出力 ---
 echo ""
 echo "=== BUILD DIAGNOSTICS ==="
@@ -141,7 +156,7 @@ echo "sorries: $SORRY_COUNT"
 echo "warnings: $WARNING_COUNT"
 echo "info: $INFO_COUNT"
 echo "log: $LOG_PATH"
-echo "diagnostics: $JSONL_PATH"
+echo "diagnostics: $SESSION_JSONL_PATH"
 echo ""
 
 # トリアージ順: error > sorry > warning > info (最大20件)
@@ -154,7 +169,7 @@ print_diags() {
     while IFS= read -r dline; do
         if [ -z "$dline" ]; then continue; fi
         if [ "$SHOWN" -ge "$MAX_SHOW" ]; then
-            echo "... (以降省略、全件は $JSONL_PATH を参照)"
+            echo "... (以降省略、全件は $SESSION_JSONL_PATH を参照)"
             return
         fi
         echo "$dline"

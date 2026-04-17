@@ -108,8 +108,8 @@ private def halfDestroyNone (inputCode : String) : Bool :=
 -- 部分砕け散り: "crRgSbcr" → 砕け散り後 "--RgSb--" → 東側 "--Rg----"
 #guard halfDestroyTest "crRgSbcr" "--Rg----"
 
--- 砕けない結晶: "crcrcgcg" → 変化なし → 東側 "crcr----"
-#guard halfDestroyTest "crcrcgcg" "crcr----"
+-- CrystalBond修正後: "crcrcgcg" → SE(cr)-SW(cg)が色不問で結合 → 全砕け → 東側=空 → none
+#guard halfDestroyNone "crcrcgcg"
 
 -- 砕けない結晶(東側のみ): "crcr----" → 東側 "crcr----"
 #guard halfDestroyTest "crcr----" "crcr----"
@@ -190,8 +190,8 @@ private def cutBothNone (inputCode : String) : Bool :=
 
 #guard cutBothNone "crcrcrcr"
 
--- 砕けない結晶: "crcrcgcg" → 変化なし → 東 "crcr----", 西 "----cgcg"
-#guard cutTest "crcrcgcg" "crcr----" "----cgcg"
+-- CrystalBond修正後: "crcrcgcg" → SE(cr)-SW(cg)が色不問で結合 → 全砕け → 両方 none
+#guard cutBothNone "crcrcgcg"
 
 -- 部分砕け: "crRgSbcr" → "--RgSb--" → 東 "--Rg----", 西 "----Sb--"
 #guard cutTest "crRgSbcr" "--Rg----" "----Sb--"

@@ -1,361 +1,232 @@
-# Gravity 証明チェーン見直し — 最終実行計画
+# Gravity 証明 — 実行計画
 
 > 作成日: 2026-04-05
-> 分析文書: [`process-rotate180-proof-redesign.md`](process-rotate180-proof-redesign.md)（提案の比較・詳細ロードマップ）
+> 最終更新: 2026-04-15 (計画簡素化, セクション番号再編, Wave Gravity 記述復元)
 
 ---
 
-## 0. 概要
+## 現状クイックリファレンス
 
-### 採用戦略: 3 段階アプローチ
-
-| フェーズ | 提案 | 目標 | 時間軸 |
-|---|---|---|---|
-| **短期** | **提案 B**: 直接 direction-disjoint 証明 | `process_rotate180` のブロッキング解消 | Phase 1 |
-| **中期** | **提案 D**: 決定性ソート移行 | rotateCW 等変性の自動導出・保守性向上 | Phase 1.5〜2 |
-| **長期** | **提案 C**: 正準着地位置（オプショナル） | MaM ソルバー健全性・gravity 冪等性 | Phase 3 |
-
-決定根拠は [`process-rotate180-proof-redesign.md` Section 5.4](process-rotate180-proof-redesign.md) を参照。
-
-### ドキュメント整理方針
-
-本計画と併せて以下のドキュメント整理を実施する:
-
-| ファイル | 方針 |
+| 指標 | 値 |
 |---|---|
-| `gravity-proof-cheatsheet.md` | **廃止** — 内容を補題インデックス (T-2)・知見ドキュメント・本計画に振り分け |
-| `gravity-simp-plan.md` | **廃止** — コンセプトを本計画 Wave 4 に取り込み、ファイル削除 |
-| `process-rotate180-proof-redesign.md` | **維持** — 提案の分析・比較表として参照用に残す |
-| `proof-cleanup-plan.md` | **維持** — Gravity 以外のリファクタリング状態管理を継続 |
+| ビルド状態 | errors=0, warnings=0 |
+| sorry | **0 件** |
+| axiom | **5 件**（§2 参照）|
+| 裸 simp | **0 個**（T-2 完了: SettledState 72箇所 + CommExt 4箇所 → 全て `simp only` / `simp_all only` 化） |
+| r180 等変性 | 全操作で完了 |
+| rCW 等変性 | 全操作で完了（Phase F LayerPerm 統合完了。R-1 完了） |
 
 ---
 
-## 1. マイルストーン全体マップ
+## 残作業 TODO
+
+| # | タスク | 対応セクション | 概要 | 推定工数 |
+|---|---|---|---|---|
+| T-5 | Wave Gravity Model | §3 | axiom 5件の除去・新モデル実装 | 3-5 s |
+
+**推奨実施順序**: T-5
+
+---
+
+## §1 全体タスク依存グラフ
 
 ```
-Wave 0: ドキュメント整理 (T-2, T-3)
-  ↓
-Wave 1: SettledState 完了 (SS-2〜SS-4)
-  ↓
-Wave 2: process_rotate180 真理値再検証 (4L+)
-  ↓
-Wave 3: 提案 B — process_rotate180 証明チェーン再構築
-  ↓
-Wave 4: Gravity.lean simp only 安定化 (旧 gravity-simp-plan)
-  ↓
-Wave 5: 下流 r180 等変性 (stack, pinPush, paint, crystallize)
-  ↓ ─── Phase 1 完了ライン ───
-Wave 6 [中期]: 提案 D — 決定性ソート移行
-  ↓
-Wave 7 [長期]: 提案 C — 正準着地位置（オプショナル）
+T-5: Wave Gravity Model (axiom 除去・新モデル実装)
 ```
 
 ---
 
-## 2. Wave 0: ドキュメント整理
+## §2 Axiom インベントリ
 
-`gravity-proof-cheatsheet.md` の情報が今後の作業で流動的になるため、
-混乱を避けて情報の切り分けと整理を先行実施する。
+5件の axiom が残存。すべて **Wave Gravity Model（§3）** の導入で構成的証明に置換可能。
 
-### 2.1 T-2: 補題インデックスの整備
-
-`docs/lean/s2il-lemma-index.md` を新設し、Gravity.lean の証明済み補題を索引化する。
-
-- [ ] **0-1**: `docs/lean/s2il-lemma-index.md` の雛形作成
-- [ ] **0-2**: cheatsheet Section 7（ファイル構造マップ）の内容を移行
-- [ ] **0-3**: cheatsheet Section 8（確立済みの事実）の内容を移行
-- [ ] **0-4**: cheatsheet Section 3（sorry 一覧）の確定情報を移行
-- [ ] **0-5**: cheatsheet Section 11（テスト一覧）の内容を移行
-
-**振り分け先の構成案**:
-```markdown
-# S2IL 補題インデックス
-## Gravity.lean
-### ファイル構造マップ        ← Section 7
-### 主要定理・補題一覧        ← 新規整理
-### テストファイル一覧        ← Section 11
-## SettledState.lean
-## Rotate180Lemmas.lean
-## （他ファイルは段階的に追加）
-```
-
-### 2.2 T-3: 等変性証明パターン集の整備
-
-既存の個別 knowledge を統合し、等変性証明の汎用パターン集を作成する。
-
-- [ ] **0-6**: `docs/knowledge/equivariance-proof-patterns.md` の新設
-- [ ] **0-7**: `gravity-equivariance-analysis.md` の汎用パターンを抽出・統合
-- [ ] **0-8**: `bfs-equivariance-proof.md` の汎用パターンを抽出・統合
-- [ ] **0-9**: `settle-foldl-eq-analysis.md` の汎用パターンを抽出・統合
-
-**パターン集の構成案**:
-```markdown
-# 等変性・交換則 証明パターン集
-## パターン 1: pointwise any 等価 → foldl 等価
-## パターン 2: Perm + 隣接可換 → foldl 等価（バブルソート帰納法）
-## パターン 3: BFS 列挙の等変性（.any メンバーシップ）
-## パターン 4: direction-disjoint → settleStep 可換
-## パターン 5: operator ∘ rotate = rotate ∘ operator 型の等変性
-```
-
-### 2.3 cheatsheet 残存情報の振り分け
-
-- [ ] **0-10**: cheatsheet Section 9（偽定理カタログ）を `docs/knowledge/lean-proof-tips.md` に移行
-    - 「Gravity 証明で判明した偽定理」セクションとして追記
-- [ ] **0-11**: cheatsheet Section 13（修正計画）は `process-rotate180-proof-redesign.md` に既に統合済みであることを確認
-
-### 2.4 gravity-simp-plan.md の統合と削除
-
-`gravity-simp-plan.md` の内容は Wave 3 完了後に対象が大幅に変わるため、
-コンセプトのみ本計画 Wave 4 に取り込み、ファイルを削除する。
-
-- [ ] **0-12**: gravity-simp-plan.md のコンセプト（パターン分類・Phase 構成）を Wave 4 に反映済みであることを確認
-- [ ] **0-13**: `gravity-simp-plan.md` を削除
-
-### 2.5 ドキュメント参照の更新
-
-- [ ] **0-14**: `.github/copilot-instructions.md` の「証明チートシート」参照を更新
-    - `gravity-proof-cheatsheet.md` → 本計画 + `s2il-lemma-index.md` + `process-rotate180-proof-redesign.md`
-- [ ] **0-15**: `gravity-proof-cheatsheet.md` を削除（全content 移行完了後）
-- [ ] **0-16**: `docs/plans/README.md` のファイル一覧を更新
-
----
-
-## 3. Wave 1: SettledState 完了
-
-`process_rotate180` の証明は SettledState 基盤に依存しないが、
-下流の `stack_rotate180_comm` 等は `gravity_IsSettled` を必要とする可能性がある。
-先行して完了させることで Phase 1 全体の見通しを確保する。
-
-- [ ] **1-1**: SS-2 `IsSettled_crystallize` の証明（`floatingUnits_crystallize_eq` が核心）
-- [ ] **1-2**: SS-3 `IsSettled_rotateCW` の証明（`floatingUnits_isEmpty_rotateCW` が核心）
-- [ ] **1-3**: SS-4 `gravity_IsSettled` の証明（★★★ — `process` 出力が安定状態であることの最重要定理）
-- [ ] **1-4**: SS-6 `SettledShape` サブタイプの導入検討（SS-1〜SS-4 完了後）
-- [ ] **1-5**: `proof-cleanup-plan.md` の SS 状態を更新
-
----
-
-## 4. Wave 2: process_rotate180 真理値再検証
-
-S-5 反例が 4L で発見された教訓を踏まえ、4L+ での網羅的検証を実施する。
-**提案 B の証明着手前に完了すること**（偽定理への工数浪費を防止）。
-
-- [ ] **2-1**: 4L 全形状の穷举検証スクリプト作成（`Scratch/ProcessRotate180Check4L.lean`）
-- [ ] **2-2**: 4L 穷举検証の実行・結果確認（failures = 0 を確認）
-- [ ] **2-3**: 構造的カバレッジ確認（空レイヤ混在・大規模クラスタ・複数チェーン・ピン集中・混合方角）
-- [ ] **2-4**: 5L+ ランダムサンプリング（10,000 件、`Scratch/ProcessRotate180Random.lean`）
-- [ ] **2-5**: 検証結果を `s2il-lemma-index.md` の Gravity セクションに記録
-
----
-
-## 5. Wave 3: 提案 B — process_rotate180 証明チェーン再構築
-
-提案 B「直接 direction-disjoint 証明」を実施し、唯一の sorry を解消する。
-詳細は [`process-rotate180-proof-redesign.md` Section 8](process-rotate180-proof-redesign.md) を参照。
-
-### 5.1 準備
-
-- [ ] **3-1**: 不健全コード（S-5 依存の ~380 行）をコメントでマーキング
-- [ ] **3-2**: 削除対象の補題一覧を最終確認
-    - `shouldProcessBefore_no_chain` (~20 行)
-    - `foldl_insertSorted_preserves_spb_order` (~200 行)
-    - `sortFallingUnits_spb_order_preserving` (~40 行)
-    - `sortFallingUnits_inversion_is_tied` (~40 行, 新版で置換)
-    - `sortFallingUnits_inversion_dir_disjoint` (~50 行, 新版で置換)
-    - `sortFallingUnits_foldl_perm_input_eq` (~30 行, 新版で置換)
-
-### 5.2 核心補題の証明
-
-- [ ] **3-3**: `input_inversion_is_tied_r180` の証明（★★★）
-    - l_mid と l2 の差分が tied ペアのスワップのみであることを r180 固有構造から導出
-    - spb 保存性: `spb(a,b) = spb(g a, g b)` (r180 はレイヤ不変)
-    - one-way pair は両入力で同順 → 入力反転は tied のみ
-- [ ] **3-4**: `sortFU_tied_input_implies_tied_output` の証明（★★）
-    - 入力反転が全て tied → insertSorted 出力の反転も全て tied
-    - `insertSorted_preserves_relative_order` (S-2, 完了) を活用
-- [ ] **3-5**: `sortFU_output_inversion_dir_disjoint_r180` の組み立て（★）
-    - 3-3 + 3-4 + `tied_no_shared_dir` → direction-disjoint
-
-### 5.3 統合
-
-- [ ] **3-6**: `settle_foldl_eq` Phase 2 の書き換え
-    - `foldl_eq_of_perm_tied_adj_comm` + 新版 `sortFU_output_inversion_dir_disjoint_r180` を接続
-- [ ] **3-7**: 不健全コードの削除
-- [ ] **3-8**: `lake build` 通過（errors = 0, sorry = 0）
-- [ ] **3-9**: `Test/Behavior/GravityRotate180.lean` の計算検証パス確認
-- [ ] **3-10**: `process-rotate180-proof-redesign.md` の状態を「完了」に更新
-
----
-
-## 6. Wave 4: Gravity.lean simp only 安定化
-
-> 旧 `gravity-simp-plan.md` のコンセプトを取り込み。
-> Wave 3 完了後の実際の残存数を再計測してから着手する。
-
-### 6.1 コンセプト
-
-Gravity.lean 内の裸 `simp` / `simp_all` を全て `simp only [...]` / `simp_all only [...]` に安定化し、
-Mathlib 更新による証明破損リスクを排除する。
-
-- Wave 3 で削除される ~380 行に含まれる裸 simp は対象外
-- Wave 3 で新規作成されるコードは最初から `simp only` で記述
-
-### 6.2 パターン分類（gravity-simp-plan.md より）
-
-| パターン | 推定数 | 難度 | 手法 |
+| axiom 名 | ファイル | 型シグネチャ（概要） | 計算検証 |
 |---|---|---|---|
-| `simp [lemmas]` | ~90 | ★☆☆ | `simp?` → `simp only` 直接置換 |
-| `simp [lemmas] at h` | ~30 | ★☆☆ | 同上 |
-| `simp at h` | ~31 | ★★☆ | `simp?` で補題特定が必要 |
-| `<;> simp` | ~14 | ★★☆ | 分岐ごとに個別確認 |
-| `by simp` (term-mode) | ~56 | ★☆☆ | 大半は自明性 |
-| 完全裸 `simp` | ~21 | ★★★ | 個別調査必要 |
-| `simp_all` | ~17 | ★★☆ | `simp_all?` で補題取得 |
+| `gravity_IsSettled` | SettledState.lean | `∀ (s : Shape), h_lc : s.layerCount ≤ 5 → IsSettled (Gravity.process s)` | 1.9M+ shapes (≤5L) 0 failures |
+| `all_grounded_settle_foldl` | SettledState.lean | foldl 帰納ステップの AllNonEmptyGrounded 保存（private） | 5L 2dir 全数 0 failures |
+| `process_rotate180_placeAbove_settled` | Stacker.lean | settled 入力の placeAbove + shatter 後 gravity が r180 等変 | 166,757+ settled shapes 0 failures |
+| `process_rotateCW_placeAbove_settled` | Stacker.lean | settled 入力の placeAbove + shatter 後 gravity が rCW 等変 | r180 版と同一検証基盤 |
+| `IsSettled_liftUp_generatePins` | PinPusher.lean | settled 入力の liftUp+generatePins は settled（private） | SettledShape 追加時に検証済み |
 
-### 6.3 実行計画
+### 除去ロードマップ（§3 Wave Model で一括）
 
-- [ ] **4-1**: Wave 3 完了後の裸 simp 残存数を再計測
-- [ ] **4-2**: Phase 1 — バッチ処理可能パターンの安定化（`lean-simp-stabilizer` 活用）
-- [ ] **4-3**: Phase 1 `lake build` 通過確認
-- [ ] **4-4**: Phase 2 — セクション集中処理（foldl 可換性・バブルソート基盤・insertSorted）
-- [ ] **4-5**: Phase 2 `lake build` 通過確認
-- [ ] **4-6**: Phase 3 — 個別対応（BFS・Reachability・完全裸 simp）
-- [ ] **4-7**: Phase 3 `lake build` 通過確認
-- [ ] **4-8**: Gravity.lean の裸 simp = 0 を達成、`proof-cleanup-plan.md` を更新
+- `gravity_IsSettled` / `all_grounded_settle_foldl`: iterate-until-settled モデルで定義的に成立
+- `process_*_placeAbove_settled` 2件: per-wave 等変性 + 反復帰納法で導出
+- `IsSettled_liftUp_generatePins`: ピン生成の接地性保存を構成的証明で置換
 
----
+### axiom 採用の経緯
 
-## 7. Wave 5: 下流 r180 等変性
-
-Wave 3 完了により `gravity_rotate180_comm` が利用可能になる。
-これを用いて下流操作の r180 等変性を証明する。
-
-- [ ] **5-1**: `stack_rotate180_comm` の証明（stack = placeAbove + shatter + gravity + truncate）
-- [ ] **5-2**: `pinPush_rotate180_comm` の証明
-- [ ] **5-3**: `paint_rotate180_comm` の証明（構造的に簡単、着色は BFS 無関係）
-- [ ] **5-4**: `crystallize_rotate180_comm` の証明
-- [ ] **5-5**: `cut_rotate180_comm` の sorry 解消確認（既に `gravity_rotate180_comm` に依存、自動的に解消）
-- [ ] **5-6**: MILESTONES.md 1-2-4 の状態を更新
-- [ ] **5-7**: 全 r180 等変性の `lake build` 確認
-
-### ── Phase 1 完了ライン ──
-
-Wave 5 完了をもって **MILESTONES.md Phase 1 の Shape Processing 等変性は完了**。
-`process-rotate180-proof-redesign.md` のエグゼクティブサマリーを最終更新する。
+sorry #4b（`all_grounded_settle_foldl` 内 pin NE コールバック）に対して 11アプローチを消耗。
+sorry #3/#4b に5-8セッションが必要と判断し、外部依存ゼロの両 sorry を axiom 化（Plan B）。
+~8,000行の sorry-free 証明資産は完全保全。詳細: [偽定理カタログ](../s2il/false-theorem-catalog.md)
 
 ---
 
-## 8. Wave 6 [中期]: 提案 D — 決定性ソート移行
+## §3 Wave Gravity Model（axiom 除去ロードマップ）
 
-`sortFallingUnits` を Mathlib の `List.mergeSort` + 辞書式全順序に差し替え、
-証明の保守性と将来の等変性拡張（rotateCW 等）を容易にする。
+現行 foldl モデルを `iterate waveStep until floatingUnits = []` に置き換え、axiom 5件を除去する。
 
-### 8.1 背景
+### タスク
 
-- 現行の `sortFallingUnits` は `insertSorted` + `shouldProcessBefore`（半順序、tied ペアあり）
-- tied ペアの入力順序依存性が証明の複雑さの根本原因
-- 全順序化により tied ペアが消滅し、証明が大幅に簡素化される
-- `spb` を拡張した全順序 `fuLe` を定義: `(layer, direction.toFin)` の辞書式比較
-- Mathlib v4.29.0 の `List.mergeSort` を利用可能
+| タスク | 推定行数 | 推定工数 |
+|---|---|---|
+| `Gravity.process` 再定義 | ~100-200 | 0.5 s |
+| 終端性証明（FU 長さ厳密減少） | ~200-400 | 1-2 s |
+| 等変性再証明（per-wave + 反復帰納法） | ~300-600 | 1-2 s |
+| axiom 除去（構成的証明で置換） | ~50 | 0.1 s |
+| PermInvariance 削減評価 | 要調査 | 0.5 s |
+| **合計** | **~650-1250** | **3-5 s** |
 
-### 8.2 実行計画
+### PermInvariance 削減の可能性
 
-- [ ] **6-1**: `fuLe : FallingUnit → FallingUnit → Bool` の定義（辞書式比較）
-- [ ] **6-2**: `fuLe` が全順序であることの証明（`DecidableLinearOrder` インスタンス）
-- [ ] **6-3**: `sortFallingUnits' := List.mergeSort fuLe` の定義
-- [ ] **6-4**: 移行証明 `sortFU_foldl_eq_sortFU'_foldl`: 新旧 sortFU の foldl 結果が一致
-    - tied ペアの `placeFallingUnit` 可換性（`settleStep_comm_ne_dir`、既に証明済み）を利用
-- [ ] **6-5**: `process` 定義を `sortFallingUnits'` に差し替え
-- [ ] **6-6**: 既存証明のマイグレーション（`sortFallingUnits` → `sortFallingUnits'`）
-- [ ] **6-7**: `process_rotateCW` の証明（mergeSort の Perm 不変性 + r(CW) 等変な全順序から自動導出）
-- [ ] **6-8**: 不要になった tied 関連補題群の削除
-- [ ] **6-9**: `lake build` 通過確認
+| 方式 | PermInvariance | 削減量 |
+|---|---|---|
+| 各 wave 内で foldl + ソート | 引き続き必要 | 0 |
+| 層別同時処理 | **不要** | ~6,600 行削減可能 |
 
----
+### 既存資産との関係
 
-## 9. Wave 7 [長期・オプショナル]: 提案 C — 正準着地位置
+- `settle_foldl_eq` Phase 1/2 等変性: per-wave 等変性の基盤として再利用可能
+- `settleStep_comm_dir_gap` / `settleStep_comm_ne_dir`: minLayer ペアの可換性は引き続き有効
+- Equivariance_obsolated.lean / CommExt_obsolated.lean: foldl → iterate 移行時に Phase 3 置換が必要
 
-MaM ソルバーの健全性証明や gravity 冪等性が必要になった段階で着手する。
-Phase 3 の進行中に必要性が明確化してから計画を具体化する。
+### 3.1 波動モデル（Wave Gravity）への将来的移行検討
 
-### 9.1 構想
+#### 波動モデルの概要
 
-- `CanonicalLanding(s, fus) : Set QuarterPos` — 浮遊ユニット集合の正準着地位置
-- 着地位置が入力の処理順序に依存しないこと（集合として一意）
-- `process(s)` の出力がこの正準着地にユニットを配置した結果と一致すること
+現行の foldl モデルでは FU を `sortFallingUnits'` でソートし、1 個ずつ順次着地させる。波動モデルでは全 FU を同時に 1 レイヤずつ落下させ、着地したものから除外する反復方式をとる。
 
-### 9.2 期待される副産物
+```text
+Wave Model:
+  1. floatingUnits(shape) で不安定ユニットを特定
+  2. 安定要素のみに接触する FU を即座に settle（接地化）
+  3. 残りの FU を全て 1 レイヤ下に移動
+  4. 安定するまで 2-3 を繰り返し
+```
 
-- [ ] **7-1**: gravity 冪等性 `process (process s) = process s` の証明
-- [ ] **7-2**: `gravity_IsSettled` (SS-4) の代替証明ルート
-- [ ] **7-3**: MaM ソルバーの健全性基盤
+#### 数学的等価性
 
----
+- `settle_foldl_eq`（SettleFoldlEq.lean, ~4,300 行）が既に foldl モデルと波動モデルの等価性を証明済み
+- ステップ 3（1 レイヤ同時降下）は幾何制約により実際には発火しない。全 FU は着地位置に直接 settle される
+- したがって波動モデルを採用しても、結果は foldl モデルと完全に一致する
 
-## 10. 偽定理カタログ（cheatsheet Section 9 より承継）
+#### 移行のメリット・デメリット
 
-以下の仮定は **全て偽** と判明済み。これらに依拠するアプローチを取ってはならない。
-Wave 0 完了後は `docs/knowledge/lean-proof-tips.md` に移行される。
-
-| 偽の仮定 | なぜ偽か |
+| 項目 | 評価 |
 |---|---|
-| `shouldProcessBefore_no_chain` | 4L+ で 3 pin 連鎖反例。2-3L 限定検証の不備 |
-| `sortFU_spb_order_on_fU` | 4 要素反例。insertSorted のグリーディ停止が順序を壊す |
-| `sortFallingUnits_shouldProcessBefore_one_way_order` | spb 非推移性。3 要素反例 |
-| `sortFU_later_not_spb_earlier` | 同根原因（非推移的 spb サイクル） |
-| `sortFallingUnits_inversion_is_tied` (一般 Perm) | 3L 3色 8628 violations。r180 固有 Perm でのみ真 |
-| sortFU が正しい topological sort を生成する | insertSorted はグリーディで後方不整合を生む |
-| spb が floatingUnits 上で全順序 | tied ペアが存在する |
-| BFS 列挙結果がリスト等号で r180 等変 | 探索順序が方角で変わる |
-| `floatingUnits_rotate180` (list equality) | BFS order changes (.any メンバーシップのみ等変) |
+| ソート不要（PermInvariance ~2,300 行が不要に） | ✅ 大幅削減 |
+| SettleFoldlEq ~4,300 行が不要に | ✅ 大幅削減 |
+| sorry #4b は解消されない（着地位置の性質であり順序非依存） | ❌ 効果なし |
+| 既存証明資産（Equivariance, CommExt 等）の全面書き換え | ❌ 高コスト |
+
+#### ≥6L 問題への対応ポテンシャル（2026-04-13 考察）
+
+sorry #3 の根本原因は「placeAbove 後の ≥6L shapes で foldl ソート可換性が成立しない」ことにある。波動モデルは FU をソートせず、全 FU を層単位で同時処理するため、このソート順序依存性が消滅する。理論上、波動モデルでは `layerCount ≤ 5` 制約も `IsSettled` 仮説も不要で、placeAbove 後の gravity 等変性を証明できる可能性がある。一方、sorry #4b（pin NE 時点の ImmBelow）は着地位置の性質であり順序非依存のため、波動モデルへの移行では解消されない。
+
+| sorry | foldl モデル（現行） | 波動モデル（将来） |
+|---|---|---|
+| #4b (pin NE ImmBelow) | 解消未達（現状） | 解消されない（順序非依存の性質） |
+| #3 (stack_rotate180_comm) | `IsSettled` 仮説が必要 | ≥6L 問題が消滅する可能性（ソート順序依存性が消滅） |
+
+#### BFS 修正後の FU=0 維持ケース（2026-04-13 考察）
+
+BFS を上方向のみに修正した後も、垂直チェーンが存在する場合は FU=0 が維持される。
+
+| シェイプ | 修正前 FU | 修正後 FU | 接地維持の理由 |
+|---|---|---|---|
+| `CuCu----:CuP-----:CuCu----` | FU=0 | FU=0（変化なし） | L0:SE(Cu)→L1:SE(P)→L2:SE(Cu) の垂直チェーンで上方向 BFS 到達可 |
+
+L1:SE のピンは L0:SE（copper, 非空）から上方向接地接触で BFS 到達可能。修正後の上方向 BFS でも「L0:SE → L1:SE(P) → L2:SE(Cu)」の垂直チェーン全体が接地済みと判定され、FU=0 のまま変化しない。これに対し S1〜S4（`Rr------:RrP-----:RrRr----` 等）は L0:SE が空のため垂直チェーンが切断されており、修正後に FU>0 となる。
+
+### 3.2 Wave Gravity Model 完了後の最終点検
+
+§3 のタスク完了後に、以下の観点で数学的・コード的美しさの最終点検を行う。
+
+| 確認項目 | 基準 |
+|---|---|
+| 冗長な場合分けの排除 | 構造的な帰納法やジェネリック補題で代替可能か |
+| 補題の一般性 | 不要な仮説が付いていないか |
+| 命名規約 | S2IL 固有ルール + Lean 4 / Mathlib 命名規則 |
+| doc コメント | public def/theorem に日本語 `/-- ... -/` が付与されているか |
 
 ---
 
-## 11. 確立済みの事実（覆らない）
+## §4 確立済みの基盤
 
-Wave 0 完了後は `docs/lean/s2il-lemma-index.md` に移行される。
+### 重要な発見と根拠
 
 | 事実 | 根拠 |
 |---|---|
-| `process_rotate180` は真 | 20+ テストケースで計算検証済み |
-| spb は floatingUnits 上で DAG（2-cycle 禁止） | 計算検証 + `shouldProcessBefore_no_mutual` 証明済み |
-| 方角素ペアは foldl で可換 | `settleStep_comm_ne_dir` 証明済み |
-| tied ↔ direction-disjoint (floatingUnits 上) | 共有方角 → minLayer 差 → one-way → 対偶 |
-| r180 はレイヤ不変、方角のみ NE↔SW / SE↔NW | `QuarterPos.rotate180` の定義 |
-| spb(a,b) = spb(a.r180, b.r180) | r180 のレイヤ不変性から直接 |
-| sortFU(l1).foldl = sortFU(l2).foldl (fU perms) | 計算検証 (23+ shapes, 2-3L 全形状) |
-| l_mid/l2 の入力反転は常に tied | 同レイヤ・別方角ペアのみスワップ |
+| `process_rotate180` は ≤5L で真 | 1.9M+ shapes 計算検証 |
+| `process_rotate180` は ≥6L で偽 | 反例: `"cr----cr:cr------:--------:cr--cr--:--crcr--:crcrcr--"`（同 minLayer FU でソート順序が結果に影響） |
+| `process_rotate180` は placeAbove 構造で真 | 166K shapes (6-10L 含む, 0 failures) |
+| `process_rotateCW` は真 | 65K+ shapes 計算検証 |
+| ≥6L 反例はゲーム内で到達不可能 | Stacker 1st gravity の入力は常に settled |
+| `IsSettled` は `layerCount ≤ 5` の代替仮説として有効 | 166,757+ settled shapes で 0 failures |
 
----
+### 各加工装置の gravity 利用パターン
 
-## 12. 健全コード資産（保持対象）
-
-Wave 3 で安全に再利用できる既存コード。
-
-| 補題 | 行数 | 用途 |
-|---|---|---|
-| `foldl_eq_of_perm_tied_adj_comm` | ~300 | バブルソート帰納法の本体 |
-| `shouldProcessBefore_no_mutual` | ~200 | S-1、独立健全 |
-| `insertSorted_preserves_relative_order` | ~150 | S-2、独立健全 |
-| `tied_no_shared_dir` / `_rev` | ~100 | tied → direction-disjoint |
-| `floatingUnits_elem_positions_disjoint` | ~100 | 位置素性 |
-| `settleStep_comm_ne_dir` | ~200 | 方角素 → foldl 可換 |
-| `sorted_foldl_pointwise_eq` | ~100 | settle_foldl_eq Phase 1 |
-| `floatingUnit_any_in_rotate180` | ~50 | .any メンバーシップ等変 |
-| その他基盤補題群 | ~4,000 | BFS・到達可能性・等変性基盤 |
-
----
-
-## 13. 進捗サマリー
-
-| Wave | 状態 | チェック数 | 完了数 |
+| 加工装置 | gravity 利用 | layerCount ≤ 5? | IsSettled 必要? |
 |---|---|---|---|
-| Wave 0: ドキュメント整理 | ⬜ 未着手 | 16 | 0 |
-| Wave 1: SettledState 完了 | ⬜ 未着手 | 5 | 0 |
-| Wave 2: 真理値再検証 | ⬜ 未着手 | 5 | 0 |
-| Wave 3: 提案 B 実施 | ⬜ 未着手 | 10 | 0 |
-| Wave 4: simp 安定化 | ⬜ 未着手 | 8 | 0 |
-| Wave 5: 下流等変性 | ⬜ 未着手 | 7 | 0 |
-| Wave 6: 提案 D [中期] | ⬜ 未着手 | 9 | 0 |
-| Wave 7: 提案 C [長期] | ⬜ 未着手 | 3 | 0 |
-| **合計** | | **63** | **0** |
+| Painter / CrystalGenerator / Rotator / ColorMixer | なし | — | N/A |
+| PinPusher | `truncated.gravity` | ≤ maxLayers ≤ 5 ✅ | 不要 |
+| **Stacker (1st gravity)** | `afterShatter.gravity` | ≤ 2×maxLayers ❌ | **必要** |
+| Stacker (2nd gravity) | `truncated.gravity` | ≤ maxLayers ≤ 5 ✅ | 不要 |
+| Cutter / HalfDestroy / Swap | `settleAfterCut` 内 | ≤ maxLayers ≤ 5 ✅ | 不要 |
+
+詳細: [gravity-issettled-matrix.md](../s2il/gravity-issettled-matrix.md)
+
+### stress8 (maxLayers > 5) への拡張
+
+現行の `layerCount ≤ 5` 仮説は vanilla4/5 でのみ有効。stress8 では全装置で IsSettled アプローチが必要。現時点では優先度外。
+
+### 採用アプローチ: 全順序ソート
+
+`fallingUnitOrd` 全順序でソート結果を一意化。基盤はすべて完了:
+- `fallingUnitOrd` 全順序: `_total`, `_trans`, `_antisymm_of_floatingUnits_impl` ✅
+- `mergeSort_perm_eq` ✅
+- `settle_foldl_eq` Phase 1/2（r180/rCW 両方）✅
+
+---
+
+## §5 完了済み作業の要約
+
+### 主要完了項目
+
+| 項目 | 内容 | 結果 |
+|---|---|---|
+| isGroundingContact バグ修正 | `groundingBfs` の探索辺を `isUpwardGroundingContact || isStructurallyBonded` に修正 | sorry 6→2 |
+| Plan B（axiom 化） | 外部依存ゼロの難所を axiom 化し証明チェーンを前進 | sorry 2→0（axiom 3→5） |
+| SettledShape 完了 | rotate/pinPush/stack/swap を含む全操作で SettledShape 化 | Machine.lean まで適用完了 |
+| rCW 等変性 + LayerPerm 統合 | rCW 経路の重複を統合しジェネリック化を推進 | 3ファイル合計 -128 行純減 |
+| simp 安定化 | `lean --json` + `simp?` で自動安定化 | 76箇所を `simp only` / `simp_all only` 化 |
+| 証明品質リファクタリング | R-1〜R-14 と F-1/F-3 を実施 | 高・中・低優先度項目を完了 |
+
+### 履歴ハイライト
+
+| Wave / フェーズ | 概要 | sorry 推移 |
+|---|---|---|
+| Wave 9 | `settleStep_comm_dir_gap` 解消 | 7→5 |
+| Wave 19 | sorry #4a 削除 + pin 空着地証明 | 5→3 |
+| Wave 21 | sorry #4c + pin d≥2 解消 | 3→2 |
+| combined edge 修正 | grounding edge 実装修正 | 6→2 |
+| Plan B | axiom 化で証明完了状態へ移行 | 2→0 |
+
+---
+
+## 関連ドキュメント
+
+| ドキュメント | 概要 |
+|---|---|
+| [MILESTONES.md](MILESTONES.md) | マイルストーン チェックシート |
+| [偽定理カタログ](../s2il/false-theorem-catalog.md) | Plan A で発見された偽定理・棄却済みアプローチ一覧 |
+| [gravity-equivariance-analysis.md](../s2il/gravity-equivariance-analysis.md) | Gravity 証明の技術的知見 |
+| [gravity-issettled-matrix.md](../s2il/gravity-issettled-matrix.md) | 全加工装置の gravity 利用・IsSettled 必要性マトリクス |
+| [s2il-lemma-index.md](../s2il/s2il-lemma-index.md) | 補題インデックス |
+
+
+
+
+
+
+

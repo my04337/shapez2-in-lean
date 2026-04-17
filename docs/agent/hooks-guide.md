@@ -3,7 +3,7 @@
 エージェントセッションのライフサイクルイベントでカスタムシェルコマンドを実行する仕組み。
 Skills が「知識・手順の注入」なら、Hooks は「確定的なコード実行による自動化」。
 
-> **ステータス**: Preview（2026-03 時点）。仕様は今後変更される可能性あり。
+> **ステータス**: Preview（2026-03-25 時点）。仕様は今後変更される可能性あり。
 
 ---
 
@@ -249,7 +249,7 @@ hooks:
 
 **制限**: VS Code は hooks の `matcher` フィールドを解析するが適用しない。
 `PostToolUse` はツール名に関わらず、`read_file`・`semantic_search` 等を含む
-すべてのツール呼び出しで発火する（2026-03 時点）。
+すべてのツール呼び出しで発火する（2026-03-25 時点）。
 
 > *「Currently, VS Code ignores matcher values, so hooks run on all tool invocations regardless of the matcher.」― VS Code 公式ドキュメント*
 

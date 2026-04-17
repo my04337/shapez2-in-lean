@@ -2,6 +2,8 @@
 -- SPDX-License-Identifier: MIT
 
 import S2IL.Shape.Shape
+import S2IL.Behavior.Rotate
+import Aesop
 
 /-!
 # CrystalGenerator (結晶製造機)
@@ -58,6 +60,16 @@ theorem fillQuarter_crystal (c color : Color) :
         fillLayer (fillLayer l color) color = fillLayer l color := by
     simp only [fillLayer, fillQuarter_idempotent]
 
+/-- fillLayer と 180° 回転は可換である -/
+@[aesop norm simp] theorem fillLayer_rotate180 (l : Layer) (color : Color) :
+        (fillLayer l color).rotate180 = fillLayer l.rotate180 color := by
+    simp only [fillLayer, Layer.rotate180, Layer.rotateCW]
+
+/-- fillLayer と時計回り 90° 回転は可換である -/
+@[aesop norm simp] theorem fillLayer_rotateCW (l : Layer) (color : Color) :
+        (fillLayer l color).rotateCW = fillLayer l.rotateCW color := by
+    simp only [fillLayer, Layer.rotateCW]
+
 end CrystalGenerator
 
 namespace Shape
@@ -75,5 +87,27 @@ def crystallize (s : Shape) (color : Color) : Shape :=
         (s.crystallize color).crystallize color = s.crystallize color := by
     ext; simp only [crystallize, mapLayers, List.map_map, List.getElem?_map,
         Option.map_eq_some_iff, Function.comp_apply, CrystalGenerator.fillLayer_idempotent]
+
+/-- 結晶製造と時計回り 90° 回転は可換である -/
+@[aesop norm simp] theorem crystallize_rotateCW_comm (s : Shape) (color : Color) :
+        (s.crystallize color).rotateCW = (s.rotateCW).crystallize color := by
+    ext
+    simp only [crystallize, rotateCW, mapLayers, List.map_map,
+        List.getElem?_map, Option.map_eq_some_iff, Function.comp_apply]
+    constructor
+    · rintro ⟨a, ha, rfl⟩
+      exact ⟨a, ha, (CrystalGenerator.fillLayer_rotateCW a color).symm⟩
+    · rintro ⟨a, ha, rfl⟩
+      exact ⟨a, ha, CrystalGenerator.fillLayer_rotateCW a color⟩
+
+/-- 結晶製造と 180° 回転は可換である（rotateCW² のコロラリー） -/
+@[aesop norm simp] theorem crystallize_rotate180_comm (s : Shape) (color : Color) :
+        (s.crystallize color).rotate180 = (s.rotate180).crystallize color := by
+    simp only [rotate180_eq_rotateCW_rotateCW, crystallize_rotateCW_comm]
+
+/-- 結晶製造と反時計回り 90° 回転は可換である（rotateCW³ のコロラリー） -/
+@[aesop norm simp] theorem crystallize_rotateCCW_comm (s : Shape) (color : Color) :
+        (s.crystallize color).rotateCCW = (s.rotateCCW).crystallize color := by
+    simp only [rotateCCW_eq_rotateCW_rotateCW_rotateCW, crystallize_rotateCW_comm]
 
 end Shape

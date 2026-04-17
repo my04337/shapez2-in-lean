@@ -99,16 +99,10 @@ def ofLayers : List Layer → Option Shape
 -- レイヤ操作ユーティリティ
 -- ============================================================
 
-private theorem map_ne_nil_of_ne_nil (l : List Layer) (f : Layer → Layer)
-        (h : l ≠ []) : l.map f ≠ [] := by
-    cases l with
-    | nil => exact h
-    | cons _ _ => exact List.cons_ne_nil _ _
-
 /-- 全レイヤに関数を適用する -/
 def mapLayers (s : Shape) (f : Layer → Layer) : Shape where
     layers := s.layers.map f
-    layers_ne := map_ne_nil_of_ne_nil s.layers f s.layers_ne
+    layers_ne := by simp only [ne_eq, List.map_eq_nil_iff]; exact s.layers_ne
 
 -- ============================================================
 -- 正規化
@@ -194,6 +188,90 @@ theorem normalize_map_layers (s : Shape) (f : Layer → Layer)
     cases dropTrailingEmpty s.layers with
     | nil => rfl
     | cons a as => simp only [ofLayers, Option.map_some, List.map_cons]
+
+/-- `dropTrailingEmpty` の結果と元リストの関係: `ls = (dropTrailingEmpty ls) ++ suffix` -/
+private theorem dropTrailingEmpty_eq_append :
+        ∀ (ls : List Layer), ∃ t, ls = (dropTrailingEmpty ls) ++ t
+    | [] => ⟨[], rfl⟩
+    | l :: rest => by
+        obtain ⟨t, ht⟩ := dropTrailingEmpty_eq_append rest
+        unfold dropTrailingEmpty
+        cases h : dropTrailingEmpty rest with
+        | nil =>
+            cases hl : l.isEmpty with
+            | true => exact ⟨l :: rest, rfl⟩
+            | false => exact ⟨rest, rfl⟩
+        | cons a as =>
+            rw [h] at ht
+            exact ⟨t, congrArg (l :: ·) ht⟩
+
+/-- `normalize` で得られるシェイプのレイヤは元のシェイプのレイヤの prefix -/
+theorem normalize_layers_eq_append (s : Shape) (s' : Shape)
+        (h : s.normalize = some s') : ∃ t, s.layers = s'.layers ++ t := by
+    cases hd : dropTrailingEmpty s.layers with
+    | nil =>
+        have h' : s.normalize = none := by unfold normalize; rw [hd]; rfl
+        exact absurd h (by rw [h']; intro h; cases h)
+    | cons a as =>
+        have h_eq : s.normalize = some ⟨a :: as, List.cons_ne_nil a as⟩ := by
+            unfold normalize; rw [hd]; rfl
+        rw [h_eq] at h
+        have h_layers : s'.layers = a :: as := by
+            have := Option.some.inj h; rw [← this]
+        rw [h_layers, ← hd]
+        exact dropTrailingEmpty_eq_append s.layers
+
+/-- 非空レイヤのインデックスは `dropTrailingEmpty` 後も範囲内 -/
+protected theorem dropTrailingEmpty_preserves_nonEmpty_index
+        (ls : List Layer) (i : Nat)
+        (hi : i < ls.length) (hne : ls[i].isEmpty = false) :
+        i < (dropTrailingEmpty ls).length := by
+    induction ls generalizing i with
+    | nil => simp only [List.length_nil] at hi; omega
+    | cons l rest ih =>
+        unfold dropTrailingEmpty
+        cases h : dropTrailingEmpty rest with
+        | nil =>
+            cases i with
+            | zero =>
+                simp only [List.getElem_cons_zero] at hne
+                simp only [hne, Bool.false_eq_true, ↓reduceIte, List.length_singleton]
+                omega
+            | succ n =>
+                simp only [List.length_cons, Nat.add_lt_add_iff_right] at hi
+                simp only [List.getElem_cons_succ] at hne
+                have := ih n hi hne; rw [h] at this
+                simp only [List.length_nil] at this; omega
+        | cons a as =>
+            cases i with
+            | zero =>
+                simp only [List.length_cons]; omega
+            | succ n =>
+                simp only [List.length_cons, Nat.add_lt_add_iff_right] at hi
+                simp only [List.getElem_cons_succ] at hne
+                have := ih n hi hne; rw [h] at this
+                simp only [List.length_cons] at this ⊢; omega
+
+/-- normalize の結果で、元のシェイプの非空レイヤのインデックスは保持される -/
+theorem normalize_preserves_nonEmpty_index (s : Shape) (s' : Shape)
+        (h : s.normalize = some s')
+        (i : Nat) (h_lt : i < s.layers.length)
+        (h_ne : s.layers[i].isEmpty = false) :
+        i < s'.layerCount := by
+    have h_dt := Shape.dropTrailingEmpty_preserves_nonEmpty_index s.layers i h_lt h_ne
+    simp only [layerCount]
+    cases hd : dropTrailingEmpty s.layers with
+    | nil =>
+        have h' : s.normalize = none := by unfold normalize; rw [hd]; rfl
+        exact absurd h (by rw [h']; intro h; cases h)
+    | cons a as =>
+        have h_eq : s.normalize = some ⟨a :: as, List.cons_ne_nil a as⟩ := by
+            unfold normalize; rw [hd]; rfl
+        rw [h_eq] at h
+        have h_layers : s'.layers = a :: as := by
+            have := Option.some.inj h; rw [← this]
+        rw [h_layers, ← hd]
+        exact h_dt
 
 -- ============================================================
 -- シリアライズ・デシリアライズ

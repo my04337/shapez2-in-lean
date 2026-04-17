@@ -1,12 +1,11 @@
 ---
 name: lean-counterexample
 description: >
-  Lean 4 の定理・補題に対して体系的に反例チェックを行い、偽定理の早期発見をする。
-  具体値の代入、境界値テスト、#eval / decide による機械検証を提供する。
+  Systematically check theorem candidates for counterexamples before proving.
   Use when: check counterexample, verify theorem, is this true, validate lemma,
   false theorem, counterexample search, theorem verification, check if provable.
 metadata:
-  argument-hint: '定理の反例チェックを体系的に行います'
+  argument-hint: 'Pass theorem signature to check for counterexamples'
 ---
 
 # 反例チェックスキル
@@ -80,7 +79,28 @@ example : ∀ b : Bool, b || !b = true := by decide
   i.val + 0 == i.val
 ```
 
-**無限型の場合**: `decide` は使えないので既存の `#eval` 具体値テスト（下記 Step 3）にフォールバックする。
+**無限型の場合**: `decide` は使えないので下記 Step 2b または `#eval` にフォールバックする。
+
+### 2b. 無限型の高速パス（`plausible` タクティク）
+
+量化された変数が **`Nat`, `Int`, `List Nat`** 等の無限型で、かつ型が `Arbitrary` インスタンスを持つ場合、
+`plausible` タクティクによるランダムサンプリングが有効。
+
+```lean
+-- Nat を含む全称命題を plausible で素早く確認
+example : ∀ n : Nat, n ≤ n + 1 := by plausible
+-- → "Unable to find a counter-example" ならほぼ真（証明ではない）
+
+-- 偽命題の反例検出
+example : ∀ n : Nat, n + 1 = n := by plausible
+-- → "Found a counter-example! n := 0"
+```
+
+**注意**:
+- `plausible` は**証明ではない**。反例なし = 「真っぽい」の確認のみ
+- S2IL の全主要型（`Color`, `Quarter`, `Layer`, `Shape`, `Direction`, `QuarterPos`, `GameConfig` 等）は `S2IL/Shape/Arbitrary.lean` で `SampleableExt` インスタンス定義済み。`import S2IL` でそのまま利用可能
+- 有限型（`Direction`, `QuarterPos` 等）は `decide` で全探索が確実（`plausible` より優先）
+- 詳細: [`docs/lean/plausible-guide.md`](../../../docs/lean/plausible-guide.md)
 
 ### 3. 機械検証
 
@@ -91,7 +111,19 @@ example : ∀ b : Bool, b || !b = true := by decide
 ```
 
 ```powershell
-.github/skills/lean-repl/scripts/repl.ps1 -InputFile Scratch/commands.jsonl
+# Windows — Persistent モード（推奨・~600ms/回）
+.github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId <id> -CmdFile Scratch/commands-<sessionId>.jsonl
+
+# Windows — バッチモード（レガシー・Persistent が利用できない場合のみ）
+.github/skills/lean-repl/scripts/repl.ps1 -InputFile Scratch/commands-<sessionId>.jsonl
+```
+
+```bash
+# macOS / Linux — Persistent モード（推奨・~600ms/回。bash 4+ 必須）
+.github/skills/lean-repl/scripts/repl.sh --send --session-id <id> --cmd-file Scratch/commands-<sessionId>.jsonl
+
+# macOS / Linux — バッチモード（レガシー）
+.github/skills/lean-repl/scripts/repl.sh --input Scratch/commands-<sessionId>.jsonl
 ```
 
 ▶ stdout 例（`data` に結果リスト）:
@@ -143,6 +175,8 @@ lake env lean Scratch/FooCheck.lean
 | `#eval` が予期しない値を返す | **反例発見** → シグネチャを修正 |
 | `decide` が `true` | 有限全探索で成立を確認 |
 | `decide` が `false` または `Decidable` インスタンスなし | 反例あり / 全探索不可 → `#eval` で個別探索 |
+| `plausible` が "Unable to find a counter-example" | ランダムテスト通過（証明ではない）→ 証明着手OK |
+| `plausible` が "Found a counter-example!" | **反例発見** → シグネチャを修正 |
 | REPL の `messages[].severity == "error"` | 型エラー等 → コードを修正してから再テスト |
 
 ```powershell

@@ -1,8 +1,8 @@
 ---
 name: lean-diagnostics
-description: 'Lean 4 ビルド・実行結果の診断メッセージを解析・トリアージする。Use when: analyze build errors, triage warnings, prioritize fixes, parse diagnostics, review build output, sorry detection.'
+description: 'Parse and triage Lean 4 build diagnostics. Use when: analyze build errors, triage warnings, prioritize fixes, parse diagnostics, review build output, sorry detection.'
 metadata:
-  argument-hint: 'ビルド結果の診断とトリアージを行います'
+  argument-hint: 'Pass build output or diagnostics file path'
 ---
 
 # ビルド診断スキル
@@ -38,6 +38,49 @@ $diags | Where-Object { $_.severity -eq "warning" -and !$_.isSorry } # 非sorry 
 | 3 | **warning** | 未使用変数・非推奨 API 等 |
 | 4 | **info** | 情報。通常対応不要 |
 
+## エラー種別 → 対応スキル/ツール ルーティング
+
+ビルドエラーの種別に応じて、最適なスキル・ツールを自動選択する。
+
+### error レベル
+
+| エラーメッセージパターン | 第1候補 | 第2候補 | 備考 |
+|---|---|---|---|
+| `unknown identifier '...'` | `lean-mathlib-search` スキル → `#loogle` / `#leansearch` | REPL `exact?` | Mathlib/Batteries の名前変更・移動が原因のことが多い |
+| `unknown constant '...'` | `grep_search` で定義箇所を検索 | `import` 追加 | ファイル内定義の参照漏れ or import 不足 |
+| `type mismatch` | REPL でゴール型を確認 → `norm_cast` / `push_cast` | `lean-tactic-select` スキル | 型変換（Nat↔Int, Fin↔Nat 等）が原因 |
+| `unsolved goals` | `lean-goal-advisor` エージェント | `lean-tactic-select` スキル | ゴール形状を分析して適切なタクティクを選択 |
+| `application type mismatch` | 引数の型を REPL `#check` で確認 | `@` で明示適用 | 暗黙引数の推論失敗が多い |
+| `function expected` | 括弧・適用の構文を確認 | — | 通常は構文ミス |
+| `declaration uses 'sorry'` | `lean-proof-planning` スキル | — | sorry 解消の計画を立てる |
+| `maximum recursion depth` | `decreasing_by` / `termination_by` を追加 | `WellFoundedRelation` を確認 | 停止性証明が必要 |
+| 複数エラーが連鎖 | **Sorrifier パターン**: 最内側から 1 箇所ずつ sorry 化→再ビルド | — | カスケードエラーの除去を優先 |
+
+### warning レベル（actionable）
+
+| warning パターン | 対応 |
+|---|---|
+| `unused variable` | `_x` にリネーム or 削除 |
+| `This simp argument is unused` | `lean-simp-stabilizer` エージェント or 手動で `simp only [...]` から削除 |
+| `this tactic is never executed` | tactic を削除 |
+| `simp made no progress` | 条件を確認し `simp` を適切なタクティクに変更 |
+
+### ルーティング判断フロー
+
+> **自動修正**: error が複数ある場合は **lean-error-fixer** エージェントに委譲すると、
+> 分類→修正候補生成→REPL検証を自動実行できる。
+
+```
+エラーメッセージを取得
+  ├─ 複数 error → lean-error-fixer エージェントに一括委譲（推奨）
+  ├─ `unknown identifier` / `unknown constant` → 補題検索（lean-mathlib-search）
+  ├─ `type mismatch` / `application type mismatch` → 型分析（REPL #check）
+  ├─ `unsolved goals` → ゴール分析（lean-goal-advisor）
+  ├─ `sorry` → 証明計画（lean-proof-planning）
+  ├─ 複数エラー連鎖 → Sorrifier パターン（最内側優先 sorry 化）
+  └─ その他 → メッセージを読んで手動判断
+```
+
 ## タスク完了前の必須確認
 
 `.lean` ファイル変更後は非sorry warning を整理すること。Stop Hook が自動ブロックする。
@@ -49,13 +92,7 @@ Get-Content .lake/build-diagnostics.jsonl | ConvertFrom-Json |
     Select-Object file, line, message
 ```
 
-### 代表的な actionable warning
-
-| warning | 修正 |
-|---|---|
-| `unused variable` | `_x` にリネームまたは削除 |
-| `This simp argument is unused` | `simp only [...]` から削除 |
-| `this tactic is never executed` | tactic を削除 |
+> actionable warning の詳細は上記「エラー種別 → 対応スキル/ツール ルーティング」の warning レベルを参照。
 
 ### Stop Hook の動作
 
@@ -65,51 +102,11 @@ Get-Content .lake/build-diagnostics.jsonl | ConvertFrom-Json |
 
 ## sorry の依存関係分析
 
-`lean-sorry-snapshot` サブエージェントでビルド→sorry 抽出→depgraph→依存分類を一括実行可能。
+`lean-sorry-snapshot` エージェントでビルド→sorry 抽出→depgraph→依存分類を一括実行可能。
+詳細な sorry 分類（独立/依存/被依存）と依存グラフの取得は `lean-sorry-snapshot` エージェントに委ねる。
 
 ## 関連スキル
 
-**lean-build** / **lean-depgraph** / **lean-proof-progress**
-> ビルド・sorry 抽出・depgraph 生成・依存分類をすべて実行し、構造化された sorry テーブルが返される。
-> 手動で次の手順を実行する必要がなくなる。
+**lean-build** / **lean-depgraph** / **lean-proof-progress** / **lean-error-fixer**（エラー自動修正スキル）
 
-### sorry 依存グラフの取得
-
-**lean-depgraph** を使って sorry を含む宣言の依存関係を可視化する:
-
-```powershell
-.github/skills/lean-depgraph/scripts/depgraph.ps1 -SorryOnly -Json
-```
-
-sorry ノードのみ抽出した依存グラフが `.lake/depgraph.json` に生成される。  
-`lean-sorry-snapshot` サブエージェントでビルド→sorry 抽出→depgraph を一括実行できる。
-.github/skills/lean-depgraph/scripts/depgraph.ps1
-```
-
-### sorry の分類
-
-| 分類 | 意味 | 対応方針 |
-|---|---|---|
-| **独立 sorry** | 他の sorry に依存しない | 即座に着手可能。優先候補 |
-| **依存 sorry** | 他の sorry の結果を前提とする | 依存先を先に解決 |
-| **被依存 sorry** | 多くの宣言がこの sorry に依存 | 解決のインパクトが大きい |
-
-### sorry の型シグネチャ要約
-
-sorry の対象（何を証明する必要があるか）を素早く把握するには:
-
-```powershell
-# Windows: sorry を含む宣言の一覧
-Get-Content .lake/build-diagnostics.jsonl |
-    ConvertFrom-Json |
-    Where-Object { $_.isSorry -eq $true } |
-    Select-Object file, line, message
-```
-
-```bash
-# macOS / Linux
-grep '"isSorry":true' .lake/build-diagnostics.jsonl | jq '{file, line, message}'
-```
-
-sorry の行番号から対象の `theorem` / `lemma` 宣言を特定し、
-その型シグネチャ（ゴール）を確認する。
+エージェント: **lean-error-fixer**（本スキルのルーティングを自動実行するエージェント） / **lean-sorry-snapshot**（sorry 一覧 + 依存グラフ）

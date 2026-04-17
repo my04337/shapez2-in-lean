@@ -4,6 +4,7 @@
 import S2IL.Behavior.Gravity
 import S2IL.Behavior.Shatter
 import S2IL.Behavior.Rotate
+import S2IL.Behavior.SettledState
 
 /-!
 # Cutter (切断)
@@ -103,13 +104,19 @@ theorem westHalf_se (l : Layer) : l.westHalf.se = .empty := rfl
     cases l; rfl
 
 /-- 180° 回転で eastHalf と westHalf が入れ替わる -/
-theorem eastHalf_rotate180 (l : Layer) :
+@[aesop norm simp] theorem eastHalf_rotate180 (l : Layer) :
         l.eastHalf.rotate180 = l.rotate180.westHalf := by
     cases l; rfl
 
-theorem westHalf_rotate180 (l : Layer) :
+@[aesop norm simp] theorem westHalf_rotate180 (l : Layer) :
         l.westHalf.rotate180 = l.rotate180.eastHalf := by
     cases l; rfl
+
+/-- combineEastWest を 180° 回転すると東西が入れ替わる -/
+@[aesop norm simp] theorem combineEastWest_rotate180 (east west : Layer) :
+        (combineEastWest east west).rotate180 =
+        combineEastWest west.rotate180 east.rotate180 := by
+    cases east; cases west; rfl
 
 end Layer
 
@@ -151,11 +158,12 @@ def combineHalves (east west : Shape) : Shape :=
 -- 安定化ヘルパー
 -- ============================================================
 
-/-- 切断後の安定化。浮遊判定 → 落下前砕け散り → 落下 → 正規化 -/
+/-- 切断後の安定化。浮遊判定 → 落下前砕け散り → 落下 → 正規化。
+    全パスが gravity を経由する（isEmpty 時: gravity = normalize、else 時: afterShatter.gravity） -/
 def settleAfterCut (s : Shape) : Option Shape :=
     let units := Gravity.floatingUnits s
     if units.isEmpty then
-        s.normalize
+        s.gravity
     else
         -- 浮遊位置を収集
         let fallingPositions := units.flatMap Gravity.FallingUnit.positions
@@ -267,6 +275,26 @@ theorem combineHalves_self (s : Shape) : combineHalves s s = s := by
     | nil => exact absurd hl s.layers_ne
     | cons b us => exact Shape.ext hl.symm
 
+/-- zipLayersWithPad.go と rotate180 の関係: 東西が入れ替わる -/
+private theorem zipLayersWithPad_go_rotate180 (ls1 ls2 : List Layer) :
+        (zipLayersWithPad.go ls1 ls2).map Layer.rotate180 =
+        zipLayersWithPad.go (ls2.map Layer.rotate180) (ls1.map Layer.rotate180) := by
+    induction ls1 generalizing ls2 with
+    | nil =>
+        induction ls2 with
+        | nil => simp only [zipLayersWithPad.go, List.map_nil]
+        | cons w ws ih =>
+            simp only [zipLayersWithPad.go, List.map_nil, List.map_cons,
+                        Layer.combineEastWest_rotate180, ih]; rfl
+    | cons e es ih =>
+        cases ls2 with
+        | nil =>
+            simp only [zipLayersWithPad.go, List.map_cons, List.map_nil,
+                        Layer.combineEastWest_rotate180, ih]; rfl
+        | cons w ws =>
+            simp only [zipLayersWithPad.go, List.map_cons,
+                        Layer.combineEastWest_rotate180, ih]
+
 -- ============================================================
 -- 180° 回転等変性
 -- ============================================================
@@ -277,29 +305,33 @@ private theorem normalize_rotate180 (s : Shape) :
     exact s.normalize_map_layers Layer.rotate180 Layer.isEmpty_rotate180
 
 /-- Shape.eastHalf と rotate180 は westHalf に変換される -/
-theorem eastHalf_rotate180 (s : Shape) :
+@[aesop norm simp] theorem eastHalf_rotate180 (s : Shape) :
         s.eastHalf.rotate180 = s.rotate180.westHalf := by
     ext; simp only [rotate180, mapLayers, eastHalf, List.map_map,
               List.getElem?_map, Option.map_eq_some_iff, Function.comp_apply,
               Layer.eastHalf_rotate180, westHalf]
 
 /-- Shape.westHalf と rotate180 は eastHalf に変換される -/
-theorem westHalf_rotate180 (s : Shape) :
+@[aesop norm simp] theorem westHalf_rotate180 (s : Shape) :
         s.westHalf.rotate180 = s.rotate180.eastHalf := by
     ext; simp only [rotate180, mapLayers, westHalf, List.map_map,
               List.getElem?_map, Option.map_eq_some_iff, Function.comp_apply,
               Layer.westHalf_rotate180, eastHalf]
 
-/-- settleAfterCut と rotate180 は可換 -/
-private theorem settleAfterCut_rotate180 (s : Shape) :
+/-- settleAfterCut と rotate180 は可換
+    layerCount ≤ 5 の場合に成立する -/
+private theorem settleAfterCut_rotate180 (s : Shape) (h : s.layerCount ≤ 5) :
         (s.settleAfterCut).map Shape.rotate180 = s.rotate180.settleAfterCut := by
     simp only [settleAfterCut, apply_ite (Option.map Shape.rotate180)]
     rw [← Gravity.floatingUnits_isEmpty_rotate180]
     split
-    · -- isEmpty = true → normalize
-      exact normalize_rotate180 s
+    · -- isEmpty = true → gravity
+      exact gravity_rotate180_comm s h
     · -- isEmpty = false → gravity
-      rw [gravity_rotate180_comm, shatterOnFall_rotate180_comm]
+      have h_sf : (s.shatterOnFall ((Gravity.floatingUnits s).flatMap
+            Gravity.FallingUnit.positions)).layerCount ≤ 5 := by
+        simp only [shatterOnFall, layerCount_clearPositions]; exact h
+      rw [gravity_rotate180_comm _ h_sf, shatterOnFall_rotate180_comm]
       -- ゴール: (s.r180.shatterOnFall (A.map r180)).gravity = (s.r180.shatterOnFall B).gravity
       -- where A = (floatingUnits s).flatMap positions, B = (floatingUnits s.r180).flatMap positions
       -- shatterOnFall_ext で .any メンバーシップ同値に帰着
@@ -317,13 +349,20 @@ private theorem cut_eq (s : Shape) :
                  s.shatterOnCut.westHalf.settleAfterCut) := rfl
 
 /-- 切断と 180° 回転の可換性。
-    切断後に 180° 回転すると、東西が入れ替わる -/
-theorem cut_rotate180_comm (s : Shape) :
+    切断後に 180° 回転すると、東西が入れ替わる。
+    layerCount ≤ 5 の場合に成立する（6 レイヤ以上では gravity に反例が存在） -/
+theorem cut_rotate180_comm (s : Shape) (h : s.layerCount ≤ 5) :
         (s.cut.1.map rotate180, s.cut.2.map rotate180) =
         (s.rotate180.cut.2, s.rotate180.cut.1) := by
+    have h_sc : s.shatterOnCut.layerCount ≤ 5 := by
+        simp only [shatterOnCut, layerCount_clearPositions]; exact h
+    have h_eh : s.shatterOnCut.eastHalf.layerCount ≤ 5 := by
+        simp only [eastHalf, mapLayers, layerCount, List.length_map]; exact h_sc
+    have h_wh : s.shatterOnCut.westHalf.layerCount ≤ 5 := by
+        simp only [westHalf, mapLayers, layerCount, List.length_map]; exact h_sc
     simp only [cut_eq, Prod.mk.injEq]
-    exact ⟨by rw [settleAfterCut_rotate180, ← shatterOnCut_rotate180_comm, eastHalf_rotate180],
-           by rw [settleAfterCut_rotate180, ← shatterOnCut_rotate180_comm, westHalf_rotate180]⟩
+    exact ⟨by rw [settleAfterCut_rotate180 _ h_eh, ← shatterOnCut_rotate180_comm, eastHalf_rotate180],
+           by rw [settleAfterCut_rotate180 _ h_wh, ← shatterOnCut_rotate180_comm, westHalf_rotate180]⟩
 
 /-- 同一シェイプをスワップすると、各出力は shatterOnCut 後の安定化・正規化結果と同じ -/
 theorem swap_self (s : Shape) :
@@ -332,5 +371,124 @@ theorem swap_self (s : Shape) :
     simp only [swap]
     cases h : s.shatterOnCut.settleAfterCut <;>
         simp_all only [Option.bind_none, combineHalves_self, Option.bind_some]
+
+/-- combineHalves と 180° 回転の可換性。東西が入れ替わる -/
+theorem combineHalves_rotate180 (a b : Shape) :
+        (combineHalves a b).rotate180 = combineHalves b.rotate180 a.rotate180 := by
+    cases ha : a.layers with
+    | nil => exact absurd ha a.layers_ne
+    | cons a0 as =>
+    cases hb : b.layers with
+    | nil => exact absurd hb b.layers_ne
+    | cons b0 bs =>
+    apply Shape.ext
+    simp only [combineHalves, zipLayersWithPad, rotate180, mapLayers, ha, hb,
+               List.map_cons, zipLayersWithPad.go]
+    congr 1
+    exact zipLayersWithPad_go_rotate180 as bs
+
+/-- 切断処理機と 180° 回転の可換性。
+    切断処理機の結果を回転させると、元シェイプを回転してから切断した西側出力と等しい。
+    halfDestroy(s) は cut(s) の東側出力であるため、回転で東西が入れ替わる。
+    layerCount ≤ 5 の場合に成立する -/
+theorem halfDestroy_rotate180 (s : Shape) (h : s.layerCount ≤ 5) :
+        (s.halfDestroy).map rotate180 = s.rotate180.cut.2 := by
+    rw [halfDestroy_eq_cut_east]
+    exact (Prod.mk.inj (cut_rotate180_comm s h)).1
+
+/-- スワップと 180° 回転の可換性（主ケース: 両入力の settleAfterCut が some の場合）。
+    スワップ後に 180° 回転すると、出力の東西が入れ替わる。
+    layerCount ≤ 5 の場合に成立する。
+
+    注: settleAfterCut が none を返す辺縁ケース（シェイプが完全に空になる場合）では、
+    swap の eastHalf 選択が r180 非等変であるため、この形の可換性は成立しない。
+    ゲーム上、Swapper 入力は常に settled であり、settleAfterCut が none を返すことは
+    実用上発生しない。 -/
+theorem swap_rotate180_comm (s1 s2 : Shape)
+        (h1 : s1.layerCount ≤ 5) (h2 : s2.layerCount ≤ 5)
+        (hs1 : s1.shatterOnCut.settleAfterCut.isSome = true)
+        (hs2 : s2.shatterOnCut.settleAfterCut.isSome = true) :
+        ((s1.swap s2).1.map rotate180, (s1.swap s2).2.map rotate180) =
+        ((s1.rotate180.swap s2.rotate180).2, (s1.rotate180.swap s2.rotate180).1) := by
+    -- settleAfterCut の結果を取り出す
+    have h1_sc : s1.shatterOnCut.layerCount ≤ 5 := by
+        simp only [shatterOnCut, layerCount_clearPositions]; exact h1
+    have h2_sc : s2.shatterOnCut.layerCount ≤ 5 := by
+        simp only [shatterOnCut, layerCount_clearPositions]; exact h2
+    -- Option の some を展開
+    obtain ⟨settled1, hs1_eq⟩ := Option.isSome_iff_exists.mp hs1
+    obtain ⟨settled2, hs2_eq⟩ := Option.isSome_iff_exists.mp hs2
+    -- settleAfterCut と r180 の可換性から、回転版も some
+    have hr1 : s1.rotate180.shatterOnCut.settleAfterCut = some (settled1.rotate180) := by
+        have h := settleAfterCut_rotate180 s1.shatterOnCut h1_sc
+        simp only [hs1_eq, Option.map] at h
+        rw [shatterOnCut_rotate180_comm] at h; exact h.symm
+    have hr2 : s2.rotate180.shatterOnCut.settleAfterCut = some (settled2.rotate180) := by
+        have h := settleAfterCut_rotate180 s2.shatterOnCut h2_sc
+        simp only [hs2_eq, Option.map] at h
+        rw [shatterOnCut_rotate180_comm] at h; exact h.symm
+    -- swap の各側を展開
+    have hswap : s1.swap s2 = ((combineHalves settled1 settled2).normalize,
+                                (combineHalves settled2 settled1).normalize) := by
+        simp only [swap, hs1_eq, hs2_eq]
+    have hswap' : s1.rotate180.swap s2.rotate180 =
+                  ((combineHalves settled1.rotate180 settled2.rotate180).normalize,
+                   (combineHalves settled2.rotate180 settled1.rotate180).normalize) := by
+        simp only [swap, hr1, hr2]
+    simp only [hswap, hswap', Prod.mk.injEq]
+    exact ⟨by rw [normalize_rotate180, combineHalves_rotate180],
+           by rw [normalize_rotate180, combineHalves_rotate180]⟩
+
+-- ============================================================
+-- IsSettled 保存定理
+-- ============================================================
+
+/-- settleAfterCut の出力は安定状態。layerCount ≤ 5 の場合に成立する。
+    全パスが gravity を経由するため、gravity_IsSettled axiom に帰着する -/
+theorem IsSettled_settleAfterCut (s : Shape) (s' : Shape)
+        (h : s.settleAfterCut = some s') (h_lc : s.layerCount ≤ 5) :
+        s'.IsSettled := by
+    simp only [settleAfterCut] at h
+    split at h
+    · -- isEmpty = true: s.gravity
+      exact gravity_IsSettled s s' h h_lc
+    · -- isEmpty = false: afterShatter.gravity
+      have h_sf : (s.shatterOnFall ((Gravity.floatingUnits s).flatMap
+            Gravity.FallingUnit.positions)).layerCount ≤ 5 := by
+        simp only [shatterOnFall, layerCount_clearPositions]; exact h_lc
+      exact gravity_IsSettled _ s' h h_sf
+
+/-- halfDestroy の出力は安定状態 -/
+theorem IsSettled_halfDestroy (s : Shape) (s' : Shape)
+        (h : s.halfDestroy = some s') (h_lc : s.layerCount ≤ 5) :
+        s'.IsSettled := by
+    simp only [halfDestroy] at h
+    have h_sc : s.shatterOnCut.layerCount ≤ 5 := by
+        simp only [shatterOnCut, layerCount_clearPositions]; exact h_lc
+    have h_eh : s.shatterOnCut.eastHalf.layerCount ≤ 5 := by
+        simp only [eastHalf, mapLayers, layerCount, List.length_map]; exact h_sc
+    exact IsSettled_settleAfterCut _ s' h h_eh
+
+/-- cut の東側出力は安定状態 -/
+theorem IsSettled_cut_east (s : Shape) (s' : Shape)
+        (h : s.cut.1 = some s') (h_lc : s.layerCount ≤ 5) :
+        s'.IsSettled := by
+    rw [← halfDestroy_eq_cut_east] at h
+    exact IsSettled_halfDestroy s s' h h_lc
+
+/-- cut の西側出力は安定状態 -/
+theorem IsSettled_cut_west (s : Shape) (s' : Shape)
+        (h : s.cut.2 = some s') (h_lc : s.layerCount ≤ 5) :
+        s'.IsSettled := by
+    simp only [cut] at h
+    have h_sc : s.shatterOnCut.layerCount ≤ 5 := by
+        simp only [shatterOnCut, layerCount_clearPositions]; exact h_lc
+    have h_wh : s.shatterOnCut.westHalf.layerCount ≤ 5 := by
+        simp only [westHalf, mapLayers, layerCount, List.length_map]; exact h_sc
+    exact IsSettled_settleAfterCut _ s' h h_wh
+
+-- TODO: IsSettled_swap は normalize の IsSettled 保存定理（IsSettled_normalize）の
+-- 追加後に実装予定。swap の出力は combineHalves → normalize で生成されるため、
+-- gravity_IsSettled axiom に直接帰着できない。
 
 end Shape
