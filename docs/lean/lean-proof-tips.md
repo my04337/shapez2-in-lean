@@ -66,6 +66,20 @@ private theorem Quarter.toString_noColon (q : Quarter) :
     | colored p c => cases p <;> cases c <;> decide  -- 全パーツ×全色を展開
 ```
 
+### `aesop` — 構造的ゴールの自動証明
+
+`simp only` で閉じない構造的ゴール（コンストラクタの一致・論理結合子・補題の連鎖適用）に試みる。
+S2IL では rotate180/rotateCW 等変性の基本等式が `@[aesop norm simp]` で登録済みのため、等変性ゴールは `aesop` で閉じる場合が多い。
+成功時は `aesop?` で安定版スクリプトを取得して置換する。詳細: [`aesop-guide.md`](aesop-guide.md)
+
+```lean
+-- 帰納型の全ケースを aesop に委ねる
+induction s <;> aesop
+
+-- 等変性ゴールを aesop で閉じる（@[aesop norm simp] 補題を活用）
+example (l : Layer) : l.eastHalf.rotate180 = l.rotate180.westHalf := by aesop
+```
+
 ### `rw` vs `simp only` — 適材適所
 
 | タクティク | 適するケース | 不向きなケース |
@@ -92,6 +106,14 @@ cases s <;> rfl
 -- 全コンストラクタを simp で閉じる場合
 cases s <;> simp [layers]
 ```
+
+### 非推奨・改名されたタクティク
+
+Lean 4 / Mathlib の更新でリネームされたタクティクを使うとビルド警告が出る。常に新名称を使うこと。
+
+| 非推奨（旧名） | 代替（新名） | 備考 |
+|---|---|---|
+| `push_neg` | `push Not` | Mathlib でリネーム済み。使用すると警告が出る |
 
 ---
 
@@ -184,14 +206,37 @@ Bool 値の場合分けに `by_cases h : f x = true` を使おうとすると、
 代わりに `cases` でパターンマッチする。
 
 ```lean
--- ❌ Mathlib なしでは使えない場合がある
+-- ✅ Mathlib 導入済みのため by_cases も利用可能
 by_cases h : f x = true
 
--- ✅ cases でパターンマッチ
+-- ✅ cases でパターンマッチ（より明示的で Mathlib 非依存）
 cases hd : f x with
 | true  => ...
 | false => ...
 ```
+
+---
+
+## Bool 矛盾ゴールのクローザー
+
+`h : false = true ⊢ False` や `h : b = true` が `false = true` になった場合の閉じ方。
+
+```lean
+-- ✅ 方法 1: simp で自動消去（最も簡潔）
+simp at h
+
+-- ✅ 方法 2: decide を使った absurd
+exact absurd h (by decide)
+
+-- ✅ 方法 3: Bool 専用コンストラクタ
+exact Bool.noConfusion h
+
+-- ✅ 方法 4: Bool.false_ne_true に渡す
+exact (Bool.false_ne_true h)
+```
+
+**発生場面**: `any (· == q) = false` を得た後、同じ式が `true` になることを示した場合
+（例: `simp only [h_disj] at h_mem` で `false = true` に帰着するケース）。
 
 ---
 
@@ -436,3 +481,33 @@ v4.29.0 では `updateGitPkg` が `git clean -xf` をチェックアウト後に
 ユーザー向けには、ドキュメントの表現が
 「instance normal form に正規化する」→「expected type に合わせてインスタンスをラップする」
 と改善された。動作は実質的に変わらない。
+
+---
+
+## Gravity 証明で判明した偽定理カタログ
+
+`Gravity.lean` の `process_rotate180` 証明過程で、以下の仮定が全て偽と判明した。
+これらに依拠するアプローチを取ってはならない。
+
+| 偽の仮定 | なぜ偽か |
+|---|---|
+| `shouldProcessBefore_no_chain` | 4L+ で 3 pin 連鎖反例。2-3L 限定検証の不備 |
+| `sortFallingUnits_spb_order_on_floatingUnits` | 4 要素反例。insertSorted のグリーディ停止が順序を壊す |
+| `sortFallingUnits_shouldProcessBefore_one_way_order` | spb 非推移性。3 要素反例 |
+| `sortFallingUnits_later_not_spb_earlier` | 同根原因（非推移的 spb サイクル） |
+| `sortFallingUnits_inversion_is_tied` (一般 Perm) | 3L 3色 8628 violations。r180 固有 Perm でのみ真 |
+| sortFallingUnits が正しい topological sort を生成する | insertSorted はグリーディで後方不整合を生む |
+| spb が floatingUnits 上で全順序 | tied ペアが存在する |
+| BFS 列挙結果がリスト等号で r180 等変 | 探索順序が方角で変わる |
+| `floatingUnits_rotate180` (list equality) | BFS order changes (.any メンバーシップのみ等変) |
+| `sortFallingUnits_preserves_spb_order` | 3-cycle 下で insertSorted の順序保存が偽 |
+| `spb_antisymm_of_disjoint` | 位置素のみでは反対称律不成立 |
+| `foldl_sorted_disjoint_flatMap_eq` | flatMap .any 等価 + 位置素では unit 分割不一致 |
+| sortFallingUnits 出力が pointwise .any 等価 | 2L: 800 不一致, 3L: 9072 不一致 |
+
+### 共通教訓
+
+- **ペアワイズ非循環 ≠ DAG**: 全ペアの 2-cycle がなくても 3-cycle 以上が存在しうる
+- **計算検証は十分な規模で**: 2-3L のみの計算検証は 4L+ 反例を見逃す
+- **リスト等号は探索順序依存**: BFS 出力はリスト等号ではなく `.any` メンバーシップで述べる
+- **偽定理に依拠する証明チェーンは直ちに不健全**: sorry 1 個でも上流全体が汚染される

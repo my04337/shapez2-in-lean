@@ -115,7 +115,7 @@ Shapez2 で使用される主要な用語をナレッジパネルのカテゴリ
 | 結合能力 (Bond Capability) | 象限が他の隣接象限と塊を形成できる能力。通常パーツ (circle, rectangle, star, windmill) および結晶が持つ。空の象限とピンは結合能力を持たない。 |
 | 構造結合 (Structural Bond) | 結合能力を持つ2つの隣接象限間の結合。シェイプ種別・色を問わない。落下時の塊の判定に使用する。詳細は [`falling.md`](falling.md) を参照。 |
 | 構造クラスタ (Structural Cluster) | 構造結合の推移閉包による連結成分。一体の剛体として落下する単位。ピンは構造クラスタに参加しない。 |
-| 結晶結合 (Crystal Bond) | 結晶同士の特殊な結合。砕け散りの伝播範囲を決定する。同レイヤ内では同色の隣接結晶、上下レイヤ間では同方角の結晶（色不問）が結合する。構造結合とは別の概念。詳細は [`crystal-shatter.md`](crystal-shatter.md) を参照。 |
+| 結晶結合 (Crystal Bond) | 結晶同士の特殊な結合。砕け散りの伝播範囲を決定する。同レイヤ内では隣接する結晶（色不問）、上下レイヤ間では同方角の結晶（色不問）が結合する。構造結合とは別の概念。詳細は [`crystal-shatter.md`](crystal-shatter.md) を参照。 |
 | 結合クラスタ (Bonded Cluster) | 結晶結合の推移閉包による連結成分。砕け散り時に一斉に破壊される単位。 |
 
 ### 接地と浮遊 (Grounding and Floating)
@@ -126,7 +126,7 @@ Shapez2 で使用される主要な用語をナレッジパネルのカテゴリ
 | 名称 | 説明 |
 |---|---|
 | 接地接触 (Grounding Contact) | 2つの非空象限間の物理的接触。垂直方向ではピンを含む全非空象限が接触を伝播し、水平方向では非ピンの非空象限のみが接触を伝播する。 |
-| 接地 (Grounded) | 非空象限が接地接触の連鎖を辿ってレイヤ 0（最下層）の非空象限に到達できる状態。 |
+| 接地 (Grounded) | 非空象限が接地接触の連鎖を辿ってレイヤ 0（最下層）の非空象限に到達できる状態。連鎖方向は**上方向（レイヤ番号増加方向）と水平方向のみ**であり、下方向（レイヤ番号減少方向）の垂直接触は接地パスとして認められない。 |
 | 浮遊 (Floating) | 非空象限またはその集合が接地していない状態。落下の対象となる。 |
 | 落下単位 (Falling Unit) | 落下処理の対象となる最小単位。浮遊している構造クラスタまたは浮遊しているピン。 |
 
@@ -194,6 +194,11 @@ Shapez2 で使用される主要な用語をナレッジパネルのカテゴリ
 | 切断処理機 (Half-Destroyer) | アイソレーターレーザーでシェイプの **西側の半分 (West Half)** を消去し、残りのパーツを出力する建物。 |
 | 切断機 (Cutter) | ホログラフィックブレードでシェイプを2つに切断し、**西側の半分 (West Half)** と **東側の半分 (East Half)** を並列に出力する建物。 |
 | スワップ機 (Swapper) | 2つのホログラフィックブレードで2つのシェイプを同時に切断し、それぞれの **西側の半分 (West Half)** を入れ替えて出力する建物。 |
+
+> **Swapper 実装上の注意点（S2IL 実装由来）**:
+> - `combineHalves` 後のシェイプは安定状態 (settled) とは限らない。異なるシェイプの東西合成で浮遊ユニットが発生しうる
+> - 現行実装では `combineHalves` 後に gravity を呼ばず `normalize` のみを適用する（ゲーム仕様に準拠）
+> - 辺縁ケース（一方の入力が shatterOnCut+settleAfterCut で完全に空になる場合）では、残った側の `eastHalf` のみが出力される。この eastHalf 選択は rotate180 等変でない（東西が入れ替わらないため）
 
 ### 回転 (Rotating)
 シェイプを回転する操作。  
@@ -275,23 +280,25 @@ Shapez2 での色の分類は以下の通り。
 
 #### 混色のルール (Mixing Rules)
 混色の基本的なルールは以下の通り。
-各色を RGB 原色成分の重み付き表現で解釈し、等体積混合後の各原色成分の比率が閾値以上であれば当該原色を含む色として判定する。
+各色を RGB 原色のビット表現で解釈する（Red=100, Green=010, Blue=001, Yellow=110, Cyan=011, Magenta=101, White=111, Uncolored=000）。
+共通の原色成分があればその交集合、なければ和集合を結果とする。
 両者に共通の原色が無い場合、混色の結果は両方の原色を合わせた色になる。例えば、Red と Green を混ぜると Yellow になる。
 両者に共通の原色がある場合、混色の結果は共通部分の原色が結果に残る。例えば、Cyan (G+B) と Magenta (R+B) を混ぜると共通の Blue が結果になる。
 
-> **注記**: Uncolored の液剤はゲーム上存在しないため、Uncolored を含む混色はゲーム上未定義である。
-> 以下のテーブルでは数学的な拡張として重み付きモデルに基づく値を記載している。
+> **注記**: Uncolored の液剤はゲーム上存在しないが、sandbox モードで検証済み。
+> Uncolored は混色の **恒等元** として振る舞う（`Uncolored + X = X`）。
+> 以下のテーブルにはこの検証結果を反映している。
 
 | 色1 \ 色2 | Red | Green | Blue | Yellow | Cyan | Magenta | White | Uncolored |
 |---|---|---|---|---|---|---|---|---|
-| **Red** | Red | Yellow | Magenta | Red | Red | Red | Red | Red |
-| **Green** | Yellow | Green | Cyan | Green | Green | Green | Green | Green |
-| **Blue** | Magenta | Cyan | Blue | Blue | Blue | Blue | Blue | Blue |
-| **Yellow** | Red | Green | Blue | Yellow | Green | Red | Yellow | Uncolored |
-| **Cyan** | Red | Green | Blue | Green | Cyan | Blue | Cyan | Uncolored |
-| **Magenta** | Red | Green | Blue | Red | Blue | Magenta | Magenta | Uncolored |
-| **White** | Red | Green | Blue | Yellow | Cyan | Magenta | White | Uncolored |
-| **Uncolored** | Red | Green | Blue | Uncolored | Uncolored | Uncolored | Uncolored | Uncolored |
+| **Red** | Red | Yellow | Magenta | Red | **White** | Red | Red | Red |
+| **Green** | Yellow | Green | Cyan | Green | Green | **White** | Green | Green |
+| **Blue** | Magenta | Cyan | Blue | **White** | Blue | Blue | Blue | Blue |
+| **Yellow** | Red | Green | **White** | Yellow | Green | Red | Yellow | Yellow |
+| **Cyan** | **White** | Green | Blue | Green | Cyan | Blue | Cyan | Cyan |
+| **Magenta** | Red | **White** | Blue | Red | Blue | Magenta | Magenta | Magenta |
+| **White** | Red | Green | Blue | Yellow | Cyan | Magenta | White | White |
+| **Uncolored** | Red | Green | Blue | Yellow | Cyan | Magenta | White | Uncolored |
 
 ### ピン押し (Pin Pushing)
 シェイプを支持するためのピンを押し込む操作。
@@ -395,10 +402,16 @@ Empty と数値 0 は **Off** 、それ以外はすべて **On** に分類され
 | シミュレーション切断処理機 (Simulated Half-Destroyer) | 入力されたシェイプコードの **西側の半分 (West Half)** を削除し、残りのシェイプコードを出力する建物。 |
 | シミュレーションスワップ機 (Simulated Swapper) | 入力された2つのシェイプコードを同時に切断し、それぞれの **西側の半分 (West Half)** を入れ替えて出力する建物。 |
 | シミュレーション積層機 (Simulated Stacker) | 2つの入力されたシェイプコードを積み重ねて出力する建物。 |
-| シミュレーション積み重ね解除機 (Simulated Unstacker) | 入力されたシェイプコードの最上位レイヤを分割して2つのシェイプコードとして出力する建物。 |
+| シミュレーション積み重ね解除機 (Simulated Unstacker) | シェイプ信号を受け取り、**最上位レイヤ**（1 層分）と**残りのレイヤ**の 2 つのシェイプ信号を出力する建物。出力対象となる非空レイヤが存在しない場合、その出力は **null** になる。落下や砕け散りは発生しない。これをカスケード接続することで、各レイヤの構成を純粋に解析できる。 |
 | シミュレーション着色機 (Simulated Painter) | 入力されたシェイプコードの最上位レイヤを着色して出力する建物。 |
 | シミュレーションピン押し機 (Simulated Pin Pusher) | 入力されたシェイプコードの第1レイヤの空でない各象限の下にピンを押し込んだシェイプコードを出力する建物。 |
 | シミュレーション結晶製造機 (Simulated Crystal Generator) | 入力されたシェイプコードの隙間やピンを結晶で埋めたシェイプコードを出力する建物。 |
+
+### 図形解析装置 (Shape Analysis)
+
+| 名称 | 説明 |
+|---|---|
+| 図形分析器 (Shape Analyzer) | シェイプ信号を受け取り、**北東 (NE) 象限**の図形タイプ（Circle / Rectangle / Star / Windmill / Pin / Crystal / 空）と**色**をそれぞれ別の信号として出力する建物。シミュレーション積み重ね解除機と組み合わせることで、各レイヤ・各象限の構成を正確に把握でき、MAM の層解析ロジックに活用される。 |
 
 ### 全自動工場 (Make Anything Machine / MaM)
 

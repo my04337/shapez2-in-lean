@@ -48,7 +48,7 @@ Quarter.isFragile : Quarter → Bool
 
 ### 3.1 同レイヤ内の結合条件
 
-同一レイヤ内で、**同じ色** の結晶が **隣接** している場合に結合する。
+同一レイヤ内で、結晶が **隣接** している場合に結合する。**色は問わない**。
 
 > 隣接関係の定義（同レイヤ内の隣接ペア、対角ペアの非隣接など）については [`adjacency.md`](adjacency.md) を参照。
 
@@ -57,15 +57,18 @@ Quarter.isFragile : Quarter → Bool
 象限 A と象限 B が同レイヤ内で結合する条件:
 1. A と B が **同レイヤ内で隣接** している（[隣接ペア](adjacency.md#3-同レイヤ内の隣接関係) の4組）
 2. A と B がともに `Quarter.crystal` である
-3. A と B の **色が同じ** である
+
+> **色は結合条件に含まれない**。異色の結晶同士でも隣接していれば結合する。
 
 #### 同レイヤ結合の例
 
-- `crcrcrcr` — 4象限すべてが赤の結晶 → 全て結合して1クラスタ
-- `crcr----` — NE(cr) と SE(cr) が隣接同色 → 結合
-- `cr----cr` — NE(cr) と NW(cr) が隣接同色 → 結合
-- `crcgcrcg` — NE(cr)≠SE(cg), SE(cg)≠SW(cr), SW(cr)≠NW(cg), NW(cg)≠NE(cr) → 結合なし（4つの独立クラスタ）
-- `crcrcgcg` — NE(cr)-SE(cr) が結合、SW(cg)-NW(cg) が結合 → 2つの独立クラスタ
+- `crcrcrcr` — 4象限すべてが赤の結晶 → 全て結合で1クラスタ
+- `crcr----` — NE(cr) と SE(cr) が隣接 → 結合
+- `cr----cr` — NE(cr) と NW(cr) が隣接 → 結合
+- `crcgcb--` — NE(cr)-SE(cg)-SW(cb) が隣接結晶（色不問） → 全結合で1クラスタ
+- `crcgcrcg` — NE(cr)-SE(cg) 結合, SE(cg)-SW(cr) 結合, ...→ 全結合で1クラスタ（東西跨ぎ → カッターで全砕け）
+- `crcrcgcg` — SE(cr)-SW(cg) 結合で全結合で1クラスタ（東西跨ぎ → カッターで全砕け）
+- `cr--cr--` — NE(cr) と SW(cr) は **対角** → 結合しない（2つの独立クラスタ）
 
 ### 3.2 上下レイヤ間の結合条件
 
@@ -145,16 +148,16 @@ Quarter.isFragile : Quarter → Bool
 | 変化前 | 変化後 | 説明 |
 |---|---|---|
 | `crcrcrcr` | `--------` (空) | 全4象限が赤結晶で1クラスタ → 東西に跨がる → 全砕け |
-| `crRgSbcr` | `--RgSb--` | NE(cr) と NW(cr) が隣接同色で結合 → 東西に跨がる → cr 2つが砕ける。Rg, Sb は非結晶なので残る |
-| `CrcgcgWu` | `Cr----Wu` | SE(cg) と SW(cg) が隣接同色で結合 → 東西に跨がる → cg 2つが砕ける。Cr, Wu は非結晶なので残る |
+| `crRgSbcr` | `--RgSb--` | NE(cr) と NW(cr) が隣接結晶で結合（色不問）→ 東西に跨がる → cr 2つが砕ける。Rg, Sb は非結晶なので残る |
+| `CrcgcgWu` | `Cr----Wu` | SE(cg) と SW(cg) が隣接結晶で結合（色不問）→ 東西に跨がる → cg 2つが砕ける。Cr, Wu は非結晶なので残る |
 | `crcrP---:--cgcg--` | `----P---:--------` (L2 は空) | L1:NE(cr)-SE(cr) が同レイヤ結合、L2:SW(cg)-NW(cg) が同レイヤ結合、L1:SE(cr)-L2:SE(cg) が上下結合 → 全結晶が1クラスタ → 東西に跨がる → 全結晶が砕ける。P- はピンなので残る |
 
 #### 切断による砕け散りの例（砕けない場合）
 
 | シェイプコード | 説明 |
 |---|---|
-| `crcgcrcg` | NE(cr)≠SE(cg), SE(cg)≠SW(cr), SW(cr)≠NW(cg), NW(cg)≠NE(cr) → 4つの独立した結晶。各クラスタは1象限なので東西に跨がらない |
-| `crcrcgcg` | {NE(cr), SE(cr)} と {SW(cg), NW(cg)} の2クラスタ。前者は East Half のみ、後者は West Half のみ → 東西に跨がらない |
+| `cr--cr--` | NE(cr) と SW(cr) は対角 → 結合しない。2つの独立クラスタはそれぞれ East Half / West Half のどちらかに収まる |
+| `cr------` | 単一結晶のみ。NE(cr) は East Half のみ → 東西に跨がらない |
 
 ---
 
