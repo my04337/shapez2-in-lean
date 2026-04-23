@@ -490,7 +490,7 @@ d({L3:SE, L3:SW}):
 
 **理由**: 各落下単位の落下距離 d(U) は 1 以上の有限値であり、落下処理はアルゴリズム 6.2 のとおり 1 パスで全落下単位の目標位置を算出して適用するため、反復は不要である。
 
-> **注意（≥6L の制限）**: 上記「反復は不要」の主張は **layerCount ≤ 5 のシェイプに限り正しい**。6 層以上のシェイプでは、foldl 中の pin 配置が水平接地接触を切断し、隣接方向の crystal が非接地のまま残存するケースが存在する（反例: `L0=[--,--], L1=[--,cr], L2=[--,P], L3=[cr,P], L4=[cr,P], L5=[cr,cr]` → gravity 出力に浮遊クラスタが残る）。§10.4 の「繰り返される」記述と矛盾するため、**現行実装 `Gravity.process` は 1 パス方式を採用し、`gravity_IsSettled` 定理には `s.layerCount ≤ 5` の仮説が付与されている**。将来的に反復方式への移行が必要（MILESTONES.md 参照）。
+> **注意（旧 foldl モデルの制約）**: 上記「反復は不要」の主張は **旧 foldl（1 パス）実装において layerCount ≤ 5 のシェイプに限り正しかった**。6 層以上のシェイプでは foldl 中の pin 配置が水平接地接触を切断し、crystal が非接地のまま残存するケースが存在した（反例: `L0=[--,--], L1=[--,cr], L2=[--,P], L3=[cr,P], L4=[cr,P], L5=[cr,cr]`）。現在の Wave Gravity モデルへの移行後はこの制限は無関係である。
 
 ### 7.2 決定性 (Determinism)
 
@@ -521,33 +521,9 @@ d({L3:SE, L3:SW}):
 
 落下により最上位レイヤが全て空になる場合がある。落下処理の最終ステップで `Shape.normalize` を適用し、末尾の空レイヤを除去する。
 
-### 7.6 foldl 方式のレイヤ数制限（≤5L）
+### 7.6 旧 foldl 実装のレイヤ数制限（参考記録）
 
-> **正式決定（2026-04-13）**: 現行の foldl（1 パス）方式による落下処理の形式検証は、**`layerCount ≤ 5` のシェイプのみ**を対象とする。
-
-#### 根拠
-
-1. **反例の存在**: `Gravity.process` の回転等変性 `process_rotate180` は 6 層以上のシェイプに対して反例が存在する（§7.1 参照）。同 minLayer の FU が同一方角を共有する場合、カスケード障害物効果によりソート順序が結果に影響する
-2. **安定性の破綻**: `gravity_IsSettled`（落下処理の出力が安定状態であること）も 6 層以上で偽。pin 配置が水平接地接触を切断し、浮遊クラスタが残存するケースが存在する
-3. **ゲーム上の到達可能性**: vanilla4（maxLayers=4）および vanilla5（maxLayers=5）では、各加工装置の入力は常に `layerCount ≤ maxLayers ≤ 5` である。6 層以上のシェイプが `Gravity.process` に渡されるのは Stacker の 1st gravity（`placeAbove` 後）のみであり、この場合は `IsSettled` 仮説による別定理で対応する（§10.4 参照）
-4. **計算的検証**: ≤5L のシェイプ 1.9M+ 個で回転等変性 0 failures、65K+ 個で CW 回転等変性 0 failures
-
-#### 影響範囲
-
-以下の定理に `s.layerCount ≤ 5` 仮説が付与されている:
-
-| 定理 | ファイル | 内容 |
-|---|---|---|
-| `process_rotate180` | Gravity.lean | 180° 回転等変性 |
-| `process_rotateCW` | Gravity.lean | 90° 回転等変性 |
-| `gravity_rotate180_comm` | Gravity.lean | Shape API レベルの 180° 回転可換性 |
-| `gravity_rotateCW_comm` | Gravity.lean | Shape API レベルの 90° 回転可換性 |
-| `gravity_IsSettled` | SettledState.lean | 落下処理出力の安定性 |
-| `all_grounded_settle_foldl` | SettledState.lean | foldl 帰納法での接地不変量 |
-
-#### 将来的な拡張
-
-6 層以上のシェイプのサポートには、反復方式（波動モデル）への移行が必要である（MILESTONES.md 参照）。反復方式では `settle_foldl_eq`（ソート不変性）の証明資産は不要になるが、着地位置の性質に関する証明（sorry #4b 相当）は引き続き必要。
+> **旧モデル固有の制約（現在は無関係）**: 旧 foldl（1 パス）実装では、形式検証の対象を `layerCount ≤ 5` のシェイプのみとしていた。6 層以上では pin 配置が水平接地接触を切断し浮遊クラスタが残存する反例が存在したためである。現在の Wave Gravity モデルへの移行後はこの制限は解消されている。旧実装時代の定理一覧（`process_rotate180`、`gravity_IsSettled` 等）には `s.layerCount ≤ 5` 仮説が付いていたが、新モデル下では不要となる。
 
 ---
 
@@ -655,9 +631,9 @@ def Shape.isSettled (s : Shape) : Bool := (Gravity.floatingUnits s).isEmpty
 
 ### 10.4 落下処理の保証
 
-落下処理 `Gravity.process` の出力は（空でない限り）常に安定状態である（**layerCount ≤ 5 の場合**）。
+落下処理 `Gravity.process` の出力は（空でない限り）常に安定状態である。
 
-> **注意**: 原文「全ての浮遊落下単位が着地するまで処理が繰り返される」は反復方式を前提とした記述だが、現行実装は 1 パス方式（foldl）である。§7.1 で述べたとおり、≤5L では 1 パスで十分であるが、≥6L では不十分。この矛盾の解消は将来課題（MILESTONES.md「gravity_IsSettled の layerCount ≤ 5 制約解消」参照）。
+> **注記（旧モデルとの差異）**: 旧 foldl（1 パス）実装では `layerCount ≤ 5` の仮説が必要だったが、Wave Gravity モデルへの移行後はこの制限は不要である。
 
 ---
 

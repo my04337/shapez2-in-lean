@@ -65,5 +65,4 @@
 
 - `docs/s2il/equivariance-proof-patterns.md`
 - `docs/s2il/false-theorem-catalog.md`
-- `docs/plans/gravity-proof-execution-plan.md`
 - `.github/skills/lean-repl/references/repl-guide.md`

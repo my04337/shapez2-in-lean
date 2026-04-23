@@ -91,7 +91,7 @@ S2IL/
 | 新しい証明に着手する前 | `equivariance-proof-patterns.md` + `gravity-equivariance-analysis.md` で証明パターンを確認 |
 | 等変性証明を書く | `equivariance-proof-patterns.md` で使えるパターンを確認 |
 | Gravity 関連の作業 | `gravity-equivariance-analysis.md` |
-| sorry の状態を確認 | `docs/plans/gravity-proof-execution-plan.md` の axiom インベントリ |
+| sorry の状態を確認 | `S2IL/_agent/sorry-plan.json` |
 | CrystalBond の仕様変更を理解 | `crystal-bond-color-fix.md` |
 
 ### 新規ファイルの追加基準

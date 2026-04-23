@@ -1,7 +1,6 @@
 # 全加工装置の gravity 利用・IsSettled 必要性マトリクス
 
 > 作成日: 2026-04-09
-> 出典: [gravity-proof-execution-plan.md](../plans/gravity-proof-execution-plan.md) §3.8
 
 ---
 
@@ -52,7 +51,7 @@
 
 ## 備考
 
-- `process_rotate180` は ≥6L で偽（反例あり）。詳細は [gravity-proof-execution-plan.md §1](../plans/gravity-proof-execution-plan.md) 参照
+- `process_rotate180` は **旧 foldl モデルで** ≥6L のシェイプに対して偽（反例あり）。Wave Gravity モデルへの移行後はこの制限は無関係
+- 上表の `≤ 5` 仮説はすべて旧 foldl（1 パス）実装に由来する制約。Wave Gravity モデルでは不要となる
 - game-settled 保証: ゲーム上、全加工装置の入力は他の Machine 出力（gravity 経由）→ 常に settled
 - Swapper の `combineHalves` 後は `normalize` のみ（gravity なし）。浮遊ユニット発生の可能性は別途確認が必要
-- stress8（maxLayers > 5）のサポートは現時点では優先度外

@@ -122,7 +122,7 @@
     "axiom_replace": {
       "description": "axiom を構成的証明に置換する",
       "steps": [
-        {"action": "read", "target": "docs/plans/gravity-proof-execution-plan.md", "section": "§2 sorry 解消戦略"},
+        {"action": "read", "target": "S2IL/_agent/sorry-plan.json", "note": "axiom エントリ・依存・次アクションを確認"},
         {"action": "grep", "pattern": "axiom {name}", "scope": "S2IL/"},
         {"action": "read", "target": "依存先ファイル（route-map.json の chain を参照）"},
         {"action": "skill", "name": "lean-proof-planning", "note": "証明戦略を策定してから着手する"}
@@ -141,8 +141,8 @@
     "sorry_settle": {
       "description": "既存の sorry を解消する",
       "steps": [
-        {"action": "read", "target": "docs/plans/gravity-proof-execution-plan.md", "section": "§1 sorry カタログ"},
-        {"action": "read", "target": "docs/plans/gravity-proof-execution-plan.md", "section": "§2 Axiom インベントリ"},
+        {"action": "read", "target": "S2IL/_agent/sorry-plan.json", "note": "sorry エントリ・依存・次アクションを確認"},
+        {"action": "read", "target": "S2IL/_agent/sorry-goals.md", "note": "sorry シグネチャ一覧"},
         {"action": "skill", "name": "lean-proof-planning", "note": "証明戦略の策定・偽定理の早期チェック"},
         {"action": "skill", "name": "lean-repl", "note": "証明ゴールの探索・タクティク検証"}
       ],
