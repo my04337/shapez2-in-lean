@@ -18,8 +18,20 @@ S2IL プロジェクトの開発計画・マイルストーン・証明アプロ
 
 | ファイル | 概要 |
 |---|---|
-| [gravity-proof-execution-plan.md](gravity-proof-execution-plan.md) | Gravity 証明 統合実行計画（Plan B）。axiom インベントリ・SettledShape 完了計画・rCW/rCCW 等変性・Wave Gravity Model ロードマップ・リファクタリング計画を統合 |
-| [codebase-restructure-plan.md](codebase-restructure-plan.md) | コード分割単位見直し計画。分割案 A〜D の比較、段階導入プラン、Appendix の具体ディレクトリ構成案を整理 |
+| [gravity-greenfield-rewrite-plan.md](gravity-greenfield-rewrite-plan.md) | **2026-04-23 新規**: Gravity 層を archive + skeleton + de-axiomatization の 3 phase で再構築する計画（第58報で基盤反例確定を受けて策定）|
+| [gravity-proof-execution-plan.md](gravity-proof-execution-plan.md) | Gravity 証明 統合実行計画（Plan B）。axiom インベントリ・確立済みの事実・Gravity モジュール概要・Wave Gravity Model ロードマップを統合 |
+| [s1-proof-plan.md](s1-proof-plan.md) | S1 axiom (`waveStep_nonGroundedLayerSum_lt`) 証明計画。Telescoping Sum 戦略・sub-lemma 分解（証明状況は sorry-card 参照） |
+
+### インフラ改善提案
+
+| ファイル | 概要 |
+|---|---|
+| [agent-efficiency-proposals.md](agent-efficiency-proposals.md) | エージェントのコンテキスト消費削減提案。Tier 1 は 2026-04-23 適用済み（sig-digest / extract-goal-context / セッション圧縮ルール）、Tier 2・3 は保留 |
+
+**現在のフォーカス**: Gravity 層の Greenfield Rewrite（`gravity-greenfield-rewrite-plan.md`）
+→ Step B3b `placeLDGroups_landing_groundingEdge_mono` は第59報で一時 axiom 化（sorry = 0）
+
+アーカイブ済: `archive/session-efficiency-followup-plan.md`（2026-04-21 に一通り適用済みのため退避）
 
 ---
 
@@ -34,6 +46,11 @@ S2IL プロジェクトの開発計画・マイルストーン・証明アプロ
 | 新しい証明に着手する前 | 既存の証明計画ファイルを確認し、関連する計画がないか調べる |
 | 証明が難航した場合 | 既存のアプローチ候補を確認し、代替戦略を検討 |
 | 証明が完了した場合 | 該当する計画ファイルとマイルストーンを更新 |
+
+### 証明計画の新規作成
+
+新しい証明計画を策定するときは **必ず** `docs/agent/proof-plan-current-focus-guide.md` の手順に従い、
+Current Focus セクション・sorry-plan.json エントリ・sorry-cards を同時に整備すること。
 
 ### 新規ファイルの追加基準
 

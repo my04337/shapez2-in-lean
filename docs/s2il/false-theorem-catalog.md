@@ -1,7 +1,7 @@
 # 偽定理カタログ
 
 > 作成日: 2026-04-14
-> 最終更新: 2026-04-14
+> 最終更新: 2026-04-20 (B3 landing empty 偽定理追加)
 
 Gravity 等変性証明チェーンの過程で発見された偽定理・棄却済みアプローチの一覧。
 同じ落とし穴を避けるためのリファレンスとして保存する。
@@ -14,7 +14,7 @@ Gravity 等変性証明チェーンの過程で発見された偽定理・棄却
 |---|---|
 | `PinLandingEmpty` 不変量保存 | 5L 2dir で 16/112,882 violations。cluster→crystal 配置が後続 pin の着地先を塞ぐ |
 | `one_step_all_grounded_pin` nonEmpty case (∀ obs) | 任意 obs で偽。foldl 中間状態では 0 violations。`h_step : ∀ obs'` が過度に一般的 |
-| `process_rotate180` without layerCount bound | ≥6L で偽（6L 反例あり）。≤5L では 1.9M+ shapes で 0 failures |
+| `process_rotate180` without layerCount bound (旧 waveStep) | ≥6L で偽（6L 反例あり）。**解決済み**: settling FU を事前着地距離の昇順でソートすることで全レイヤ数で等変に |
 | `landingDistance_placeFU_gap` の minLayer ≤ 2 制約撤廃 | placeAbove shapes で干渉確認（128/34,322 ペア） |
 | `gravity_truncate_eq_gravity_gravity_truncate` | gravity 前後で truncate 結果が異なる。一般には偽 |
 | exfalso by `layerCount ≤ 10 + minLayer ≥ 3 + gap ≥ 2` | p=3, q=5, gap=2 で矛盾せず。算術的に不可 |
@@ -23,6 +23,12 @@ Gravity 等変性証明チェーンの過程で発見された偽定理・棄却
 | ImmBelow as foldl invariant | 4,504/45,576 failures（cross-direction cluster が破壊） |
 | ANEG → ImmBelow | 反例あり: `obs = [⟨cr, -, -, -⟩, ⟨cr, cr, -, -⟩]` — ANEG=true, ImmBelow=false |
 | ImmBelow as dual invariant (ANEG ∧ ImmBelow) | all-empty obstacle でも 916/27,945 IB failures |
+| `shouldProcessBefore_no_chain` | 4L 反例: 3 pins in same column |
+| `sortFallingUnits_spb_order_preserving` | 3 要素干渉パターン: chains a→b→c |
+| `sortFallingUnits_inversion_is_tied` | one-way pairs can be inverted in sortFallingUnits output |
+| `B3_landing_empty_in_obs` (waveStep) | 4L/3-type で偽。結晶ボンドチェーンがピンを迂回し、settling cluster が非 settling ピン位置に着地。例: cluster[(1,NE),(1,SE),(2,SE),(3,SE),(3,NE)] + pin(2,NE) → (3,NE) が (2,NE) に着地しピン上書き。≤3L では真。main axiom は依然真 |
+| `waveStep_floatingUnits_length_lt` | 10L 反例: FU count 2→2→0。非 overwrite パターン。nonGroundedLayerSum 測度に切替済み |
+| `floatingUnits_waveStep_subset_nonSettling` | 9L 反例: s' の FU が fus.filter(nonSettling) に含まれない |
 
 ---
 

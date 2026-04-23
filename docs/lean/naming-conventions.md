@@ -81,6 +81,52 @@ structure OneHom (M : Type) (N : Type) [One M] [One N] where
 |---|---|---|
 | 結論をそのまま | `mul_zero`, `succ_ne_zero` | `a * 0 = 0`, `succ n ≠ 0` |
 | `_of_` で仮定記述 | `lt_of_succ_le`, `lt_of_le_of_ne` | 仮定の順に列挙 |
+
+---
+
+## 新規補題の命名フロー（エージェント運用ルール）
+
+新規補題を導入するときは、以下の 3 段階で名前を確定し、**仮称をドキュメントに残さない**。
+これは sorry-plan.json / sorry-card / symbol-map.jsonl の整合性を保ち、補題検索のヒット率を高めるための必須ルール。
+
+### ステップ 1: REPL で仮称シグネチャをスケッチ
+
+```lean
+example (s : Shape) ... : ... := by sorry
+```
+
+- 名前は `example` のままでよい（この時点では確定しない）
+- 型だけ REPL で通すことが目的
+
+### ステップ 2: REPL 型チェック通過後に確定名を決める
+
+確定名は以下を満たすまで確定しない:
+
+1. 本ファイルの基本ルール（返り値の型別 case、`_of_` 区切り）に従っている
+2. 既存の類似補題（symbol-map.jsonl で `grep` して確認）と命名パターンが揃っている
+3. 対象となる操作の層（Shape / Layer / Gravity / …）を接頭辞に含める
+
+### ステップ 3: 確定名をまず `sorry-plan.json` に記録
+
+- 新補題の **確定名** を `ready_lemmas` または `remaining_steps.title` に登録する
+- sorry-card にも記入する場合は **確定名のみ** を書く
+- **仮称（`_persists_`, `_tmp_` など）を sorry-card / 本文コメントに残さない**
+- 確定名を途中で変更した場合は、以下を同時に grep して全箇所を更新:
+  - `S2IL/**/*.lean`
+  - `S2IL/_agent/sorry-plan.json`
+  - `S2IL/_agent/sorry-cards/*.md`
+  - `docs/plans/*.md`
+
+### 違反例（過去の実績）
+
+- 2026-04-22 Step 0.2 で sorry-card に `placeLDGroups_landing_persists_nonEmpty`（仮称）と `placeLDGroups_landing_nonEmpty`（確定名）が混在。
+  - 原因: REPL 確定前に sorry-card を先に書いた → 書き直し忘れ
+  - 対策: 本フローを `AGENTS.md` 証明作業セクションにも明示
+
+### 関連
+
+- 詳細な運用は [`docs/agent/proof-plan-current-focus-guide.md`](../agent/proof-plan-current-focus-guide.md) の「役割分担」セクションを参照
+- 確定名の検索: [`S2IL/_agent/symbol-map.jsonl`](../../S2IL/_agent/symbol-map.jsonl) を `grep_search` で検索
 | `_left` / `_right` | `add_le_add_left` | 左右の変形 |
 | 省略形 | `pos`, `neg`, `nonpos`, `nonneg` | `0 < x`, `x < 0`, `x ≤ 0`, `0 ≤ x` |
 | 公理的性質 | `refl`, `symm`, `trans`, `comm`, `assoc` | 反射・対称・推移・交換・結合 |

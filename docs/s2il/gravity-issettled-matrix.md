@@ -28,7 +28,7 @@
 | CrystalGenerator | `crystallize_rotate180_comm` | なし | なし |
 | Rotator | `rotateCW_rotate180_comm` 等 | なし | なし |
 | PinPusher | `pinPush_rotate180_comm` | `config.maxLayers ≤ 5` | なし |
-| Stacker | `stack_rotate180_comm` | `config.maxLayers ≤ 5` | **あり** |
+| Stacker | `stack_rotate180_comm` | `config.maxLayers ≤ 5` + `IsSettled` | なし（axiom 依存） |
 | Cutter | `cut_rotate180_comm` | `s.layerCount ≤ 5` | なし |
 | HalfDestroy | `halfDestroy_rotate180` | `s.layerCount ≤ 5` | なし |
 | Swapper | `swap_rotate180_comm` | `s1.layerCount ≤ 5 ∧ s2.layerCount ≤ 5` + 両入力の settleAfterCut が some | なし |
