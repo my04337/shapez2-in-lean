@@ -1,5 +1,5 @@
 -- sortFallingUnits((floatingUnits s).map r180) vs sortFallingUnits(floatingUnits(s.r180)) の pointwise .any 比較
-import S2IL.Behavior.Gravity
+import S2IL.Operations.Gravity
 
 open Gravity
 

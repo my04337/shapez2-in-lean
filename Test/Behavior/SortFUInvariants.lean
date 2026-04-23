@@ -1,6 +1,6 @@
 -- sortFallingUnits_shouldProcessBefore_order の厳密な反例チェック
 -- 特に非推移的パターン: pin_a → cluster_u → pin_c だが pin_a ↛ pin_c
-import S2IL.Behavior.Gravity
+import S2IL.Operations.Gravity
 
 open Gravity
 

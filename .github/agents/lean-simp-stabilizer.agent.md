@@ -1,7 +1,7 @@
 ---
 description: "Auto-stabilize Lean 4 simp to simp only [...] via REPL-extracted lemma list. Use when: stabilize simp, simp to simp only, replace simp, simp? automation, simp lemma list, make simp deterministic, simp only migration, fix unstable simp."
 tools: [execute, read, edit, search]
-argument-hint: "Pass file path and line number (e.g. S2IL/Behavior/Gravity.lean:42)"
+argument-hint: "Pass file path and line number (e.g. S2IL/Behavior/Gravity.lean:42). Optionally include diagnosticsFile path."
 ---
 
 あなたは Lean 4 コード中の `simp` を `simp only [...]` に自動安定化するスペシャリストです。
@@ -28,7 +28,7 @@ REPL で `simp?` を実行して使用された補題リストを取得し、安
 
 対象の `simp` を `simp?` に置換した定理コードの断片を REPL に送信する。
 
-**JSONL 作成**（`Scratch/simp_stabilizer.jsonl`）:
+**JSONL 作成**（`Scratch/commands-<sessionId>-simp-stabilizer-<runId>.jsonl`）:
 
 ```jsonl
 {"cmd": "<simp を simp? に置換した定理コード>", "env": 0}
@@ -41,13 +41,15 @@ REPL で `simp?` を実行して使用された補題リストを取得し、安
 
 ```powershell
 # Windows — Persistent モード（推奨・~600ms/回）
-.github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId simp -CmdFile Scratch/simp_stabilizer.jsonl
+.github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId <sessionId>-simp-stabilizer-<runId> -CmdFile Scratch/commands-<sessionId>-simp-stabilizer-<runId>.jsonl
 ```
 
 ```bash
 # macOS / Linux
-.github/skills/lean-repl/scripts/repl.sh --send --session-id simp --cmd-file Scratch/simp_stabilizer.jsonl
+.github/skills/lean-repl/scripts/repl.sh --send --session-id <sessionId>-simp-stabilizer-<runId> --cmd-file Scratch/commands-<sessionId>-simp-stabilizer-<runId>.jsonl
 ```
+
+> `runId` は時刻ベース（例: `yyyyMMdd-HHmmss-fff`）を使用し、固定名を再利用しない。
 
 ### Step 3: 補題リストの抽出
 
@@ -135,7 +137,12 @@ simp only [Lemma1, Lemma2, extra_lemma]
 **`lean --json` パイプライン**を使用する。永続化スクリプトが利用可能:
 
 ```powershell
+# Windows
 .github/skills/lean-simp-guide/scripts/simp-stabilize.ps1 -File <対象ファイル>
+```
+```bash
+# macOS / Linux
+.github/skills/lean-simp-guide/scripts/simp-stabilize.sh --file <対象ファイル>
 ```
 
 **手順**:

@@ -26,20 +26,27 @@ try {
         '{}'; exit 0
     }
 
-    $inputJson = $rawInput | ConvertFrom-Json
+    # proof-suppressed.flag が存在する場合は証明フック出力を抑止する
+    # (session-efficiency スキル発動時 / 明示的な証明停止時に作成される)
+    #
+    # NOTE: ConvertFrom-Json は tool_input.content / newString / oldString 等が
+    # 不正な JSON エスケープ (例: "\" の後に有効なエスケープ文字がない) を含む場合に
+    # 失敗するため、cwd と filePath は正規表現で raw 文字列から直接抽出する。
 
-    # 対象ファイルパスの取得
-    $filePath = $null
-    if ($inputJson.tool_input.PSObject.Properties["filePath"]) {
-        $filePath = $inputJson.tool_input.filePath
+    # cwd を正規表現で抽出（失敗時は現在ディレクトリを使用）
+    $cwdForFlag = (Get-Location).Path
+    if ($rawInput -match '"cwd"\s*:\s*"((?:[^"\\]|\\.)*)"') {
+        $cwdForFlag = $Matches[1] -replace '\\\\', '\' -replace '\\/', '/'
+    }
+    $suppressFlag = Join-Path $cwdForFlag ".lake/proof-suppressed.flag"
+    if (Test-Path $suppressFlag) {
+        '{}'; exit 0
     }
 
-    # multi_replace の場合は replacements 内の最初のファイルを使用
-    if (-not $filePath -and $inputJson.tool_input.PSObject.Properties["replacements"]) {
-        $replacements = $inputJson.tool_input.replacements
-        if ($replacements.Count -gt 0) {
-            $filePath = $replacements[0].filePath
-        }
+    # filePath を正規表現で抽出（filePath / replacements 両対応: 最初の .lean ファイルを選択）
+    $filePath = $null
+    if ($rawInput -match '"filePath"\s*:\s*"((?:[^"\\]|\\.)*\.lean)"') {
+        $filePath = $Matches[1] -replace '\\\\', '\' -replace '\\/', '/'
     }
 
     # .lean ファイルでなければスキップ
@@ -80,6 +87,13 @@ try {
     if ($bareSimpCount -gt 0) {
         $lineNums = ($bareSimpLines | ForEach-Object { $_.LineNumber }) -join ", "
         $null = $messages.Add("⚠ bare simp detected: $bareSimpCount (L$lineNums). Please stabilize with simp only [...]")
+    }
+
+    # .lean ファイルが編集されたことをフラグで記録（Stop フックが sorry 通知要否を判断するために使用）
+    $lakeDir = Join-Path $cwdForFlag ".lake"
+    if (Test-Path $lakeDir) {
+        $leanEditedFlag = Join-Path $lakeDir "lean-edited-this-turn.flag"
+        [System.IO.File]::WriteAllText($leanEditedFlag, "")
     }
 
     if ($messages.Count -gt 0) {

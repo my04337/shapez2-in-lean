@@ -1,11 +1,11 @@
 ---
 description: "Search Mathlib/Batteries for lemmas that close a Lean 4 proof goal; reports only verified candidates. Use when: find lemma, search mathlib, which lemma, lemma finder, auto search lemma, exact? automation, apply? automation, loogle automation, leansearch automation, what lemma closes this, lemma for goal, find matching theorem, unknown lemma name."
 tools: [execute, read, search]
-argument-hint: "Pass theorem code with sorry, goal string, or file:line"
+argument-hint: "Pass theorem code with sorry, goal string, or file:line. Optionally include diagnosticsFile path."
 handoffs:
   - label: Try tactics
     agent: lean-goal-advisor
-    prompt: 上記で見つかった補題を踏まえ、ゴールに対してタクティクを試行してください。
+    prompt: "diagnosticsFile={{diagnosticsFile}}\n\n上記で見つかった補題を踏まえ、ゴールに対してタクティクを試行してください。"
 ---
 
 あなたは Lean 4 の証明ゴールに対して Mathlib / Batteries の補題を自動検索し、
@@ -27,7 +27,7 @@ handoffs:
 
 **入力パターン A: sorry を含む定理コード**
 
-JSONL ファイル `Scratch/lemma_finder.jsonl` を作成:
+JSONL ファイル `Scratch/commands-<sessionId>-lemma-finder-<runId>.jsonl` を作成:
 
 ```jsonl
 {"cmd": "<sorry を含む定理コード>", "env": 0}
@@ -45,12 +45,12 @@ JSONL ファイル `Scratch/lemma_finder.jsonl` を作成:
 
 ```powershell
 # Windows — Persistent モード（推奨・~600ms/回）
-.github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId lemma -CmdFile Scratch/lemma_finder.jsonl
+.github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId <sessionId>-lemma-finder-<runId> -CmdFile Scratch/commands-<sessionId>-lemma-finder-<runId>.jsonl
 ```
 
 ```bash
 # macOS / Linux
-.github/skills/lean-repl/scripts/repl.sh --send --session-id lemma --cmd-file Scratch/lemma_finder.jsonl
+.github/skills/lean-repl/scripts/repl.sh --send --session-id <sessionId>-lemma-finder-<runId> --cmd-file Scratch/commands-<sessionId>-lemma-finder-<runId>.jsonl
 ```
 
 結果から取得:
@@ -95,7 +95,7 @@ JSONL を作成して `exact?` と `apply?` を同一 `proofState` に投入:
 
 Round 1 で見つからない場合、自然言語・型パターンで広く検索する。
 
-**新しい JSONL ファイル** `Scratch/lemma_finder_r2.jsonl` を作成:
+**新しい JSONL ファイル** `Scratch/commands-<sessionId>-lemma-finder-r2-<runId>.jsonl` を作成:
 
 ```jsonl
 {"cmd": "#leansearch \"<ゴールを英語で要約>.\"", "env": 0}
@@ -115,13 +115,15 @@ Round 1 で見つからない場合、自然言語・型パターンで広く検
 
 ```powershell
 # Windows — Persistent モード（推奨・~600ms/回）
-.github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId lemma -CmdFile Scratch/lemma_finder_r2.jsonl
+.github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId <sessionId>-lemma-finder-<runId> -CmdFile Scratch/commands-<sessionId>-lemma-finder-r2-<runId>.jsonl
 ```
 
 ```bash
 # macOS / Linux
-.github/skills/lean-repl/scripts/repl.sh --send --session-id lemma --cmd-file Scratch/lemma_finder_r2.jsonl
+.github/skills/lean-repl/scripts/repl.sh --send --session-id <sessionId>-lemma-finder-<runId> --cmd-file Scratch/commands-<sessionId>-lemma-finder-r2-<runId>.jsonl
 ```
+
+> `runId` は時刻ベース（例: `yyyyMMdd-HHmmss-fff`）を使用し、固定名を使わない。
 
 候補が得られたら、Step 5 で検証する。
 

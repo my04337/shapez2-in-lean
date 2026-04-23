@@ -1,6 +1,6 @@
 -- sortFallingUnits_later_not_shouldProcessBefore_earlier の反例チェック
 -- sortFallingUnits 出力で j > i のとき shouldProcessBefore(output[j], output[i]) = false を検証
-import S2IL.Behavior.Gravity
+import S2IL.Operations.Gravity
 
 open Gravity
 

@@ -117,3 +117,71 @@ instance : Std.Commutative Color.mix where
 |-----|------------|--------|
 | `SimpleGraph.reachableSet` | `Fintype V` | `List.toFinset` でラップした独自実装を使う |
 | `Finset.univ : Finset QuarterPos` | `Fintype QuarterPos` | `(QuarterPos.allValid s).toFinset` を使う |
+
+---
+
+## `List.Nodup` 関連 API 型早見表（提案 5: 頻出 API の蓄積）
+
+Gravity 証明で頻繁に使う `List.Nodup` 系補題の正確な型を記録する。  
+直感と外れやすい部分に注意（`#check` で事前確認を推奨）。
+
+### `List.nodup_append`
+
+```lean
+-- 分解: (l₁ ++ l₂).Nodup → 3 成分
+theorem List.nodup_append :
+    (l₁ ++ l₂).Nodup ↔
+    l₁.Nodup ∧ l₂.Nodup ∧ (∀ a ∈ l₁, ∀ b ∈ l₂, a ≠ b)
+```
+
+⚠️ **第 3 成分は `Disjoint` ではなく `∀ a ∈ l₁, ∀ b ∈ l₂, a ≠ b` 形式**。
+
+```lean
+-- Disjoint として取り出す場合 (a = b と帰着させる)
+fun q hq hmem => h_nodup_parts.2.2 q hq q hmem rfl
+```
+
+### `List.nodup_cons`
+
+```lean
+theorem List.nodup_cons : (a :: l).Nodup ↔ a ∉ l ∧ l.Nodup
+-- 使用例
+have h_not_mem := (List.nodup_cons.mp h_nodup).1
+have h_nodup_rest := (List.nodup_cons.mp h_nodup).2
+```
+
+### `List.flatMap_cons` (simp lemma)
+
+```lean
+-- cons の flatMap 展開（simp で自動適用される）
+@[simp] theorem List.flatMap_cons :
+    (a :: l).flatMap f = f a ++ l.flatMap f
+-- 使用例: Nodup の分解に先立ち flatMap_cons で展開する
+have : (first :: rest).flatMap FallingUnit.positions =
+        first.positions ++ rest.flatMap FallingUnit.positions := by
+    simp [List.flatMap_cons]
+```
+
+### `List.mem_flatMap`
+
+```lean
+theorem List.mem_flatMap :
+    a ∈ l.flatMap f ↔ ∃ b ∈ l, a ∈ f b
+-- 使用例: rest の flatMap への membership 証明
+have : p ∈ rest.flatMap FallingUnit.positions :=
+    List.mem_flatMap.mpr ⟨FallingUnit.pin p, hp, by simp [FallingUnit.positions]⟩
+```
+
+### `FallingUnit.positions`（S2IL 定義）
+
+```lean
+def FallingUnit.positions : FallingUnit → List QuarterPos
+  | cluster ps => ps
+  | pin p => [p]
+-- pin の場合は singleton なので、positions = [p] が自明
+-- cluster の場合は ps をそのまま返す
+```
+
+**活用パターン**: `∀ u ∈ group, ∀ q ∈ u.positions, P q` という前提式は  
+pin では `q = p` のみ、cluster では `q ∈ ps` に縮退する。  
+これを使って前提を「最も一般的な形」で書くと cluster/pin 両方に均一に適用できる。

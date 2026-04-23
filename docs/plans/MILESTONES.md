@@ -2,6 +2,8 @@
 
 Shapez2 in Lean (S2IL) の開発マイルストーンと達成状況を管理するチェックシートです。
 
+> 最新のビルド状態・sorry 件数は [`S2IL/_agent/sorry-goals.md`](../S2IL/_agent/sorry-goals.md)（自動生成）を参照。
+
 ---
 
 ## フェーズ 0: 事前準備
@@ -141,6 +143,43 @@ Shapez2 in Lean (S2IL) の開発マイルストーンと達成状況を管理す
 
 ---
 
+## フェーズ R: リファクタリング & 数学的正しさの検証（S1 完了後に実施）
+
+S1 全 sorry 解消後に集中して実施する整理フェーズ。
+複数の証明で浮上した技術的負債をまとめて解消する。
+
+### R-1. 証明ライブラリの中間表現統一
+
+| # | タスク | 状態 | 備考 |
+|---|---|---|---|
+| R-1-1 | GroundedMono 層以下で `getDir ≠ Quarter.empty` と `isOccupied = true` の二重表現を統一する。基本単位を `getDir ≠ Quarter.empty` とし、`isOccupied` は `placeLDGroupsLandings` 定義など既存 API との境界のみで使用 | ✅ 完了 | 2026-04-23: `CommExt/PlaceGrounding.lean` の chain 補題 3 本 (`foldl_placeFU_*`, `placeLDGroups_*`) を `getDir ≠ empty` 形に統一。`placeLDGroups_landing_nonEmpty` で 2 回必要だった bridge 呼び出しが 0 回になった |
+| R-1-2 | 統一判断に基づき `foldl_placeFU_isOccupied_mono` / `isOccupied_placeLDGroups_mono` 等を必要最小限まで整理（`getDir` 版のみ残す、または相互変換を `@[simp]` にする） | ✅ 完了 | 2026-04-23: chain 3 本を改名・getDir 版に一本化（`foldl_placeFU_getDir_ne_empty_mono` / `placeLDGroups_getDir_ne_empty_mono` / `foldl_placeFU_written_getDir_ne_empty`）。leaf の `isOccupied_placeQuarter_mono` / `isOccupied_placeFallingUnit_mono` は Bool 形のほうが自然なので isOccupied 形のまま維持 |
+
+### R-2. bridge 補題の配置整理
+
+| # | タスク | 状態 | 備考 |
+|---|---|---|---|
+| R-2-1 | 汎用 bridge 補題 (`isOccupied ↔ getDir`, `getQuarter ↔ layers.getD`, etc.) を適切な上流レイヤに移動する。判定基準: 定義元ファイルと同階層 or 1 つ上のファイル | ✅ 完了 | 2026-04-23: `isOccupied_of_getDir_ne_empty` / `getDir_ne_empty_of_isOccupied` を `CommExt/PlaceGrounding.lean` L976 から `Operations/Gravity/Defs.lean` の `isOccupied` 定義直後（L800）へ昇格。併せて `isOccupied_iff_getDir_ne_empty`（iff 形の統合版）を追加 |
+| R-2-2 | bridge 補題の分類ルールを `S2IL/AGENTS.md` に明文化（「汎用変換補題は操作固有ファイルに置かない」） | ✅ 完了 | 既に記載済（"補題の配置ルール（bridge / helper）" セクション）。R-2-1 の実施例を反映 |
+| R-2-3 | 既存 `CommExt/` 配下の補題をレビューし、操作非依存のものを上流へ昇格 | ⬜ 未着手 | R-2-1 / R-2-2 完了後の整理 |
+
+### R-3. 数学的正しさの再検証
+
+| # | タスク | 状態 | 備考 |
+|---|---|---|---|
+| R-3-1 | 主要補題群 (B1/B2/B3a/B3b/B4) の仮定を最小化する再検証。現在の仮定で余剰なものがあれば削る | ⬜ 未着手 | |
+| R-3-2 | `plausible` / `lean-theorem-checker` で主要補題をバッチ検証し、カウンターエグザンプルが存在しないことを再確認 | ⬜ 未着手 | |
+| R-3-3 | 残存 axiom (S2, S3) の除去計画を更新する | ⬜ 未着手 | S3 除去完了後に S2 は `rotate180_eq_rotateCW_rotateCW` 経由で 1 行導出 |
+
+### R-4. ドキュメント整理
+
+| # | タスク | 状態 | 備考 |
+|---|---|---|---|
+| R-4-1 | 完了済み sorry-card を `archive/` へ一括移動、README を整理 | ⬜ 未着手 | |
+| R-4-2 | `docs/plans/*.md` の陳腐化したセクションを削除、シングルソース原則に沿わない箇所を整理 | ⬜ 未着手 | |
+
+---
+
 ## 凡例
 
 | 記号 | 意味 |
@@ -156,7 +195,7 @@ Shapez2 in Lean (S2IL) の開発マイルストーンと達成状況を管理す
 
 ### stress8 (maxLayers > 5) の等変性サポート
 
-> 出典: [gravity-proof-execution-plan.md](gravity-proof-execution-plan.md) §3.9
+> 出典: [gravity-proof-execution-plan.md](gravity-proof-execution-plan.md) §3
 
 現行の `layerCount ≤ 5` 仮説は vanilla4/5 でのみ有効。stress8（maxLayers=8）では PinPusher・Cutter 等の gravity 入力が ≤ 8L となり `gravity_rotate180_comm` の適用不可。IsSettled アプローチで解決可能な箇所もあるが、各装置の構造的特殊性の調査が必要。現時点では優先度外（ストレステスト専用）。
 

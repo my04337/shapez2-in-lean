@@ -86,7 +86,7 @@ hooks:
 | `name` | string | No | 表示名。省略時はファイル名 |
 | `argument-hint` | string | No | ユーザーへの入力ヒント |
 | `tools` | string[] | No | 使用可能なツール/ツールセットの一覧。MCP サーバーは `<server>/*` 形式 |
-| `agents` | string[] | No | サブエージェントとして使用可能なエージェント名の一覧。`*` で全許可、`[]` で禁止 |
+| `agents` | string[] | No | サブエージェントとして使用可能なエージェント名の一覧。`*` で全許可、`[]` で禁止。指定する場合は `tools` に `agent` を含める |
 | `model` | string \| string[] | No | 使用する AI モデル。配列指定時は優先順に試行 |
 | `user-invocable` | bool | No | エージェントドロップダウンに表示するか（デフォルト: `true`） |
 | `disable-model-invocation` | bool | No | 他エージェントからサブエージェントとして呼び出されることを禁止（デフォルト: `false`） |
@@ -215,7 +215,8 @@ model:
 # planning.agent.md
 ---
 description: 実装計画を生成する
-tools: ['search', 'read', 'web']
+tools: ['agent', 'search', 'read', 'web']
+agents: ['implementation']
 handoffs:
   - label: 実装を開始
     agent: implementation
@@ -226,6 +227,7 @@ handoffs:
 
 - `send: false`（デフォルト）: ユーザーが確認してから送信
 - `send: true`: 自動で次のエージェントに送信（注意して使用）
+- `agents` を使う自動 subagent 呼び出しでは、`tools` に `agent` が必要
 
 ---
 
@@ -267,6 +269,7 @@ argument-hint: "<ユーザーへの入力ヒント>"
 ```
 
 - **`tools`**: 読み取り専用操作のエージェントには `[read, search]`、REPL 実行が必要なら `[execute, read, search]`
+- **`agent` ツール**: `agents:` を追加するなら `tools` に `agent` を含める
 - **`argument-hint`**: ユーザーが何を渡すべきかを明示
 - **制約セクション**: プロダクションコードの変更禁止等を明記
 - **手順セクション**: ステップバイステップで具体的な操作手順を記述

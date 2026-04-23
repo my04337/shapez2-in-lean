@@ -1,6 +1,6 @@
 -- foldl settle の順列不変性の破綻を確認するテスト
 -- 反例候補: 4つの独立浮遊ユニットで sortFallingUnits 順序依存性を示す
-import S2IL.Behavior.Gravity
+import S2IL.Operations.Gravity
 
 open Gravity
 

@@ -61,18 +61,21 @@ lake build
 
 ## ビルド・実行
 
-VS Code でこのリポジトリを開き、**Ctrl+Shift+B** を押すとビルド〜実行まで一括で行われます。
+VS Code でこのリポジトリを開き、**Ctrl+Shift+B** を押すとビルドが一括で行われます。
 
 コマンドラインから実行する場合:
 
 ```powershell
-# Windows (PowerShell 7)
-pwsh.exe -File .github/skills/lean-run/scripts/run.ps1
-```
+# ビルド
+lake build
 
-```bash
-# macOS / Linux
-bash .github/skills/lean-run/scripts/setup.sh
+# 開発ツール（S2IL 依存 — 依存グラフ・シンボルマップ・証明統計）
+lake exe s2il-toolkit --help
+lake exe s2il-toolkit depgraph --json --output .lake/depgraph.json
+lake exe s2il-toolkit proof-stats
+
+# 診断ツール（S2IL 非依存 — S2IL ビルドエラー時も動作）
+lake exe s2il-diag sorry-list
 ```
 
 ## バージョンアップとビルド高速化

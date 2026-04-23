@@ -111,20 +111,14 @@ example : ∀ n : Nat, n + 1 = n := by plausible
 ```
 
 ```powershell
-# Windows — Persistent モード（推奨・~600ms/回）
+# Persistent モード（推奨・~600ms/回）
 .github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId <id> -CmdFile Scratch/commands-<sessionId>.jsonl
 
-# Windows — バッチモード（レガシー・Persistent が利用できない場合のみ）
+# バッチモード（レガシー）
 .github/skills/lean-repl/scripts/repl.ps1 -InputFile Scratch/commands-<sessionId>.jsonl
 ```
 
-```bash
-# macOS / Linux — Persistent モード（推奨・~600ms/回。bash 4+ 必須）
-.github/skills/lean-repl/scripts/repl.sh --send --session-id <id> --cmd-file Scratch/commands-<sessionId>.jsonl
-
-# macOS / Linux — バッチモード（レガシー）
-.github/skills/lean-repl/scripts/repl.sh --input Scratch/commands-<sessionId>.jsonl
-```
+（macOS/Linux の `.sh` 版も存在。引数はほぼ同型）
 
 ▶ stdout 例（`data` に結果リスト）:
 
@@ -191,10 +185,7 @@ lake env lean Scratch/FooCheck.lean
 
 ### 5. N 要素の相互作用チェック（3-cycle 検出）
 
-ペアワイズ検証だけでは不十分。3 要素以上の組み合わせも確認する。
-
-**教訓**: `shouldProcessBefore` の 3-cycle（`l = [w, a, b]`）はペアワイズでは見抜けない。
-グリーディアルゴリズムの定理では第三者による遮断ケースを必ずチェックする。
+ペアワイズ検証だけでは不十分。3 要素以上の組み合わせも確認する。グリーディアルゴリズム・ペアワイズ条件の定理では第三者による遮断ケースを必ずチェックする。
 
 ## Gotchas
 

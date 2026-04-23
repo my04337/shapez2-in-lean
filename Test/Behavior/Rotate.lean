@@ -2,7 +2,7 @@
 -- SPDX-License-Identifier: MIT
 
 -- 回転操作のユニットテスト
-import S2IL.Behavior.Rotate
+import S2IL.Kernel.Transform.Rotate
 
 -- ============================================================
 -- テスト用データ

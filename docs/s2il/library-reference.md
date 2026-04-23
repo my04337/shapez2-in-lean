@@ -36,9 +36,9 @@ S2IL プロジェクトで導入済みのライブラリ・ツールの現状評
 | **Plausible** | `leanprover-community/plausible` | ✅ | ✅ lean-counterexample (Step 2b), lean-proof-planning (Phase 0), lean-tactic-select | ✅ docs/lean/plausible-guide.md | `by plausible` タクティクで ∀ 命題のランダムテスト。偽定理の早期検出。**S2IL REPL では import 不要（デフォルトで `import Plausible` 済み）。スタンドアロンファイルでは `import Plausible` が必要** | 🟡 メンテ継続中、Mathlib 経由なので固定 |
 | **LeanSearchClient** | `leanprover-community/LeanSearchClient` | ✅ | ✅ lean-mathlib-search で `#leansearch` / `#loogle` を活用 | ✅ skills/lean-mathlib-search/references/ | REPL 内 `#leansearch` / `#loogle` の通信バックエンド | 🟢 Mathlib に統合、活発 |
 | **ProofWidgets4** | `leanprover-community/ProofWidgets4` | 🔷 | ❌ | ❌ | VS Code Infoview での証明状態の対話的可視化。Mathlib タクティクの裏側で使用 | 🟡 メンテ継続、API 変更あり |
-| **importGraph** | `leanprover-community/import-graph` | 🔶 | ✅ lean-depgraph（import グラフ生成に間接利用） | ⚠️ DepGraph.lean にて利用 | import 依存グラフの生成（`DepGraph.lean` で活用中） | 🟢 活発 |
-| **Qq (quote4)** | `leanprover-community/quote4` | 🔷 | ❌ | ❌ | 型付きマクロ準クォート。証明自動化マクロ開発時のみ必要 | 🟢 Mathlib が依存、活発 |
-| **lean4-cli** | `leanprover/lean4-cli` | 🔷 | ❌ | ❌ | CLI サブコマンド構築（`Main.lean` / `DepGraph.lean` の CLI 部分で間接利用） | 🟢 公式提供 |
+| **importGraph** | `leanprover-community/import-graph` | 🟦 | ❌ | ❌ | import 依存グラフの生成（`DevTool/Toolkit/DepGraph.lean` で活用中） | 🟢 活発 |
+| **Qq (quote4)** | `leanprover-community/quote4` | 🟦 | ❌ | ❌ | 型付きマクロ準クォート。証明自動化マクロ開発時のみ必要 | 🟢 Mathlib が依存、活発 |
+| **lean4-cli** | `leanprover/lean4-cli` | 🟦 | ❌ | ❌ | CLI サブコマンド構築（`DevTool/Toolkit.lean` / `DevTool/Diag.lean` の CLI 部分で間接利用） | 🟢 公式提供 |
 
 ---
 

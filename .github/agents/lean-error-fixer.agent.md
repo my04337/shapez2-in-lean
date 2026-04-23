@@ -1,17 +1,18 @@
 ---
 description: "Auto-classify Lean 4 build errors and generate REPL-verified fixes. Use when: fix build error, resolve type mismatch, unknown identifier, unsolved goals, auto fix error, build error repair, error resolution, fix compilation error."
-tools: [execute, read, search]
-argument-hint: "Describe the build error (or omit to auto-diagnose)"
+tools: [agent, execute, read, search]
+agents: [lean-goal-advisor, lean-lemma-finder, lean-sorry-snapshot]
+argument-hint: "Pass diagnosticsFile path (e.g., .lake/build-diagnostics-<sid>.jsonl) or error description"
 handoffs:
   - label: Goal advisor
     agent: lean-goal-advisor
-    prompt: 上記の unsolved goals エラーに対してタクティクを試行してください。
+    prompt: "diagnosticsFile={{diagnosticsFile}}\n\n上記の unsolved goals エラーに対してタクティクを試行してください。"
   - label: Search lemma
     agent: lean-lemma-finder
-    prompt: 上記の unknown identifier に対して Mathlib/Batteries の補題を検索してください。
+    prompt: "diagnosticsFile={{diagnosticsFile}}\n\n上記の unknown identifier に対して Mathlib/Batteries の補題を検索してください。"
   - label: Sorry snapshot
     agent: lean-sorry-snapshot
-    prompt: ビルドして sorry の一覧と依存関係を返してください。
+    prompt: "diagnosticsFile={{diagnosticsFile}}\n\nビルドして sorry の一覧と依存関係を返してください。"
 ---
 
 あなたは Lean 4 ビルドエラーを自動分類し、REPL で修正候補を生成・検証するスペシャリストです。
@@ -77,7 +78,7 @@ grep '"severity":"error"' "$DIAG_FILE" | jq '{file, line, message}'
 
 #### 3a: `unknown identifier` / `unknown constant`
 
-JSONL ファイル `Scratch/error_fixer.jsonl` を作成:
+JSONL ファイル `Scratch/commands-<sessionId>-error-fixer-<runId>.jsonl` を作成:
 
 ```jsonl
 {"cmd": "#loogle \"<型パターン>\"", "env": 0}
@@ -87,13 +88,15 @@ JSONL ファイル `Scratch/error_fixer.jsonl` を作成:
 
 ```powershell
 # Windows
-.github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId errfix -CmdFile Scratch/error_fixer.jsonl
+.github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId <sessionId>-error-fixer-<runId> -CmdFile Scratch/commands-<sessionId>-error-fixer-<runId>.jsonl
 ```
 
 ```bash
 # macOS / Linux
-.github/skills/lean-repl/scripts/repl.sh --send --session-id errfix --cmd-file Scratch/error_fixer.jsonl
+.github/skills/lean-repl/scripts/repl.sh --send --session-id <sessionId>-error-fixer-<runId> --cmd-file Scratch/commands-<sessionId>-error-fixer-<runId>.jsonl
 ```
+
+> `runId` は時刻ベース（例: `yyyyMMdd-HHmmss-fff`）を使用し、並列実行時の JSONL 競合を避ける。
 
 候補が見つかったら `#check` で型シグネチャを確認する。
 見つからない場合は `grep_search` でプロジェクト内の定義箇所を検索し、`import` の不足を特定する。

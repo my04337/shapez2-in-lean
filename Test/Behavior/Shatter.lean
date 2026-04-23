@@ -2,7 +2,7 @@
 -- SPDX-License-Identifier: MIT
 
 -- CrystalBond (結晶結合) と Shatter (砕け散り) のユニットテスト
-import S2IL.Behavior.Shatter
+import S2IL.Operations.Shatter.Shatter
 
 -- ============================================================
 -- テスト用データ

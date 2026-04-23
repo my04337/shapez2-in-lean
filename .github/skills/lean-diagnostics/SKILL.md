@@ -107,6 +107,6 @@ Get-Content .lake/build-diagnostics.jsonl | ConvertFrom-Json |
 
 ## 関連スキル
 
-**lean-build** / **lean-depgraph** / **lean-proof-progress** / **lean-error-fixer**（エラー自動修正スキル）
+**lean-build** / **lean-proof-progress** / **lean-error-fixer**（エラー自動修正スキル）
 
-エージェント: **lean-error-fixer**（本スキルのルーティングを自動実行するエージェント） / **lean-sorry-snapshot**（sorry 一覧 + 依存グラフ）
+ツール: **s2il-diag**（sorry-list） / **s2il-toolkit**（depgraph・proof-stats）

@@ -16,7 +16,7 @@
 --   Structural coverage: 24 shapes, 0 failures
 --   合計: 1,930,747 shapes, 0 failures
 
-import S2IL.Behavior.Gravity
+import S2IL.Operations.Gravity
 
 open Gravity
 

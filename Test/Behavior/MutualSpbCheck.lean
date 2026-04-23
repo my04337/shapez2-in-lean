@@ -1,6 +1,6 @@
 -- mutual shouldProcessBefore の不可能性チェック
 -- 同一シェイプの異なる floatingUnit 間で shouldProcessBefore(a,b)=true ∧ shouldProcessBefore(b,a)=true が成立するか
-import S2IL.Behavior.Gravity
+import S2IL.Operations.Gravity
 
 open Gravity
 

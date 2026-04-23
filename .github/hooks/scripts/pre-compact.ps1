@@ -21,6 +21,7 @@ try {
     $null = $messages.Add("⚠ Context compaction is about to occur. Please do the following:")
     $null = $messages.Add("")
     $null = $messages.Add("1. Save current work state to /memories/session/")
+    $null = $messages.Add("   - If no session memory exists yet, create one immediately before anything else")
     $null = $messages.Add("   - Files being edited and line ranges")
     $null = $messages.Add("   - Proof strategy and unsolved goals")
     $null = $messages.Add("   - Next steps")
@@ -28,6 +29,7 @@ try {
     $null = $messages.Add("3. After saving session memory, **continue working**.")
     $null = $messages.Add("   Proceed to the next task unless the user explicitly asks to stop.")
     $null = $messages.Add("   Context compaction is not a reason to pause work.")
+    $null = $messages.Add("4. Do not postpone memory save to a later turn.")
 
     # --- sorry 残数の補足情報 ---
     $diagFile = Join-Path $cwd ".lake/build-diagnostics.jsonl"

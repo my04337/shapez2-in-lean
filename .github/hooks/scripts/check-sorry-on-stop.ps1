@@ -24,6 +24,14 @@ try {
         exit 0
     }
 
+    # proof-suppressed.flag が存在する場合は全証明フック出力を抑止する
+    # (session-efficiency スキル発動時やユーザが明示的に証明停止を指示した場合に作成される)
+    $suppressFlag = Join-Path $cwd ".lake/proof-suppressed.flag"
+    if (Test-Path $suppressFlag) {
+        @{ continue = $true } | ConvertTo-Json -Compress
+        exit 0
+    }
+
     # ======================================================================
     # 0. セッション内にビルドが実行されたかチェック（前セッション診断の混入防止）
     # ======================================================================
@@ -132,8 +140,16 @@ try {
 
     # ======================================================================
     # 3. sorry の残存チェック (情報通知のみ、ブロックしない)
+    #    ターン内に .lean ファイル編集があった場合のみ通知する
     #    build 診断の isSorry=true を唯一の情報源とする
     # ======================================================================
+    # .lean 編集フラグの確認: count-sorry フックがこのターン中に作成する
+    $leanEditedFlag = Join-Path $cwd ".lake/lean-edited-this-turn.flag"
+    $leanWasEdited = Test-Path $leanEditedFlag
+    # フラグを削除（次回のターンに引きずらないようリセット）
+    if ($leanWasEdited) {
+        Remove-Item $leanEditedFlag -Force -ErrorAction SilentlyContinue
+    }
     $sorryFiles = @()
     if ($sorryEntries.Count -gt 0) {
         $sorryFiles = $sorryEntries |
@@ -157,10 +173,15 @@ try {
             $fileList
         ) -join "`n"
 
-        @{
-            continue      = $true
-            systemMessage = $msg
-        } | ConvertTo-Json -Compress
+        if ($leanWasEdited) {
+            @{
+                continue      = $true
+                systemMessage = $msg
+            } | ConvertTo-Json -Compress
+        } else {
+            # .lean 編集なしターン: sorry 実証作業を行っていないため通知を抑止する
+            @{ continue = $true } | ConvertTo-Json -Compress
+        }
     }
     # ======================================================================
     # 4. 未完了タスクの残存チェック (情報通知のみ、ブロックしない)
@@ -169,24 +190,7 @@ try {
         # sorry がある場合は上のブロックで処理済み。このブロックは到達しない。
     }
 
-    # 未完了 TODO チェック: gravity-proof-execution-plan.md の未チェック項目を数える
-    $planFile = Join-Path $cwd "docs/plans/gravity-proof-execution-plan.md"
-    $unfinishedTodos = 0
-    if (Test-Path $planFile) {
-        $unfinishedTodos = @(Get-Content $planFile |
-            Where-Object { $_ -match '^\s*- \[ \]' }).Count
-    }
-    if ($sorryFiles.Count -eq 0 -and $unfinishedTodos -gt 0) {
-        $msg = @(
-            "[Stop] $unfinishedTodos unfinished task(s) remain in the execution plan."
-            "Check with the user before continuing further work."
-        ) -join "`n"
-        @{
-            continue      = $true
-            systemMessage = $msg
-        } | ConvertTo-Json -Compress
-    }
-    elseif ($sorryFiles.Count -eq 0) {
+    if ($sorryFiles.Count -eq 0) {
         @{ continue = $true } | ConvertTo-Json -Compress
     }
     exit 0

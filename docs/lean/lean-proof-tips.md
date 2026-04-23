@@ -511,3 +511,66 @@ v4.29.0 では `updateGitPkg` が `git clean -xf` をチェックアウト後に
 - **計算検証は十分な規模で**: 2-3L のみの計算検証は 4L+ 反例を見逃す
 - **リスト等号は探索順序依存**: BFS 出力はリスト等号ではなく `.any` メンバーシップで述べる
 - **偽定理に依拠する証明チェーンは直ちに不健全**: sorry 1 個でも上流全体が汚染される
+
+---
+
+## 証明作業の効率化ルール（エージェント向け）
+
+このセクションはエージェントの作業効率を向上させるために実績から抽出したルールをまとめる。
+
+### 提案 1: lean-proof-planning Phase 0 を最初に読む
+
+`lean-proof-planning` スキルが適用される場面（新規証明開始・方針転換）では、実装着手の前に必ず読む。
+
+```
+❌ 禁止: スキル読み → 即実装
+✅ 正解: スキル読み → Phase 0（真偽チェック）→ ゲート 1（反例チェック）→ 実装
+```
+
+Phase 0 を省略して実装に入ると、偽定理に長時間費やすリスクが高い（本プロジェクト実績: 複数回発生）。
+
+### 提案 2: 関連シンボル群は 1 回の alternation regex で取得する
+
+`symbol-map.jsonl` を検索するとき、関連する複数シンボルをバラバラに検索しない。
+
+```
+❌ 非効率: grep "foldl_placeFU_cluster" → grep "foldl_placeFU_pin" → grep "isOccupied_placeFallingUnit"
+✅ 効率的: grep "foldl_placeFU|isOccupied_placeFallingUnit" (1 クエリで全件取得)
+```
+
+**実装**: `grep_search` の `query` フィールドに正規表現の alternation `|` を使う。  
+`isRegexp: true` を忘れずに設定する。
+
+### 提案 3: 補題の前提条件は最も一般的な形で書く
+
+複数の具象バージョン（cluster-only / pin-only / mixed など）に発展する補題は、
+最初から最も一般的な前提式で設計する。
+
+```lean
+-- ❌ pin-only 版（後で mixed を作るとき再設計が必要）
+(h_layer_ge : ∀ p, FallingUnit.pin p ∈ group → d ≤ p.layer)
+(h_layer_lt : ∀ p, FallingUnit.pin p ∈ group → p.layer < obs.length)
+
+-- ✅ 最初から全 FU 統一形（cluster も pin も同じ形で扱える）
+(h_layer_ge : ∀ u ∈ group, ∀ q ∈ u.positions, d ≤ q.layer)
+(h_layer_lt : ∀ u ∈ group, ∀ q ∈ u.positions, q.layer < obs.length)
+```
+
+`FallingUnit.positions` は `cluster ps → ps` / `pin p → [p]` なので、後者は前者の縮退形として機能する。
+
+### 提案 4: 自プロジェクト補題・Mathlib API の使用前に REPL `#check` で型確認する
+
+補題を使おうとする前に、その型シグネチャを REPL で確認する。
+特に `List.nodup_append` / `List.nodup_cons` 等の分解結果の型は直感と外れやすい。
+
+```jsonl
+{"cmd": "#check @List.nodup_append", "env": 0}
+```
+
+これにより、実装中のエラー修正サイクル（REPL → 修正 → REPL → 修正）を排除できる。
+
+| よく誤解される API | 実際の型（要 `#check` 確認） |
+|---|---|
+| `List.nodup_append.mp` | `→ l₁.Nodup ∧ l₂.Nodup ∧ (∀ a ∈ l₁, ∀ b ∈ l₂, a ≠ b)` （`Disjoint` ではない） |
+| `List.nodup_cons.mp` | `→ a ∉ l ∧ l.Nodup` |
+| `List.flatMap_cons` | `→ (f a ++ l.flatMap f)` ← `simp` で展開する補題 |
