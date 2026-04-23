@@ -14,8 +14,8 @@ The author is still learning Lean, so this project is being developed as a learn
 なお、本プロジェクトの開発の一部には生成AI (GitHub Copilot) を利用しています。  
 Note: Part of the development of this project uses generative AI (GitHub Copilot).
 
-> **現状 / Status:** 開発初期段階のプレースホルダーです。Shapez2のロジック実装はこれからです。  
-> This is an early-stage placeholder. Implementation of Shapez2 logic is yet to come.
+> **現状 / Status:** フェーズ 1（Shape/加工装置の形式的定義・証明）完了。Shape Code の型定義・シリアライズ、切断・回転・積層・着色・ピン押し・結晶化・重力処理・散砕 など全加工操作の実装と正当性証明（sorry 0 件）が完了しています。  
+> **Status:** Phase 1 complete — All shape types, serialization, and shape-processing operations (cut, rotate, stack, paint, pin-push, crystallize, gravity, shatter) are formally defined and proved (0 sorries).
 
 ## 前提条件
 
@@ -88,13 +88,13 @@ lake exe s2il-diag sorry-list
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4"
-rev = "v4.29.0-rc8"   ← Mathlib のリリースタグ
+rev = "v4.29.0"   ← Mathlib のリリースタグ
 ```
 
 また `lean-toolchain` は Mathlib が要求する Lean バージョンと**常に一致させる**必要があります。
 
 ```
-leanprover/lean4:v4.29.0-rc8   ← lean-toolchain の内容
+leanprover/lean4:v4.29.0   ← lean-toolchain の内容
 ```
 
 > **注意**: Lean の最新安定版（例: `v4.29.0`）が存在していても、Mathlib 側のタグがその版に対応するまでは
@@ -102,7 +102,7 @@ leanprover/lean4:v4.29.0-rc8   ← lean-toolchain の内容
 
 ### Lean / Mathlib のバージョンアップ手順
 
-新しい Mathlib リリースタグ（例: `v4.30.0-rc1`）が出たときの更新手順です。
+新しい Mathlib リリースタグ（例: `v4.30.0`）が出たときの更新手順です。
 
 **1. `lakefile.toml` の `rev` を新しいタグに変更する**
 
@@ -110,7 +110,7 @@ leanprover/lean4:v4.29.0-rc8   ← lean-toolchain の内容
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4"
-rev = "v4.30.0-rc1"   ← 新しいタグに書き換え
+rev = "v4.30.0"   ← 新しいタグに書き換え
 ```
 
 **2. `lake update` を実行して `lake-manifest.json` を更新する**
@@ -126,7 +126,7 @@ Get-Content .lake/packages/mathlib/lean-toolchain   # Windows
 cat .lake/packages/mathlib/lean-toolchain           # macOS / Linux
 ```
 
-表示されたバージョン（例: `leanprover/lean4:v4.30.0-rc1`）を `lean-toolchain` に書き込みます。
+表示されたバージョン（例: `leanprover/lean4:v4.30.0`）を `lean-toolchain` に書き込みます。
 elan が自動的に新しい Lean バージョンをダウンロードします。
 
 **4. prebuilt olean キャッシュを取得して再ビルドする**（後述）
