@@ -1,0 +1,69 @@
+# S2IL 証明ワークフロープレイブック（詳細版）
+
+この文書は `S2IL/AGENTS.md` から移設した詳細運用ルールを集約する。
+
+## 証明継続ポリシー
+
+- 証明作業中は、ユーザーが明示的に停止を指示するまで継続する
+- 小さなマイルストーン（単補題完了、ビルド成功）で自発停止しない
+- sorry 数減少がない段階でコミット提案しない
+
+## Proof-First-Test
+
+### ステップ 0（着手前の真偽確認）
+
+- sorry のシグネチャが確定したら、最初に `lean-theorem-checker` または REPL `#eval` で真偽確認
+- 偽なら先にシグネチャ修正し、証明戦略検討を後回しにする
+
+### ステップ 0.5（偽と判明した直後）
+
+- 呼び出し元補題のシグネチャを即時確認
+- 呼び出し元が `∀ obs'` を要求する場合、局所条件追加での回避は原則採用しない
+- 帰納スキームの強化を先に検討する
+
+## 戦略検討の上限
+
+- インライン推論のみで 3 アプローチ以上を続行しない
+- 3 つ目で停滞したら REPL / Scratch で計算検証を挟む
+- 前提が偽と出たアプローチは即時棄却する
+
+## REPL 優先運用
+
+### コード変更前の即時検証
+
+以下はビルド前に REPL で確認する。
+
+- タクティク変更（例: `subst` → `rw`）
+- 新規 API 名の使用（`#check`）
+- `have` / `suffices` の型変更
+- `simp only [...]` 候補の妥当性
+- Bool/Prop 変換補題の型整合
+
+### 大規模挿入前の段階検証
+
+200 行以上の追加は次の順で行う。
+
+1. 基盤補題を REPL 検証
+2. 中核補題（帰納・等変性）を REPL 検証
+3. ファイルへ一括反映
+4. フルビルドで統合確認
+
+## 長大ファイル運用
+
+- 3000 行超ファイルの Wave 開始時は、Explore で対象定理の行番号・シグネチャを一括取得
+- 取得結果を `/memories/session/` に記録し、以降はピンポイント読みに切り替える
+- 新規ヘルパー追加前に重複チェック（`symbol-map.jsonl` + キーワード検索）を行う
+
+## Mathlib 補題探索のエスカレーション
+
+1. REPL `#check @候補名`
+2. `lean-mathlib-search` スキル
+3. Explore で `.lake/packages/mathlib/` 検索
+4. 最後に build で統合確認
+
+## 関連ドキュメント
+
+- `docs/s2il/equivariance-proof-patterns.md`
+- `docs/s2il/false-theorem-catalog.md`
+- `docs/plans/gravity-proof-execution-plan.md`
+- `.github/skills/lean-repl/references/repl-guide.md`

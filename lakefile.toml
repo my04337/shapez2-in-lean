@@ -1,10 +1,37 @@
 name = "shapez2-in-lean"
 version = "0.1.0"
-defaultTargets = ["s2il"]
+defaultTargets = ["S2IL", "Test"]
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "v4.29.0"
+
+[[require]]
+name = "repl"
+git = "https://github.com/leanprover-community/repl"
+rev = "v4.29.0"
+
+[[require]]
+name = "Duper"
+git = "https://github.com/leanprover-community/duper.git"
+rev = "v4.29.0"
 
 [[lean_lib]]
 name = "S2IL"
 
+[[lean_lib]]
+name = "DevTool"
+globs = ["DevTool.+"]
+
 [[lean_exe]]
-name = "s2il"
-root = "Main"
+name = "s2il-toolkit"
+root = "DevTool.Toolkit"
+
+[[lean_exe]]
+name = "s2il-diag"
+root = "DevTool.Diag"
+
+[[lean_lib]]
+name = "Test"
+globs = ["Test.+"]

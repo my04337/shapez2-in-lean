@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "generated": false,
+  "description": "Operation-first reading order for agent exploration. Read 'entry' first, then 'chain' if internal details are needed. 'kernel_deps' and 'ops_deps' are upstream dependencies.",
+  "maintenance": "Update only when adding new modules. Max 3 deps per category is recommended.",
+  "routes": {
+    "Gravity": {
+      "entry": "S2IL/Operations/Gravity/Facade.lean",
+      "chain": [
+        "S2IL/Operations/Gravity/Defs.lean",
+        "S2IL/Operations/Gravity/Equivariance.lean",
+        "S2IL/Operations/Gravity/Equivariance/Clusters.lean",
+        "S2IL/Operations/Gravity/CommExt/FloatUnits.lean",
+        "S2IL/Operations/Gravity/CommExt/LandingDist.lean",
+        "S2IL/Operations/Gravity/CommExt/PlaceGrounding.lean",
+        "S2IL/Operations/Gravity/CommExt/CommNe.lean",
+        "S2IL/Operations/Gravity/CommExt/SortStability.lean",
+        "S2IL/Operations/Gravity/GroundedMono.lean",
+        "S2IL/Operations/Gravity/ProcessWave.lean",
+        "S2IL/Operations/Gravity/Facade.lean"
+      ],
+      "kernel_deps": [
+        "S2IL/Kernel/BFS/GenericBfs.lean",
+        "S2IL/Kernel/Bond/CrystalBond.lean",
+        "S2IL/Kernel/Transform/Rotate180Lemmas.lean"
+      ]
+    },
+    "Shatter": {
+      "entry": "S2IL/Operations/Shatter/Shatter.lean",
+      "kernel_deps": [
+        "S2IL/Kernel/Bond/CrystalBond.lean",
+        "S2IL/Kernel/Transform/Rotate.lean",
+        "S2IL/Kernel/Transform/Rotate180Lemmas.lean"
+      ],
+      "ops_deps": [
+        "S2IL/Operations/Gravity.lean"
+      ]
+    },
+    "Settled": {
+      "entry": "S2IL/Operations/Settled.lean",
+      "chain": [
+        "S2IL/Operations/Settled/Core.lean",
+        "S2IL/Operations/Settled/GroundedCore.lean",
+        "S2IL/Operations/Settled/GroundedInvariant.lean",
+        "S2IL/Operations/Settled/GroundedPlacement.lean",
+        "S2IL/Operations/Settled/GravityBridge.lean",
+        "S2IL/Operations/Settled/Paint.lean",
+        "S2IL/Operations/Settled/Rotate.lean",
+        "S2IL/Operations/Settled/Crystallize.lean"
+      ],
+      "ops_deps": [
+        "S2IL/Operations/Gravity.lean",
+        "S2IL/Operations/Painter/Painter.lean",
+        "S2IL/Operations/CrystalGenerator/CrystalGenerator.lean"
+      ]
+    },
+    "Cutter": {
+      "entry": "S2IL/Operations/Cutter/Cutter.lean",
+      "kernel_deps": [
+        "S2IL/Kernel/Transform/Rotate.lean"
+      ],
+      "ops_deps": [
+        "S2IL/Operations/Gravity.lean",
+        "S2IL/Operations/Shatter/Shatter.lean",
+        "S2IL/Operations/Settled.lean"
+      ]
+    },
+    "Stacker": {
+      "entry": "S2IL/Operations/Stacker/Stacker.lean",
+      "kernel_deps": [
+        "S2IL/Kernel/Transform/Rotate.lean"
+      ],
+      "ops_deps": [
+        "S2IL/Operations/Gravity.lean",
+        "S2IL/Operations/Shatter/Shatter.lean",
+        "S2IL/Operations/Settled.lean"
+      ]
+    },
+    "PinPusher": {
+      "entry": "S2IL/Operations/PinPusher/PinPusher.lean",
+      "kernel_deps": [
+        "S2IL/Kernel/Transform/Rotate.lean"
+      ],
+      "ops_deps": [
+        "S2IL/Operations/Gravity.lean",
+        "S2IL/Operations/Shatter/Shatter.lean",
+        "S2IL/Operations/Stacker/Stacker.lean",
+        "S2IL/Operations/Settled.lean"
+      ]
+    },
+    "Painter": {
+      "entry": "S2IL/Operations/Painter/Painter.lean",
+      "kernel_deps": [
+        "S2IL/Kernel/Transform/Rotate.lean"
+      ],
+      "shape_deps": [
+        "S2IL/Shape/Shape.lean"
+      ]
+    },
+    "CrystalGenerator": {
+      "entry": "S2IL/Operations/CrystalGenerator/CrystalGenerator.lean",
+      "kernel_deps": [
+        "S2IL/Kernel/Transform/Rotate.lean"
+      ],
+      "shape_deps": [
+        "S2IL/Shape/Shape.lean"
+      ]
+    },
+    "ColorMixer": {
+      "entry": "S2IL/Operations/ColorMixer/ColorMixer.lean",
+      "shape_deps": [
+        "S2IL/Shape/Color.lean"
+      ]
+    }
+  }
+}

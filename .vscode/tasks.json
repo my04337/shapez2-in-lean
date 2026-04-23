@@ -2,20 +2,6 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "lean-run",
-            "type": "shell",
-            "command": "pwsh.exe -File .github/skills/lean-run/scripts/run.ps1",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared"
-            },
-            "problemMatcher": []
-        },
-        {
             "label": "lake build",
             "type": "shell",
             "command": "lake build",
@@ -24,7 +10,10 @@
                     "PATH": "${env:USERPROFILE}\\.elan\\bin;${env:PATH}"
                 }
             },
-            "group": "build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "presentation": {
                 "reveal": "always",
                 "panel": "shared"

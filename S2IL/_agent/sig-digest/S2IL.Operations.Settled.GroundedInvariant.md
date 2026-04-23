@@ -1,0 +1,23 @@
+# S2IL/Operations/Settled/GroundedInvariant.lean
+
+- Lines: 284
+- Declarations: 10 (theorems/lemmas: 8, defs/abbrev: 2, private: 0, sorry: 0)
+
+## Landmarks
+
+L6     namespace Shape
+
+## Declarations
+
+```
+L12    def        Shape.AllNonEmptyGrounded : (layers : List Layer) : Prop
+L22    def        Shape.ImmBelow : (obs : List Layer) : Prop
+L28    theorem    ImmBelow.descends_one_layer : {obs : List Layer} (h_ib : ImmBelow obs) {l : Nat} {d : Direction} (h_lt : l < obs.length) (h_pos : l > 0) (h_ne : ¬(QuarterPos.getDir (obs.getD l Layer.empty) d...
+L37    theorem    Shape.vertical_grounding_contact : (s : Shape) (l : Nat) (d : Direction) (h_ne_low : ∃ q, (⟨l, d⟩ : QuarterPos).getQuarter s = some q ∧ !q.isEmpty = true) (h_ne_high : ∃ q, (⟨l + 1, d⟩ : QuarterPos...
+L54    theorem    Shape.getDir_nonempty_implies_getQuarter : (s : Shape) (l : Nat) (d : Direction) (h_lt : l < s.layerCount) (h_ne : ¬(QuarterPos.getDir (s.layers.getD l Layer.empty) d).isEmpty) : ∃ q, (⟨l, d⟩ : Qua...
+L74    theorem    Shape.immBelow_column_filled : (obs : List Layer) (h_ib : ImmBelow obs) (l : Nat) (d : Direction) (h_lt : l < obs.length) (h_ne : ¬(QuarterPos.getDir (obs.getD l Layer.empty) d).isEmpty) : ∀ k, k ≤...
+L106   theorem    Shape.immBelow_implies_allNonEmptyGrounded : (obs : List Layer) (h_ib : ImmBelow obs) : AllNonEmptyGrounded obs
+L195   theorem    Shape.foldl_grounded_induction_prefix : (s : Shape) (sorted : List Gravity.FallingUnit) (obs0 : List Layer) (h_base : AllNonEmptyGrounded obs0) (h_step : ∀ (done : List Gravity.FallingUnit) (u : Gr...
+L237   theorem    Shape.foldl_grounded_induction : (s : Shape) (sorted : List Gravity.FallingUnit) (obs : List Layer) (h_base : AllNonEmptyGrounded obs) (h_step : ∀ (obs' : List Layer) (u : Gravity.FallingUnit), u ∈...
+L257   theorem    Shape.foldl_grounded_induction_with_inv : (s : Shape) (sorted : List Gravity.FallingUnit) (obs : List Layer) (P : List Layer → Prop) (h_base_aneg : AllNonEmptyGrounded obs) (h_base_p : P obs) (h_st...
+```

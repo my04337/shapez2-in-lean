@@ -4,25 +4,22 @@
     "editor.insertSpaces": true,
     "editor.tabSize": 4,
     "files.exclude": {
-        "**/.lake": true
+        "**/.lake": true,
     },
     "search.exclude": {
-        "**/.lake": true
+        "**/.lake": true,
     },
     "chat.tools.terminal.enableAutoApprove": true,
     "chat.tools.terminal.autoApprove": {
-        // lean-setup
-        "pwsh.exe -File .github/skills/lean-setup/scripts/setup.ps1": true,
-        "bash .github/skills/lean-setup/scripts/setup.sh": true,
-        // lean-build
-        "pwsh.exe -File .github/skills/lean-build/scripts/build.ps1": true,
-        "pwsh.exe -File .github/skills/lean-build/scripts/build.ps1 -Clean": true,
-        "pwsh.exe -File .github/skills/lean-build/scripts/build.ps1 -Update": true,
-        "bash .github/skills/lean-build/scripts/build.sh": true,
-        "bash .github/skills/lean-build/scripts/build.sh --clean": true,
-        "bash .github/skills/lean-build/scripts/build.sh --update": true,
-        // lean-run
-        "pwsh.exe -File .github/skills/lean-run/scripts/run.ps1": true,
-        "bash .github/skills/lean-run/scripts/run.sh": true
+        ".github/skills/lean-setup/scripts/setup.ps1": true,
+        ".github/skills/lean-setup/scripts/setup.sh": true,
+        ".github/skills/lean-build/scripts/build.ps1": true,
+        ".github/skills/lean-build/scripts/build.sh": true,
+        ".github/skills/lean-repl/scripts/repl.ps1": true,
+        ".github/skills/lean-repl/scripts/repl.sh": true,
+        "ConvertFrom-Json": true,
+        "ConvertTo-Json": true,
+        "lake exe s2il-toolkit": true,
+        "lake exe s2il-diag": true
     }
 }

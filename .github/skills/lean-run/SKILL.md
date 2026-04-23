@@ -1,64 +1,78 @@
 ---
 name: lean-run
-description: 'Lean 4 プロジェクトの実行ファイルを lake exe で実行し、出力結果を検証する。Use when: run lean executable, execute lean program, lake exe, verify output, check program result.'
-argument-hint: 'Lean プロジェクトを実行して結果を確認します'
+description: 'Run Lean 4 executable via lake exe and verify output. Use when: run lean executable, execute lean program, lake exe, verify output, check program result.'
+metadata:
+  argument-hint: 'Pass executable name (or omit for default)'
+disable-model-invocation: true
 ---
 
-# Lean プロジェクトの実行と検証
+# Lean Run スキル
 
-`lake exe` でビルド済み実行ファイルを起動し、出力を確認・検証する。
+> ⚠️ **このスキルは `lake exe <target>` 専用**。  
+> `Scratch/` ファイルを直接実行したい場合は **`lake env lean --run Scratch/MyFile.lean`** を使うこと（`--run` はファイル名より前）。  
+> 本スキルを `Scratch/` 実行に使っても動作しない。
 
-## 前提条件
+`lean-build` → `lake exe` の順にビルド＋実行し、出力を検証する。
+証明作業や lint チェックが目的なら **lean-build** で十分。本スキルは `Main.lean` の出力確認用。
 
-- **lean-build** スキルでプロジェクトがビルド済みであること
-- `lakefile.toml` に `[[lean_exe]]` が定義されていること
+## スクリプト
 
-## 依存関係
-
+```powershell
+.github/skills/lean-run/scripts/run.ps1          # Windows
+.github/skills/lean-run/scripts/run.sh            # macOS / Linux
 ```
-lean-setup → lean-build → lean-run
-```
-
-スクリプトは内部で lean-build (→ lean-setup) を自動呼び出しするため、
-通常は lean-run のスクリプトだけ実行すれば PATH 解決からビルド・実行まで一括で行われる。
-
-## 手順
-
-### 1. 実行スクリプトの実行
-
-ビルド → 実行 → (任意) 出力検証をまとめて行う:
-
-- **Windows (PowerShell 7)**: [run.ps1](./scripts/run.ps1)
-- **macOS / Linux (bash/zsh)**: [run.sh](./scripts/run.sh)
-
-オプション:
 
 | オプション | デフォルト | 説明 |
 |---|---|---|
 | `-Target <name>` / `--target <name>` | `s2il` | 実行ターゲット名 |
-| `-Expected <string>` / `--expected <string>` | *(なし)* | 期待する出力文字列 (指定時のみ検証) |
+| `-Expected <string>` / `--expected <string>` | — | 期待する出力文字列（検証用） |
 
-### 2. 実行ターゲットの確認
+## 出力仕様
 
-`lakefile.toml` の `[[lean_exe]]` セクション:
+**stdout** にビルド診断サマリー + 実行結果サマリーを出力する。
 
-```toml
-[[lean_exe]]
-name = "s2il"
-root = "Main"
+```
+=== BUILD DIAGNOSTICS ===
+...（lean-build と同形式）
+=== END DIAGNOSTICS ===
+
+=== RUN RESULT ===
+status: success|failure|skipped
+exit_code: 0
+target: s2il
+log: .lake/run-log.txt
+output_lines: 12
+---
+<実行出力 (先頭50行)>
+=== END RUN ===
 ```
 
-### 3. 手動実行
+| フィールド | 内容 |
+|---|---|
+| `status: skipped` | ビルド失敗のため実行せずスキップ |
+| `status: success` | 実行成功（exit 0） |
+| `status: failure` | 実行失敗（非ゼロ終了） |
+| `output_lines` | 総行数（50行超は先頭50行のみ表示） |
+| `verification` | `-Expected` 指定時のみ: `pass` / `fail` |
 
-```shell
-lake exe s2il
-```
+実行ログ全体は `.lake/run-log.txt` に保存される。
 
-`lake exe` は必要に応じて自動でビルドも行うため、単独での実行も可能。
+## バックグラウンド実行時のポーリング指針
 
-## トラブルシューティング
+`lake env lean --run` を `isBackground=true` で起動した場合、進捗を確認する手段がないため
+ポーリングが必要になる。以下の指針に従い、**コンテキスト消費を最小化**すること。
 
-- 実行ファイルが見つからない → `lakefile.toml` の `[[lean_exe]]` 定義を確認
-- 実行時エラー → `Main.lean` の `main` 関数を確認
-- `lake` が見つからない → **lean-setup** スキルを参照
-- ビルドエラー → **lean-build** スキルを参照
+### 実行時間の目安
+
+| 対象 | 推定実行時間 | 初回ポーリング | 以降の間隔 | 打ち切り上限 |
+|---|---|---|---|---|
+| 1L-4L 全数テスト（~200万件） | 2-5 分 | 120 秒後 | 120 秒 | 5 回 |
+| 5L+ ランダムサンプリング（~2万件） | 1-3 分 | 60 秒後 | 60 秒 | 5 回 |
+| 単体テスト・小規模 #eval | 10-30 秒 | 30 秒後 | 30 秒 | 3 回 |
+| ビルド (`lake build`) | 30-180 秒 | 60 秒後 | 60 秒 | 5 回 |
+
+### ポーリング時の注意
+
+- `get_terminal_output` の出力は毎回数千トークンになりうる。**上限回数を超えたらタイムアウトとして扱い、ユーザーに報告する**
+- ポーリング間で他の作業（メモリ保存、ドキュメント整理等）を並行して行い、待機時間を有効活用する
+- 出力が既に完了していた場合（exit code 表示済み）、追加ポーリングは不要

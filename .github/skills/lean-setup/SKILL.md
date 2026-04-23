@@ -1,7 +1,9 @@
 ---
 name: lean-setup
-description: 'Lean 4 ツールチェイン (elan/lake/lean) のパスを解決し、ターミナルやタスクから利用可能にする。Use when: lean or lake command is not found, PATH setup, elan toolchain resolution, environment configuration.'
-argument-hint: 'ツールチェインのセットアップや PATH 問題のトラブルシュートを行います'
+description: 'Resolve Lean 4 toolchain (elan/lake/lean) PATH for terminals and tasks. Use when: lean or lake command is not found, PATH setup, elan toolchain resolution, environment configuration.'
+metadata:
+  argument-hint: 'Describe the PATH or toolchain issue'
+disable-model-invocation: true
 ---
 
 # Lean ツールチェインセットアップ
@@ -23,10 +25,11 @@ elan でインストールされた Lean 4 ツールチェイン (lean, lake 等
 
 ### 1. セットアップスクリプトの実行
 
-elan の存在確認、PATH 追加、動作確認をまとめて行う:
+elan の存在確認、PATH 追加、動作確認をまとめて行う。
+シェル名を前置せず、スクリプトを直接実行すること。
 
-- **Windows (PowerShell 7)**: [setup.ps1](./scripts/setup.ps1)
-- **macOS / Linux (bash/zsh)**: [setup.sh](./scripts/setup.sh)
+- **Windows**: `.github/skills/lean-setup/scripts/setup.ps1`
+- **macOS / Linux**: `.github/skills/lean-setup/scripts/setup.sh`
 
 ### 2. VS Code タスクでの PATH 解決
 

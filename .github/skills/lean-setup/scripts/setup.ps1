@@ -1,6 +1,7 @@
 #!/usr/bin/env pwsh
 # lean-setup: elan ツールチェインの PATH 解決と動作確認 (PowerShell 7)
 
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
