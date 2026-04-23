@@ -1,11 +1,11 @@
 ---
 description: "Generate sorry-first proof scaffolding from a theorem type signature, with REPL-confirmed goal states. Use when: proof skeleton, sorry skeleton, scaffold proof, generate proof outline, proof structure, decompose theorem, sorry decomposition, proof template, break down theorem, plan proof structure."
 tools: [execute, read, search]
-argument-hint: "Pass theorem type signature (e.g. ∀ (s : Shape), (process s).map rotate180 = process s.rotate180)"
+argument-hint: "Pass theorem type signature (e.g. ∀ (s : Shape), (process s).map rotate180 = process s.rotate180). Optionally include diagnosticsFile path."
 handoffs:
   - label: Try tactics on goal
     agent: lean-goal-advisor
-    prompt: 上記の骨格中の sorry ゴールに対してタクティクを試行してください。
+    prompt: "diagnosticsFile={{diagnosticsFile}}\n\n上記の骨格中の sorry ゴールに対してタクティクを試行してください。"
 ---
 
 あなたは Lean 4 の定理に対して sorry-first の証明骨格を自動生成するスペシャリストです。
@@ -68,7 +68,7 @@ theorem <name> <args> : <conclusion> := by
 
 骨格コードを REPL で実行し、各 sorry のゴール状態を取得する。
 
-**JSONL 作成**（`Scratch/skeleton_check.jsonl`）:
+**JSONL 作成**（`Scratch/commands-<sessionId>-proof-skeleton-<runId>.jsonl`）:
 
 ```jsonl
 {"cmd": "<骨格コード全体>", "env": 0}
@@ -80,10 +80,12 @@ theorem <name> <args> : <conclusion> := by
 
 ```powershell
 # Persistent モード（推奨・~600ms/回）
-.github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId skeleton -CmdFile Scratch/skeleton_check.jsonl
+.github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId <sessionId>-proof-skeleton-<runId> -CmdFile Scratch/commands-<sessionId>-proof-skeleton-<runId>.jsonl
 # macOS / Linux:
-# .github/skills/lean-repl/scripts/repl.sh --send --session-id skeleton --cmd-file Scratch/skeleton_check.jsonl
+# .github/skills/lean-repl/scripts/repl.sh --send --session-id <sessionId>-proof-skeleton-<runId> --cmd-file Scratch/commands-<sessionId>-proof-skeleton-<runId>.jsonl
 ```
+
+> `runId` は時刻ベース（例: `yyyyMMdd-HHmmss-fff`）を使用し、並列実行時に衝突しないようにする。
 
 **結果の解析**:
 - `sorries[].goal` から各 sorry のゴール文字列を取得

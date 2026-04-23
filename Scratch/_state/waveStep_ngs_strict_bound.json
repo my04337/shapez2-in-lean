@@ -1,0 +1,18 @@
+{
+  "task": "waveStep_ngs_strict_bound",
+  "file": "S2IL/Operations/Gravity/ProcessWave.lean",
+  "line": 46,
+  "last_goal": "⊢ nonGroundedLayerSum (waveStep s) + 1 ≤ nonGroundedLayerSum s",
+  "useful_lemmas": [
+    "nonGroundedLayerSum_clear_add",
+    "Shape.groundedPositions_placeLDGroups_subset",
+    "landing_sum_bound",
+    "sum_map_layer_landing_telescope",
+    "placeLDGroupsLandings_mem_exists_drop_ge_one",
+    "landingDistance_ge_one",
+    "settling_minLayer_ge_one"
+  ],
+  "dead_ends": [],
+  "updated": "2026-04-21",
+  "notes": "waveStep_grounding_mono が主要残課題。Sub-lemma #5 (cluster placing) と #6 (pin placing) の landing edge 保存を先に固める必要あり。"
+}

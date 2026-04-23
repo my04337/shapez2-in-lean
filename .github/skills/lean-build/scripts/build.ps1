@@ -161,6 +161,51 @@ foreach ($d in ($diagnostics | Where-Object { $_.severity -eq "info" })) {
 
 Write-Output "=== END DIAGNOSTICS ==="
 
+# --- symbol-map 更新（ビルド成功時のみ） ---
+if ($buildExitCode -eq 0) {
+    $symbolMapScript = Join-Path $PSScriptRoot "update-symbol-map.ps1"
+    if (Test-Path $symbolMapScript) {
+        try {
+            & $symbolMapScript -Root ([System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\..\..\..\")))
+        } catch {
+            Write-Host "[build] symbol-map update failed (non-fatal): $_"
+        }
+    }
+
+    # sig-digest（案 1 + 案 4: per-file signature & landmark index）
+    $sigDigestScript = Join-Path $PSScriptRoot "update-sig-digest.ps1"
+    if (Test-Path $sigDigestScript) {
+        try {
+            & $sigDigestScript -Root ([System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\..\..\..\")))
+        } catch {
+            Write-Host "[build] sig-digest update failed (non-fatal): $_"
+        }
+    }
+
+    # sorry-card context 事前埋込（案 J + 案 N: 2026-04-23 #52）
+    # sorry-plan.json に登録された全 sorry-card に extract-goal-context の出力を
+    # upsert する。案 J の受動 read モデルが sorry 移動で陳腐化しないよう、build
+    # フックで自動更新する。
+    $sorryCardCtxScript = Join-Path $PSScriptRoot "update-sorry-card-context.ps1"
+    if (Test-Path $sorryCardCtxScript) {
+        try {
+            & $sorryCardCtxScript -Root ([System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\..\..\..\")))
+        } catch {
+            Write-Host "[build] sorry-card context update failed (non-fatal): $_"
+        }
+    }
+}
+
+# --- sorry-goals 更新（ビルド成功/部分失敗問わず、診断 JSONL があれば実行） ---
+$sorryGoalsScript = Join-Path $PSScriptRoot "update-sorry-goals.ps1"
+if (Test-Path $sorryGoalsScript) {
+    try {
+        & $sorryGoalsScript -Root ([System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\..\..\..\"))) -Diag $sessionJsonlPath
+    } catch {
+        Write-Host "[build] sorry-goals update failed (non-fatal): $_"
+    }
+}
+
 # ビルド失敗時は非ゼロで終了
 if ($buildExitCode -ne 0) {
     exit $buildExitCode

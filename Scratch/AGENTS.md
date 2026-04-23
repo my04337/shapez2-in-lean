@@ -1,81 +1,47 @@
-# Scratch/ — 一時ファイル・実験作業
+# Scratch/ — 一時ファイル運用（簡約版）
 
-> このファイルは `Scratch/` 配下のファイル（`.lean`・`.jsonl`）編集時に自動適用される（`chat.useNestedAgentsMdFiles` 有効時）。
-> プロジェクト全体の規約は [AGENTS.md](../AGENTS.md)、Lean 証明コードの規約は [S2IL/AGENTS.md](../S2IL/AGENTS.md) を参照。
+## 用途
 
-## このディレクトリの用途
+`Scratch/` は実験・検証専用ディレクトリ。
 
-`Scratch/` は**実験・検証用の一時的なファイル置き場**であり、`*.lean` と `*.jsonl` は `.gitignore` 対象。
+- `*.lean`: 断片検証、`#eval`、局所テスト
+- `*.jsonl`: REPL バッチコマンド
 
-| 種類 | 用途 | 命名規則 |
-|---|---|---|
-| `*.lean` | Lean 式・定理の型チェック / `#eval` | `UpperCamelCase`（例: `GravityCheck.lean`） |
-| `*.jsonl` | REPL コマンドバッチ | `commands-<sessionId>.jsonl`（不明時: `commands.jsonl`） |
-| `commands.jsonl` | セッション ID 不明時のフォールバック | 固定名 |
+## 役割分担
 
-## ディレクトリ別の役割分担
+- `Scratch/`: エージェントが作成する一時ファイル
+- `.repl/<session>/`: REPL インフラ専用（直接編集しない）
 
-```
-Scratch/        ← エージェントが作成する一時 Lean / JSONL ファイルはここ
-.repl/<session>/ ← REPL デーモンのインフラファイル（エージェントは直接作成しない）
-                   _session-in.jsonl, _session-out.jsonl, daemon.pid, ready 等
-```
-
-**`.repl/` への Lean ファイル・JSONL コマンドファイルの作成は禁止。** `.repl/` は REPL スクリプトが管理するインフラ用ディレクトリ。
-
-## 実行方法
+## 実行
 
 ```powershell
-# 型チェック / #eval
 lake env lean Scratch/MyFile.lean
-
-# def main の実行（--run は必ずファイル名より前に置く）
 lake env lean --run Scratch/MyFile.lean
 ```
 
-## Lean ファイルの使い分け
+## JSONL 作成ルール
 
-- **数行の即時確認**: REPL を優先（`lean-repl` スキル参照）
-- **複数定義・10 行以上**: `Scratch/*.lean` を使う
-- **証明骨格・仮説メモ**: Markdown（`/memories/session/` 等）に書く
+- JSONL は `run_in_terminal` + `Set-Content` で作成
+- **並列実行時の衝突回避のため、毎回一意な名前を使う**
+- 推奨形式: `Scratch/commands-<sessionId>-<topic>-<runId>.jsonl`
+- `runId` は時刻ベース（例: `yyyyMMdd-HHmmss-fff`）を使う
+- `sessionId` が不明な場合は `unknown` を使う（例: `Scratch/commands-unknown-goal-advisor-20260418-103015-123.jsonl`）
+- 固定名（`Scratch/commands.jsonl` など）は禁止
 
-## JSONL ファイルの生成規則
+## JSONL 蓄積管理
 
-### 生成方法（`run_in_terminal` + `Set-Content`）
+- **自セッションのファイル**（`Scratch/commands-<自sessionId>-*.jsonl`）は **証明・検証が完了したタイミングごとに** 不要なものを削除する
+  - セッション終了時にも `Get-ChildItem Scratch\commands-<sessionId>-*.jsonl | Remove-Item` で一括削除
+- **他セッションのファイルは削除しない**: 自分の sessionId を含まないファイルは別セッションが使用中の可能性があるため削除禁止
+- Scratch/ 内の JSONL が 30 件を超えたら整理を検討する（**自セッション分のみ**を削除対象にする）
+- 将来参照する可能性がない実験 JSONL は即座に削除して構わない
 
-```powershell
-# ✅ 正しい生成方法
-'{"cmd": "#eval 1+1", "env": 0}' | Set-Content Scratch/commands.jsonl
+## 禁止
 
-# ✅ 複数行（ヒアストリング）
-@'
-{"cmd": "#eval 1+1", "env": 0}
+- トップレベルへの一時ファイル作成（`tmp_*.lean` など）
+- `.repl/` への Lean/JSONL 作成
 
-{"cmd": "theorem test : 1 + 1 = 2 := by norm_num", "env": 0}
-'@ | Set-Content Scratch/commands.jsonl
-```
+## 補足
 
-```powershell
-# ❌ create_file で JSONL 生成（\n が実際の改行に展開されて JSON 破損）
-```
-
-### ファイル命名ルール
-
-- 同一探索テーマ内の繰り返しテストは**同一ファイルに追記**する（連番ファイルを増殖させない）
-- 新ファイルを作るのは別テーマの場合のみ
-- 1 セッション内の REPL ファイル作成は**最大 3 件まで**
-
-```
-✅ 同じテーマで修正 → commands.jsonl を上書き再利用
-❌ commands-check2.jsonl, commands-check3.jsonl と連番で増殖
-```
-
-## Unicode 文字を含む Lean コード
-
-`∀`、`¬`、`≤`、`⊢` 等の Unicode 文字は REPL の Persistent モードおよびバッチ JSONL 内でそのまま使用できる。
-
-ただし JSONL へのエスケープが複雑になる場合（多数の Unicode を含む長い証明等）は `Scratch/*.lean` に直接記述して `lake env lean Scratch/File.lean` で評価する方が確実。
-
-## Scratch/commands.jsonl の読み取り前確認
-
-この JSONL ファイルは**前セッションの内容が残っている可能性がある**。`replace_string_in_file` や `create_file` を使う前に必ず `read_file` で現在の内容を確認すること。
+- `Scratch/commands.jsonl` は編集前に必ず内容確認する
+- 長い Unicode 含み検証は JSONL より `Scratch/*.lean` を優先する

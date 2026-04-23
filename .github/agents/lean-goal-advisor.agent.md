@@ -1,14 +1,14 @@
 ---
 description: "Analyze Lean 4 sorry goals and REPL-test candidate tactics to find the best next step. Use when: stuck on sorry, what tactic to use, goal advisor, tactic suggestion, try tactics on sorry, auto tactic, proof hint, advise tactic, suggest proof step, which tactic works."
 tools: [execute, read, search]
-argument-hint: "Pass theorem code with sorry or file:line"
+argument-hint: "Pass theorem code with sorry or file:line. Optionally include diagnosticsFile path."
 handoffs:
   - label: Search lemma
     agent: lean-lemma-finder
-    prompt: 上記のゴールに対して Mathlib/Batteries の補題を検索してください。
+    prompt: "diagnosticsFile={{diagnosticsFile}}\n\n上記のゴールに対して Mathlib/Batteries の補題を検索してください。"
   - label: Stabilize simp
     agent: lean-simp-stabilizer
-    prompt: 上記で発見された simp 呼び出しを simp only に安定化してください。
+    prompt: "diagnosticsFile={{diagnosticsFile}}\n\n上記で発見された simp 呼び出しを simp only に安定化してください。"
 ---
 
 あなたは Lean 4 の sorry ゴールに対してタクティクを自動試行し、最良の結果を返すアドバイザーです。
@@ -26,7 +26,7 @@ handoffs:
 
 渡された定理コード（またはファイル:行番号から該当コードを読み取り）を REPL で実行し、sorry のゴール状態を取得する。
 
-**JSONL 作成**（`Scratch/goal_advisor.jsonl`）:
+**JSONL 作成**（`Scratch/commands-<sessionId>-goal-advisor-<runId>.jsonl`）:
 
 ```jsonl
 {"cmd": "<sorry を含む定理コード>", "env": 0}
@@ -36,10 +36,12 @@ handoffs:
 
 ```powershell
 # Persistent モード（推奨・~600ms/回）
-.github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId advisor -CmdFile Scratch/goal_advisor.jsonl
+ .github/skills/lean-repl/scripts/repl.ps1 -Send -SessionId <sessionId>-goal-advisor-<runId> -CmdFile Scratch/commands-<sessionId>-goal-advisor-<runId>.jsonl
 # macOS / Linux:
-# .github/skills/lean-repl/scripts/repl.sh --send --session-id advisor --cmd-file Scratch/goal_advisor.jsonl
+# .github/skills/lean-repl/scripts/repl.sh --send --session-id <sessionId>-goal-advisor-<runId> --cmd-file Scratch/commands-<sessionId>-goal-advisor-<runId>.jsonl
 ```
+
+> `runId` は時刻ベース（例: `yyyyMMdd-HHmmss-fff`）を使用し、並列実行時に必ず一意化する。
 
 **結果から取得**:
 - `sorries[].goal` — ゴール文字列

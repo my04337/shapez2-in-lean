@@ -267,11 +267,21 @@ $p.WaitForExit()
 
 | スクリプト | 用途 |
 |---|---|
-| `simp-stabilize.ps1` | bare simp → simp? 変換 + lean --json 実行 + 提案適用の一括パイプライン |
+| `simp-stabilize.ps1` | bare simp → simp? 変換 + lean --json 実行 + 提案適用の一括パイプライン (Windows) |
+| `simp-stabilize.sh` | 同上 (macOS / Linux、python3 または jq が必要) |
 
 使い方:
 ```powershell
+# Windows
 .github/skills/lean-simp-guide/scripts/simp-stabilize.ps1 -File S2IL/Behavior/Gravity.lean
+.github/skills/lean-simp-guide/scripts/simp-stabilize.ps1 -File S2IL/Behavior/Gravity.lean -DryRun
+.github/skills/lean-simp-guide/scripts/simp-stabilize.ps1 -File S2IL/Behavior/Gravity.lean -KeepBackup
+```
+```bash
+# macOS / Linux
+.github/skills/lean-simp-guide/scripts/simp-stabilize.sh --file S2IL/Behavior/Gravity.lean
+.github/skills/lean-simp-guide/scripts/simp-stabilize.sh --file S2IL/Behavior/Gravity.lean --dry-run
+.github/skills/lean-simp-guide/scripts/simp-stabilize.sh --file S2IL/Behavior/Gravity.lean --keep-backup
 ```
 
 ---

@@ -32,6 +32,13 @@ if [ -z "$CWD" ]; then
     CWD="$(pwd)"
 fi
 
+# proof-suppressed.flag が存在する場合は全証明フック出力を抑止する
+# (session-efficiency スキル発動時やユーザが明示的に証明停止を指示した場合に作成される)
+if [ -f "$CWD/.lake/proof-suppressed.flag" ]; then
+    echo '{"continue":true}'
+    exit 0
+fi
+
 # ======================================================================
 # 0. セッション内にビルドが実行されたかチェック（Q&A セッション等の誤ブロック防止）
 #    - .lake/session-id.tmp が存在 → セッションIDを取得
@@ -134,8 +141,16 @@ fi
 
 # ======================================================================
 # 3. sorry の残存チェック (情報通知のみ、ブロックしない)
+#    ターン内に .lean ファイル編集があった場合のみ通知する
 #    build 診断の isSorry=true を唯一の情報源とする
 # ======================================================================
+# .lean 編集フラグの確認とリセット
+LEAN_EDITED_FLAG="$CWD/.lake/lean-edited-this-turn.flag"
+LEAN_WAS_EDITED="false"
+if [ -f "$LEAN_EDITED_FLAG" ]; then
+    LEAN_WAS_EDITED="true"
+    rm -f "$LEAN_EDITED_FLAG"
+fi
 SORRY_INFO=""
 TOTAL_SORRIES=0
 
@@ -151,8 +166,13 @@ if [ -f "$DIAG_FILE" ] && command -v jq &>/dev/null; then
 fi
 
 if [ "$TOTAL_SORRIES" -gt 0 ]; then
-    MSG="[Stop] ${TOTAL_SORRIES} sorry(s) remain. Recommended: record proof progress in /memories/repo/ before ending the session.\\n\\nRemaining sorrys:\\n${SORRY_INFO}"
-    echo "{\"continue\":true,\"systemMessage\":\"${MSG}\"}"
+    if [ "$LEAN_WAS_EDITED" = "true" ]; then
+        MSG="[Stop] ${TOTAL_SORRIES} sorry(s) remain. Recommended: record proof progress in /memories/repo/ before ending the session.\\n\\nRemaining sorrys:\\n${SORRY_INFO}"
+        echo "{\"continue\":true,\"systemMessage\":\"${MSG}\"}"
+    else
+        # .lean 編集なしターン: sorry 実証作業を行っていないため通知を抑止する
+        echo '{"continue":true}'
+    fi
 else
     echo '{"continue":true}'
 fi

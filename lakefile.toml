@@ -1,6 +1,6 @@
 name = "shapez2-in-lean"
 version = "0.1.0"
-defaultTargets = ["s2il", "Test"]
+defaultTargets = ["S2IL", "Test"]
 
 [[require]]
 name = "mathlib"
@@ -20,13 +20,17 @@ rev = "v4.29.0"
 [[lean_lib]]
 name = "S2IL"
 
-[[lean_exe]]
-name = "s2il"
-root = "Main"
+[[lean_lib]]
+name = "DevTool"
+globs = ["DevTool.+"]
 
 [[lean_exe]]
-name = "depgraph"
-root = "DepGraph"
+name = "s2il-toolkit"
+root = "DevTool.Toolkit"
+
+[[lean_exe]]
+name = "s2il-diag"
+root = "DevTool.Diag"
 
 [[lean_lib]]
 name = "Test"

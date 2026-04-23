@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "generated": false,
+  "description": "Structured snapshot of active sorry obligations. Used by agents to quickly identify the current proof target and dependencies without re-reading lengthy planning markdown.",
+  "maintenance": "Update when adding/removing sorrys or when dependency structure changes. Progress milestones belong to sorry-cards/{symbol}.md (milestone table). Detailed history: git log.",
+  "updated": "2026-04-23 (第59報: sorry 0 化 / ブランチマージ準備完了。第58報で 3 戦略すべての基盤崩壊を確認した後、偽証明を積み上げないため `placeLDGroups_landing_groundingEdge_mono` を一時 axiom 化。削除した補題: `landingDistance_foldl_placeFU_preserve_on_remaining` (refuted), `placeLDGroups_remaining_head_pin_landing_empty` (h_sorted 依存), `placeLDGroups_landing_groundingEdge_mono_aux` (IH 不健全)。保持: `_step_generic` / `_step` (いずれも 0-sorry、Greenfield Rewrite 再利用見込)。lake build green, sorry 0, warnings 0。次ステップは Greenfield Rewrite 計画 docs/plans/gravity-greenfield-rewrite-plan.md に基づく Gravity 層の全面再構築。)",
+  "sorrys": [],
+  "recently_completed": [
+    {
+      "symbol": "placeLDGroups_landing_groundingEdge_mono (axiom 化)",
+      "file": "S2IL/Operations/Gravity/GroundedMono.lean",
+      "completed_on": "2026-04-23",
+      "notes": "第59報: 第58報で aux の IH 不変量 h_sorted'、保存補題 landingDistance_foldl_placeFU_preserve_on_remaining 双方が反例確定のため、一時 axiom 化。de-axiomatization は Greenfield Rewrite 計画で対応予定。"
+    },
+    {
+      "symbol": "waveStep_grounding_mono",
+      "file": "S2IL/Operations/Gravity/ProcessWave.lean",
+      "completed_on": "2026-04-23",
+      "notes": "第44報: axiom placeLDGroups_landing_groundingEdge_mono に委譲して 0-sorry 化。axiom 定理化後も変更不要。"
+    },
+    {
+      "symbol": "waveStep_ngs_strict_bound",
+      "file": "S2IL/Operations/Gravity/ProcessWave.lean",
+      "completed_on": "2026-04-22",
+      "notes": "S1 strict-bound 形式 NGS(waveStep s) + 1 ≤ NGS(s) の構成的証明を完了。axiom 依存のため Greenfield Rewrite で再検証対象。"
+    }
+  ],
+  "axioms": [
+    {
+      "symbol": "placeLDGroups_landing_groundingEdge_mono",
+      "file": "S2IL/Operations/Gravity/GroundedMono.lean",
+      "status": "temporary",
+      "introduced": "2026-04-23 (第59報)",
+      "notes": "Step B3b 本体。命題自体は直感的には真（grounding は occupation 追加で単調）だが既存の aux IH 設計は h_sorted' preservation が FALSE で破綻。Greenfield Rewrite で再構築予定。"
+    },
+    {
+      "symbol": "waveStep_rotate180_comm",
+      "file": "S2IL/Operations/Gravity/Equivariance/Clusters.lean",
+      "status": "held",
+      "notes": "2026-04-20 導入。真定理であることは vanilla4/5/stress8 で計算検証済み (#guard 相当)。S2 構成的証明は Greenfield Rewrite 計画参照。"
+    },
+    {
+      "symbol": "S2_axiom",
+      "file": "S2IL/Operations/Gravity/Defs.lean",
+      "status": "held",
+      "notes": "Placeholder. Greenfield Rewrite で再評価。"
+    },
+    {
+      "symbol": "S3_axiom",
+      "file": "S2IL/Operations/Gravity/Defs.lean",
+      "status": "held",
+      "notes": "Placeholder. Greenfield Rewrite で再評価。"
+    }
+  ]
+}

@@ -122,7 +122,7 @@ try {
 
     # --- 出力 ---
     # セッション ID を systemMessage に含める（エージェントが REPL JSONL ファイル名に使用）
-    $sidMsg = "Session ID: $sessionId (REPL JSONL: Scratch/commands-${sessionId}.jsonl)"
+    $sidMsg = "Session ID: $sessionId (REPL JSONL template: Scratch/commands-${sessionId}-<topic>-<runId>.jsonl; use unique runId for parallel runs)"
     if ($messages.Count -gt 0) {
         $msg = $messages -join "`n"
         $result = @{

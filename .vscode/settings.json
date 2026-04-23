@@ -15,15 +15,11 @@
         ".github/skills/lean-setup/scripts/setup.sh": true,
         ".github/skills/lean-build/scripts/build.ps1": true,
         ".github/skills/lean-build/scripts/build.sh": true,
-        ".github/skills/lean-run/scripts/run.ps1": true,
-        ".github/skills/lean-run/scripts/run.sh": true,
-        ".github/skills/lean-depgraph/scripts/depgraph.ps1": true,
-        ".github/skills/lean-depgraph/scripts/depgraph.sh": true,
         ".github/skills/lean-repl/scripts/repl.ps1": true,
         ".github/skills/lean-repl/scripts/repl.sh": true,
-        "lean --print-decl": true,
         "ConvertFrom-Json": true,
         "ConvertTo-Json": true,
-        "lake exe depgraph": true
+        "lake exe s2il-toolkit": true,
+        "lake exe s2il-diag": true
     }
 }

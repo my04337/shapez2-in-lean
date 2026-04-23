@@ -30,6 +30,12 @@
         "command": ".github/hooks/scripts/check-sorry-on-stop.sh",
         "windows": "pwsh -ExecutionPolicy Bypass -NoProfile -File .github/hooks/scripts/check-sorry-on-stop.ps1",
         "timeout": 10
+      },
+      {
+        "type": "command",
+        "command": ".github/hooks/scripts/regen-indices.sh",
+        "windows": "pwsh -ExecutionPolicy Bypass -NoProfile -File .github/hooks/scripts/regen-indices.ps1",
+        "timeout": 60
       }
     ]
   }
