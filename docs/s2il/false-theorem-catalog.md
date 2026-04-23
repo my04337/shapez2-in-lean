@@ -36,7 +36,7 @@ Gravity 層の探索で発見された偽定理・偽の不変量候補をリフ
 ## sorry #4b に関する棄却済みアプローチ
 
 このセクションは過去の特定 sorry に紐づく内容のため削除された。  
-現在の再構築方針は [`../plans/gravity-greenfield-rewrite-plan.md`](../plans/gravity-greenfield-rewrite-plan.md) を参照。
+現在の再構築方針は [`../plans/layer-ab-rewrite-plan.md`](../plans/layer-ab-rewrite-plan.md) および [`../plans/architecture-layer-ab.md`](../plans/architecture-layer-ab.md) を参照（旧 Gravity 限定計画は [`../plans/archive/gravity-greenfield-rewrite-plan.md`](../plans/archive/gravity-greenfield-rewrite-plan.md) に退避済み）。
 
 ---
 

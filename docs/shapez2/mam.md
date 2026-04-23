@@ -177,7 +177,7 @@ placeAbove 出力が上界を超えるケースへの対応が再構築の核心
 Gravity 層を全面的に再設計する **Greenfield Rewrite** が進行中。  
 旧 rotate180 ベースの axiom プレースホルダーは存在するが、  
 CW 回転ベースの構成的証明への置換が目標。  
-詳細は `docs/plans/gravity-greenfield-rewrite-plan.md` を参照。
+詳細は `docs/plans/layer-ab-rewrite-plan.md` および `docs/plans/architecture-layer-ab.md` を参照（旧 `gravity-greenfield-rewrite-plan.md` は `docs/plans/archive/` に統合済み）。
 
 積層等変性（T-11）の構成的証明が、MaM 形式化への残る主要ブロッカーである。
 

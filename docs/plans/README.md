@@ -14,11 +14,18 @@ Shapez2 in Lean (S2IL) プロジェクトの最終目標・大きな方針・層
 |---|---|
 | [MILESTONES.md](MILESTONES.md) | MAM 完全性に至る最終目標と、Data / Behavior / Flow / MAM の層構造 |
 
-### 層別の実行計画
+### Layer A/B 再構築
 
 | ファイル | 概要 |
 |---|---|
-| [gravity-greenfield-rewrite-plan.md](gravity-greenfield-rewrite-plan.md) | Layer B（落下・結晶砕け散り・安定化）の再構築計画。CW 等変性への一本化と重複排除 |
+| [architecture-layer-ab.md](architecture-layer-ab.md) | Layer A/B の新ディレクトリ構造と設計原則の正本（Facade / Internal / MECE / 認知負荷制約）|
+| [layer-ab-rewrite-plan.md](layer-ab-rewrite-plan.md) | Layer A/B を Greenfield で再構築するための Phase 別実施計画。各 Phase 末の振り返り手順を含む |
+
+### アーカイブ
+
+| ファイル | 概要 |
+|---|---|
+| [archive/gravity-greenfield-rewrite-plan.md](archive/gravity-greenfield-rewrite-plan.md) | 旧 Gravity 限定再構築計画。`layer-ab-rewrite-plan.md` に統合済み |
 
 ---
 
@@ -27,7 +34,8 @@ Shapez2 in Lean (S2IL) プロジェクトの最終目標・大きな方針・層
 | 作業 | 参照先 |
 |---|---|
 | プロジェクト全体の位置付けを確認 | `MILESTONES.md` |
-| Gravity 層の構造を変更する | `gravity-greenfield-rewrite-plan.md` |
+| Layer A/B の構造原則を確認 | `architecture-layer-ab.md` |
+| Layer A/B 再構築の手順を確認 | `layer-ab-rewrite-plan.md` |
 | 個別 sorry の現状を確認 | `../../S2IL/_agent/sorry-plan.json` / `../../S2IL/_agent/sorry-goals.md` |
 | 新しい証明計画を策定する | `../agent/proof-plan-current-focus-guide.md` |
 
