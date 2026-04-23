@@ -4,8 +4,8 @@
 -- placeAbove 構造シェイプの process_rotate180 検証
 -- 実行: lake env lean --run Verification/Gravity/ProcessRotate180PlaceAbove.lean
 
-import S2IL.Behavior.Gravity
-import S2IL.Behavior.Stacker
+import S2IL.Operations.Gravity
+import S2IL.Operations.Stacker.Stacker
 
 open Gravity Stacker
 

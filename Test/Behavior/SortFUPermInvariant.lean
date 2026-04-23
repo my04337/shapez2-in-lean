@@ -1,5 +1,5 @@
 -- sortFallingUnits(perm).foldl が全順列で同じ結果を返すか検証
-import S2IL.Behavior.Gravity
+import S2IL.Operations.Gravity
 
 open Gravity
 

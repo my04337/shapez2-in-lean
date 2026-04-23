@@ -2,7 +2,7 @@
 -- SPDX-License-Identifier: MIT
 
 -- ColorMixer (混色機) のユニットテスト
-import S2IL.Behavior.ColorMixer
+import S2IL.Operations.ColorMixer.ColorMixer
 import S2IL.Machine.Machine
 
 -- ============================================================

@@ -2,7 +2,7 @@
 -- SPDX-License-Identifier: MIT
 
 -- CrystalGenerator (結晶製造機) のユニットテスト
-import S2IL.Behavior.CrystalGenerator
+import S2IL.Operations.CrystalGenerator.CrystalGenerator
 
 -- ============================================================
 -- テストヘルパー

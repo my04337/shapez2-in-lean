@@ -2,7 +2,7 @@
 -- SPDX-License-Identifier: MIT
 
 -- Cutter (切断) のユニットテスト
-import S2IL.Behavior.Cutter
+import S2IL.Operations.Cutter.Cutter
 
 -- ============================================================
 -- テスト用データ

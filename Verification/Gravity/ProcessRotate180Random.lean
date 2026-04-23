@@ -13,7 +13,7 @@
 --   16L:    200 shapes, 0 failures
 --   合計: 18,700 shapes, 0 failures
 
-import S2IL.Behavior.Gravity
+import S2IL.Operations.Gravity
 
 open Gravity
 

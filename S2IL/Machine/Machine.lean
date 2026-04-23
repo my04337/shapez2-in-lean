@@ -1,14 +1,14 @@
 -- SPDX-FileCopyrightText: 2026 my04337
 -- SPDX-License-Identifier: MIT
 
-import S2IL.Behavior.Painter
-import S2IL.Behavior.CrystalGenerator
-import S2IL.Behavior.Rotate
-import S2IL.Behavior.PinPusher
-import S2IL.Behavior.Stacker
-import S2IL.Behavior.Cutter
-import S2IL.Behavior.ColorMixer
-import S2IL.Behavior.SettledShape
+import S2IL.Operations.Painter.Painter
+import S2IL.Operations.CrystalGenerator.CrystalGenerator
+import S2IL.Kernel.Transform.Rotate
+import S2IL.Operations.PinPusher.PinPusher
+import S2IL.Operations.Stacker.Stacker
+import S2IL.Operations.Cutter.Cutter
+import S2IL.Operations.ColorMixer.ColorMixer
+import S2IL.SettledShape
 
 /-!
 # Machine (加工装置)
