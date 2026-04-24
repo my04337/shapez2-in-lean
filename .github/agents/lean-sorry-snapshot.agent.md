@@ -55,28 +55,13 @@ lake exe s2il-diag sorry-list --json
 
 ### Step 3: sorry 間依存グラフの生成
 
-`s2il-toolkit depgraph --sorry-only --json` で sorry ノードと sorry 間エッジのみをコンパクトに取得する。
-
-> **注意**: s2il-toolkit は S2IL を import するため、S2IL のビルドが成功している必要がある。
-> S2IL がビルドエラーの場合は Step 3 をスキップし、Step 2 の結果のみで報告する。
+Phase A (2026-04-24) で `s2il-toolkit depgraph` は廃止された。
+sorry 間の依存関係は `S2IL/_agent/sorry-plan.json` の `blockers` / `dependents` フィールドで手動管理する。
+`sorry-plan.json` を参照して依存情報を取得する:
 
 ```powershell
-lake exe s2il-toolkit depgraph --sorry-only --json --output .lake/depgraph.json
-```
-
-stderr に統計情報が出力される:
-```
-=== DEPGRAPH STATISTICS ===
-  nodes: N (theorems: T, other: O)
-  edges: E
-  sorry: S (independent: I)
-=== END STATISTICS ===
-```
-
-`.lake/depgraph.json` を読み込んで依存情報を取得する:
-```powershell
-$g = Get-Content .lake/depgraph.json | ConvertFrom-Json
-# 全ノードが sorry: true。エッジ {from: "A", to: "B"} は「A が B に依存」を意味する
+$plan = Get-Content S2IL/_agent/sorry-plan.json | ConvertFrom-Json
+# $plan.sorrys[i].blockers は「この sorry を解くのに必要な sorry 名の一覧」
 ```
 
 ### Step 4: sorry の依存分類
@@ -85,9 +70,9 @@ Step 2 と Step 3 の情報を組み合わせて各 sorry を分類する。
 
 | 分類 | 定義 | 着手優先度 |
 |---|---|---|
-| **独立** | 他の sorry に依存しない | ◎ 即着手可能 |
-| **被依存数が多い** | 多くの宣言がこの sorry に依存している | ○ 解決インパクト大 |
-| **依存あり** | 他の sorry の結果を前提とする | △ 依存先解決後 |
+| **独立** | `blockers` が空 | ◎ 即着手可能 |
+| **被依存数が多い** | 他 sorry の `blockers` に多数登場する | ○ 解決インパクト大 |
+| **依存あり** | `blockers` が非空 | △ 依存先解決後 |
 
 ## 出力フォーマット
 
@@ -113,13 +98,12 @@ Step 2 と Step 3 の情報を組み合わせて各 sorry を分類する。
 ## Gotchas
 
 - ビルドが failure の場合でも sorry 一覧は `s2il-diag sorry-list` で取得できる（S2IL 非依存）
-- `s2il-toolkit` は S2IL を import するため、S2IL のビルド成功が前提。エラー時は Step 3 をスキップ
+- `sorry-plan.json` の `blockers` / `dependents` は手動管理のため、最新 sorry 一覧と不整合の可能性がある。検出時は sorry-plan.json の更新を促す
 - sorry 数が 0 件の場合は「sorry なし」と明示して終了する（空テーブルを返さない）
 
 ## 関連
 
 - **ツール**: `s2il-diag`（S2IL 非依存診断ツール）
-- **ツール**: `s2il-toolkit`（S2IL 依存開発ツール）
 - **スキル**: `lean-build`（ビルドスクリプトの詳細）
 - **スキル**: `lean-diagnostics`（診断メッセージの解析・トリアージ）
 - **スキル**: `lean-proof-progress`（sorry 進捗の長期管理・撤退判断）

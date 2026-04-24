@@ -87,7 +87,7 @@ structure OneHom (M : Type) (N : Type) [One M] [One N] where
 ## 新規補題の命名フロー（エージェント運用ルール）
 
 新規補題を導入するときは、以下の 3 段階で名前を確定し、**仮称をドキュメントに残さない**。
-これは sorry-plan.json / sorry-card / symbol-map.jsonl の整合性を保ち、補題検索のヒット率を高めるための必須ルール。
+これは sorry-plan.json / sorry-card / Lean ソースの整合性を保ち、補題検索のヒット率を高めるための必須ルール。
 
 ### ステップ 1: REPL で仮称シグネチャをスケッチ
 
@@ -103,7 +103,7 @@ example (s : Shape) ... : ... := by sorry
 確定名は以下を満たすまで確定しない:
 
 1. 本ファイルの基本ルール（返り値の型別 case、`_of_` 区切り）に従っている
-2. 既存の類似補題（symbol-map.jsonl で `grep` して確認）と命名パターンが揃っている
+2. 既存の類似補題（`S2IL/**/*.lean` を `grep_search` して確認）と命名パターンが揃っている
 3. 対象となる操作の層（Shape / Layer / Gravity / …）を接頭辞に含める
 
 ### ステップ 3: 確定名をまず `sorry-plan.json` に記録
@@ -126,7 +126,7 @@ example (s : Shape) ... : ... := by sorry
 ### 関連
 
 - 詳細な運用は [`docs/agent/proof-plan-current-focus-guide.md`](../agent/proof-plan-current-focus-guide.md) の「役割分担」セクションを参照
-- 確定名の検索: [`S2IL/_agent/symbol-map.jsonl`](../../S2IL/_agent/symbol-map.jsonl) を `grep_search` で検索
+- 確定名の検索: `S2IL/**/*.lean` を `grep_search` で検索
 | `_left` / `_right` | `add_le_add_left` | 左右の変形 |
 | 省略形 | `pos`, `neg`, `nonpos`, `nonneg` | `0 < x`, `x < 0`, `x ≤ 0`, `0 ≤ x` |
 | 公理的性質 | `refl`, `symm`, `trans`, `comm`, `assoc` | 反射・対称・推移・交換・結合 |

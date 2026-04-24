@@ -109,4 +109,4 @@ Get-Content .lake/build-diagnostics.jsonl | ConvertFrom-Json |
 
 **lean-build** / **lean-proof-progress** / **lean-error-fixer**（エラー自動修正スキル）
 
-ツール: **s2il-diag**（sorry-list） / **s2il-toolkit**（depgraph・proof-stats）
+ツール: **s2il-diag**（sorry-list）

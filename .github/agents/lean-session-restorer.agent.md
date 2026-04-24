@@ -215,7 +215,7 @@ Stage 1 実装では複数候補への fan-out は導入しない。
 - ビルドエラーがある場合は sorry 分析より先にエラー修正を推奨する
 - `docs/plans/` 内の個別計画は流動的な場合がある。README を入口にし、必要な資料だけを参照する
 - 計画資料の記述とビルド結果が食い違う場合は、ビルド結果を信頼源とする
-- depgraph の詳細が必要な場合は **lean-sorry-snapshot** へのハンドオフを使う（`lake exe s2il-toolkit depgraph` で取得）
+- depgraph の詳細が必要な場合は **lean-sorry-snapshot** へのハンドオフを使う（`sorry-plan.json` の `blockers` / `dependents` を参照）
 
 ## 関連
 

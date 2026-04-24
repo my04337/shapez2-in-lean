@@ -100,7 +100,6 @@ Current Focus は「今すぐ参照すべき sorry カードへの経路」を 2
 > 位置: `{file}:{line}`
 > スコープ: `{private|public} theorem|lemma`
 > ステータス: 🟡 **{現在フェーズ}**
-> **Preflight**: `.github/skills/lean-build/scripts/extract-goal-context.ps1 -File {file} -Line {line}`
 
 ---
 
@@ -112,14 +111,14 @@ Current Focus は「今すぐ参照すべき sorry カードへの経路」を 2
 {宣言の先頭 5〜10 行（長い場合は要約）}
 ```
 
-宣言全体: `{file}:{line}`（symbol-map.jsonl で `endLine` 確認可）
+宣言全体: `{file}:{line}`（facade または REPL `#check` で行数確認可）
 
 ### 次アクション（sorry-plan.json `next_actions` も参照）
 
 1. {次に行う具体的な tactic / 補題証明の手順}
 2. ...
 
-### 直接使う補題（symbol-map.jsonl で sig 確認）
+### 直接使う補題（REPL `#check` で sig 確認）
 
 | 補題 | 役割 |
 |---|---|
@@ -209,7 +208,6 @@ Current Focus は「今すぐ参照すべき sorry カードへの経路」を 2
 2. `sorry-plan.json` の対象エントリを `"status": "proved"` に変更し、`downstream` を確認する。
 3. `sorry-cards/` の当該ファイルは保持（参照履歴として）。
 4. `update-sorry-goals.ps1` を再実行して `sorry-goals.md` を更新する。
-5. `symbol-map.jsonl` に新証明済みシンボルを反映（`build.ps1` で自動再生成）。
 
 ---
 

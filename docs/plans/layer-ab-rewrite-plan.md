@@ -150,12 +150,17 @@ Phase E  総仕上げ（archive 削除・MILESTONES 整合・全点検）
 
 ### 5.1 チェック項目
 
-- [ ] サンプルタスク 1 件（例: 「Shape の round-trip 定理の位置を特定して」）を `_agent/` インデックスなしで実行し、ワーキングメモリ消費が許容範囲か確認
-- [ ] `_archive/` 参照がコンテキスト溢れを起こさないことを確認（Phase A では空 facade のみなので基本的に `_archive/` は読まない想定）
-- [ ] `S2IL/AGENTS.md` / `AGENTS.md`（ルート）/ `.github/skills/` の `_agent` 依存記述を更新
-  - 「symbol-map.jsonl を grep」等の手順を削除
-  - 「facade から読み始める」への置換
-- [ ] `docs/agent/` 配下の関連ドキュメント（`proof-plan-current-focus-guide.md` など）の `_agent` 参照を洗い出し、必要なら追補
+- [x] サンプルタスク 1 件（例: 「Shape の round-trip 定理の位置を特定して」）を `_agent/` インデックスなしで実行し、ワーキングメモリ消費が許容範囲か確認
+  - 本セッションの Phase A 廃止作業自体が facade ベースで遂行され、旧インデックスなしでも問題なく完了
+- [x] `_archive/` 参照がコンテキスト溢れを起こさないことを確認（Phase A では空 facade のみなので基本的に `_archive/` は読まない想定）
+  - 本セッション中 `_archive/` 下のファイルを `read_file` する必要は発生せず、`grep_search` も preflight 除外設定で回避
+- [x] `S2IL/AGENTS.md` / `AGENTS.md`（ルート）/ `.github/skills/` の `_agent` 依存記述を更新
+  - Phase A 本体: ルート `AGENTS.md`, `S2IL/AGENTS.md`, `DevTool/AGENTS.md`, `.github/skills/lean-build/SKILL.md`, `.github/skills/lean-proof-progress/SKILL.md` を更新
+  - 本追従: `.github/skills/lean-diagnostics/SKILL.md`, `.github/skills/session-efficiency/SKILL.md` から旧インデックス指標を削除
+- [x] `docs/agent/` 配下の関連ドキュメント（`proof-plan-current-focus-guide.md` など）の `_agent` 参照を洗い出し、必要なら追補
+  - `docs/agent/README.md`, `docs/agent/agent-operations-playbook.md` で Phase A 廃止注記済
+  - 本追従: `docs/agent/proof-plan-current-focus-guide.md`, `docs/agent/repl-session-state-guide.md`, `docs/lean/naming-conventions.md`, `docs/lean/lean-proof-tips.md`, `docs/s2il/proof-workflow-playbook.md`, `README.md` から旧インデックス参照を除去
+  - 追加撤去: `.github/hooks/hooks.json` から `regen-indices` エントリ削除、`.github/hooks/scripts/regen-indices.ps1/.sh` を削除、`.vscode/settings.json` の `s2il-toolkit` 許可削除、`.github/agents/lean-sorry-snapshot.agent.md` / `lean-session-restorer.agent.md` の `s2il-toolkit depgraph` 参照を `sorry-plan.json` 経路に置換
 
 ### 5.2 続行判断
 

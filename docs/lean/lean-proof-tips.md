@@ -531,7 +531,7 @@ Phase 0 を省略して実装に入ると、偽定理に長時間費やすリス
 
 ### 提案 2: 関連シンボル群は 1 回の alternation regex で取得する
 
-`symbol-map.jsonl` を検索するとき、関連する複数シンボルをバラバラに検索しない。
+Lean ソースを `grep_search` するとき、関連する複数シンボルをバラバラに検索しない。
 
 ```
 ❌ 非効率: grep "foldl_placeFU_cluster" → grep "foldl_placeFU_pin" → grep "isOccupied_placeFallingUnit"

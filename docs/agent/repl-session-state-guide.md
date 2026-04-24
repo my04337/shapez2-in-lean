@@ -34,4 +34,4 @@
 
 - REPL で有用な進展があった時点でエージェントが更新する（コミット対象）
 - `transplant-proof.ps1` が `.lean` 移植成功時に該当タスクの `updated` を自動更新する（TODO）
-- ファイル名は sorry のシンボル名を kebab-case せず **そのまま** 使う（symbol-map と一致）
+- ファイル名は sorry のシンボル名を kebab-case せず **そのまま** 使う（Lean の declaration 名と一致）

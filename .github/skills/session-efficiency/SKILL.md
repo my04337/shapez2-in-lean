@@ -118,8 +118,6 @@ Remove-Item ".lake/proof-suppressed.flag" -Force -ErrorAction SilentlyContinue
 | **推定トークン効率** | 有効情報トークン / 推定出力トークン | > 60% が望ましい |
 | **ツール効率** | 有効ツール呼び出し / 全ツール呼び出し | > 70% が望ましい |
 | **再説明率** | 重複説明を含む回答数 / 全回答数 | < 20% が望ましい |
-| **symbol-map 活用率** | symbol-map 参照 / (symbol-map 参照 + シンボル名 grep_search) | > 50% が望ましい |
-| **route-map 活用率** | route-map 参照回数 / Operation 探索開始回数 | > 80% が望ましい |
 
 #### 入出力トークン推定アルゴリズム（精度優先）
 
@@ -177,9 +175,7 @@ Remove-Item ".lake/proof-suppressed.flag" -Force -ErrorAction SilentlyContinue
 | 適用可能スキルの未読 | 作業に対応するスキルが read_file されていない | 中 |
 | docs 未参照 | 作業カテゴリに対応する docs を参照していない | 中 |
 | Explore → Build 直行 | REPL の `#check` ステップなしでビルド | 中 |
-| symbol-map 未活用 | symbol-map.jsonl を参照せず grep_search でシンボル探索 | 中 |
-| route-map 未活用 | route-map.json を参照せず Operations 配下を直接探索 | 中 |
-| query-playbook 未活用 | 該当レシピがあるタスク種別なのに playbook を参照していない | 低 |
+| facade 目次未活用 | facade 冒頭目次を読まずにシンボル探索へ直行 | 中 |
 
 #### 3. 誤解（メインアプローチ: 例示追加）
 
@@ -202,43 +198,18 @@ Remove-Item ".lake/proof-suppressed.flag" -Force -ErrorAction SilentlyContinue
 | ビルドの連続失敗 | 3 回以上連続でエラー（修正アプローチを変えるべき） | 中 |
 | 出力圧縮不足 | 要約要求時も冗長な段落を維持 | 中 |
 
-### Phase 3.5: `_agent` インデックス活用分析
+### Phase 3.5: facade 活用分析
 
-`S2IL/_agent/` のインデックスファイルがセッション中に適切に活用されたかを評価する。
-証明の大規模化に伴い、インデックスの活用度がセッション効率に直結する。
+Phase A (2026-04-24) で `symbol-map` / `route-map` / `query-playbook` / `dep-graph-baseline` / `sig-digest` は廃止された。
+代わりに **facade 冒頭目次** と `sorry-plan.json` / `sorry-goals.md` がエージェントの入口となる。
 
 #### 分析項目
 
-| インデックス | 計測方法 | 評価基準 |
+| 入口 | 計測方法 | 評価基準 |
 |---|---|---|
-| **symbol-map.jsonl** | `_agent/symbol-map` を含む tool_call 数 vs シンボル名での grep_search 数 | 参照率 > 50% が目標 |
-| **route-map.json** | `route-map` 参照数 vs Operation 配下の直接探索数 | Operation 探索開始時に毎回参照すべき |
-| **query-playbook.json** | 該当レシピがあるタスクでの参照有無 | 該当タスク開始時に参照すべき |
-| **dep-graph-baseline.json** | 依存関係調査時の参照有無 | 依存確認が必要な場面で参照すべき |
-
-#### symbol-map コンテンツの品質評価
-
-インデックスの中身が十分かも評価し、改善提案を行う。
-
-| 評価軸 | チェック方法 | 改善例 |
-|---|---|---|
-| **カバレッジ** | symbol-map のエントリ数 vs 実際の public 宣言数 | 不足シンボルのパターン特定（自動生成 instance 等） |
-| **鮮度** | symbol-map の最終更新日 vs 最新ビルド日 | build.ps1 統合が動作しているか確認 |
-| **フィールド充足度** | 現在のフィールド（file, kind, symbol）で不足がないか | sorry 状態、行番号、docstring 要約の追加を検討 |
-| **検索効率** | symbol-map で解決できなかったシンボル検索の件数 | route-map との連携パターンの提案 |
-
-#### 報告フォーマット（出力セクション 1 に統合）
-
-```
-#### (x) 【不足 / 中】_agent インデックス活用不足
-- symbol-map 参照率: N% (M 回 / K 回)
-- route-map 参照率: N% (M 回 / K 回)  
-- query-playbook: 該当レシピ X に対して未参照
-- symbol-map コンテンツ評価:
-  - カバレッジ: N 件 / 推定 M 件 (X%)
-  - 鮮度: 最終更新 YYYY-MM-DD（build 統合: 有効/無効）
-  - 追加推奨フィールド: （あれば記載）
-```
+| **facade 目次** | 対象 namespace の facade を最初に read_file したか | Lean ソース閲覧開始時に毎回参照すべき |
+| **sorry-plan.json** | sorry 作業開始時に参照したか | sorry に着手する前に必ず参照すべき |
+| **sorry-goals.md** | ゴール形状確認時に参照したか | REPL での `example ... := by sorry` 発行とセット |
 
 ### Phase 4: 時系列分析（前半 vs 後半）
 
@@ -377,8 +348,7 @@ AGENTS.md・SKILL.md が肖大化していないかを評価する。
 | sorry 推移 | X → Y |
 | ビルド回数 | N 回 (成功 M / 失敗 K) |
 | REPL 活用率 | X% |
-| symbol-map 活用率 | X% (M/K 回) |
-| route-map 活用率 | X% (M/K 回) |
+| facade 目次参照率 | X% (M/K 回) |
 | 推定 I/O トークン | 入力 A〜B / 出力 C〜D |
 | 推定精度ランク | A/B/C |
 | 推定トークン効率 | X% |

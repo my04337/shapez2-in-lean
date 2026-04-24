@@ -19,7 +19,6 @@
         ".github/skills/lean-repl/scripts/repl.sh": true,
         "ConvertFrom-Json": true,
         "ConvertTo-Json": true,
-        "lake exe s2il-toolkit": true,
         "lake exe s2il-diag": true
     }
 }
