@@ -1,14 +1,18 @@
 -- SPDX-FileCopyrightText: 2026 my04337
 -- SPDX-License-Identifier: MIT
 
+import S2IL.Wires.Signal
+import S2IL.Wires.Gates
+import S2IL.Wires.Elements
+
 /-!
 # S2IL.Wires facade
 
-ワイヤー系 (Layer A-3) のスケルトン。
+ワイヤー系 (Layer A-3) のスケルトン。Phase B では `WireSignal` 型のみ scaffold。
 
 ## 公開 API
 
-Phase A 時点では空。Phase B で axiom scaffold を追加予定。
+- `WireSignal` と基本コンストラクタ（off / boolean / shape / color）
 
 ## サブモジュール（公開）
 
@@ -18,8 +22,5 @@ Phase A 時点では空。Phase B で axiom scaffold を追加予定。
 
 ## Internal（外部 import 禁止）
 
-- `S2IL.Wires.Internal.*`
+- `S2IL.Wires.Internal.*` （Phase C で整備）
 -/
-
-namespace S2IL.Wires
-end S2IL.Wires

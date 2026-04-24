@@ -2,7 +2,7 @@
 
 - 作成日: 2026-04-24
 - 最終更新: 2026-04-24
-- ステータス: **Phase A 完了 / Phase B 着手前**
+- ステータス: **Phase B 完了 / Phase C 着手前**
 - スコープ: S2IL Layer A（Shape / Kernel / Operations 純粋部 / Wires スケルトン / Machine）および Layer B（振る舞い系）の再構築
 - 関連: 構造の正本は [architecture-layer-ab.md](architecture-layer-ab.md)、前身は [archive/gravity-greenfield-rewrite-plan.md](archive/gravity-greenfield-rewrite-plan.md)
 
@@ -367,7 +367,69 @@ Phase E  総仕上げ（archive 削除・MILESTONES 整合・全点検）
 
 ### Phase B 終了時
 
-（以下、Phase C / D / E も同様）
+- 実施日: 2026-04-24
+- axiom 数: 181
+- sorry 数: 0
+- warning 数: 0
+- facade 行数一覧:
+  - `S2IL.lean`: 26 行（Phase A 時点と同じ）
+  - `S2IL/Shape.lean`: 29 行
+  - `S2IL/Kernel.lean`: 21 行
+  - `S2IL/Wires.lean`: 17 行
+  - `S2IL/Operations.lean`: 46 行
+  - `S2IL/Machine.lean`: 14 行
+- 公開部品ファイル行数（最大のみ抜粋）:
+  - `S2IL/Shape/Types.lean`: 131 行（最大）
+  - `S2IL/Kernel/Transform.lean`: 66 行
+  - `S2IL/Kernel/BFS.lean` / `Bond.lean`: 各 47 行
+  - `S2IL/Operations/Cutter.lean`: 46 行
+  - 他はいずれも 40 行以下
+- Internal ファイル行数: すべて 15 行以下（placeholder のみ）
+- ディレクトリ内ファイル数:
+  - `Shape/`: 6 本（Internal 含む）✓
+  - `Kernel/`: 6 本（Internal 含む）✓
+  - `Wires/`: 3 本 ✓
+  - `Operations/`: 13 本（**≤ 8 本ガイドライン違反**、下記 B-R §7 参照）
+- 追加ファイル:
+  - `S2IL/Shape/{Types,GameConfig,Arbitrary,Notation}.lean`
+  - `S2IL/Shape/Internal/{Parse,Serialize}.lean`
+  - `S2IL/Kernel/{BFS,Bond,Transform}.lean`
+  - `S2IL/Kernel/Internal/{BFSImpl,BondImpl,Rotate180Lemmas}.lean`
+  - `S2IL/Wires/{Signal,Gates,Elements}.lean`
+  - `S2IL/Operations/{Common,HalfDestroyer,Cutter,Swapper,Rotator,Painter,ColorMixer,CrystalGenerator,Stacker,PinPusher,Gravity,Shatter,Settled}.lean`
+- 特記事項:
+  - すべての主要型（Color / PartCode / RegularPartCode / Direction / Quarter / Layer / Shape / QuarterPos / GameConfig / WireSignal）は opaque `axiom T : Type` として scaffold 済み。Phase C で具体 inductive/structure に置換する
+  - 単一チェーン原則（§1.4）を実装: `Shape.rotate180` / `Shape.rotateCCW` は `rotateCW` の合成として `noncomputable def` 化、`f_rotate180_comm` / `f_rotateCCW_comm` は各 1 行系として `theorem` 定義（`Painter.paint`, `CrystalGenerator.crystallize`, `Settled.IsSettled`, `Gravity.gravity`, `Shatter.shatterOnCut`, `PinPusher.liftUp` で実装）
+  - `PinPusher.generatePins` の CW 等変性は signature 不確定のため Phase C に繰り越し
+  - `Kernel.Bond` の `isBonded_rotate180` / `_rotateCCW` は `QuarterPos.rotate180` / `rotateCCW` を CW 系として定義する Phase C 以降に記述予定
+- Phase B-R の結論は本書 §7-R 参照
+
+### Phase B-R 振り返り結果（2026-04-24）
+
+#### §7.1 チェックリスト結果
+
+| 観点 | 結果 | 備考 |
+|---|---|---|
+| **公開 API 境界の妥当性** | ✓ | Internal 配下はすべて placeholder（最大 15 行）。外部参照 0。facade は 14–46 行に収まり薄すぎず厚すぎず |
+| **補題の MECE 性** | ✓ | Defs / Behavior / Equivariance の区分は各操作 1 ファイル内で意味的に分離。等変性は CW 版を中核とし 180° / CCW は 1 行系として実装。重複補題なし |
+| **次レイヤからの使いやすさ** | ✓ | `S2IL.Operations` facade が 13 操作を再エクスポート。Layer C は `import S2IL.Operations` 1 行で全操作アクセス可能 |
+| **認知負荷指標: facade ≤ 150** | ✓ | 最大 46 行（Operations） |
+| **認知負荷指標: 一般 ≤ 300** | ✓ | 最大 131 行（Shape/Types） |
+| **認知負荷指標: Internal ≤ 300** | ✓ | 最大 15 行 |
+| **認知負荷指標: 1 dir ≤ 8** | ❌ | `Operations/` に 13 本。アーキテクチャ §2 自身が 13 本を列挙しているため既知の設計上の許容逸脱 |
+
+#### 逸脱項目と対応
+
+- **`Operations/` 13 本**: アーキテクチャ §2 に従った結果であり、Phase B で新たに生じた問題ではない。Phase C/D で各操作を `Operations/<Op>/` 配下に展開する際にサブ namespace 化を自然に導入できる見込みのため、アーキテクチャ §1.1 第 3 項（「名前空間を分割」）のタイミングを Phase C/D 着手時に再評価する。Phase B は続行可能と判断
+
+#### 続行条件
+
+1. `lake build` green ✓
+2. axiom スナップショット記録済み ✓
+3. sorry / warning なし ✓
+4. 単一チェーン原則を実装例で検証済み（`gravity_rotate180_comm` / `gravity_rotateCCW_comm` 等）✓
+
+→ **Phase C 着手可能**
 
 ---
 

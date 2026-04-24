@@ -675,8 +675,8 @@ def Quarter.canFormBond : Quarter → Bool
 |---|---|---|
 | `Shape.gravity` | `Gravity.process` のラッパー | ✅ 実装済み |
 | `Shape.IsSettled` / `Shape.isSettled` | 安定状態の判定 | ✅ 実装済み |
-| `gravity_rotate180_comm` | 180° 回転等変性（≤5L） | ✅ 実装済み |
-| `gravity_rotateCW_comm` | 90° 回転等変性（≤5L） | ✅ 実装済み |
+| `gravity_rotate180_comm` | 180° 回転等変性（Wave Gravity: 全レイヤ数で成立） | ✅ 実装済み |
+| `gravity_rotateCW_comm` | 90° 回転等変性（Wave Gravity: 全レイヤ数で成立） | ✅ 実装済み |
 
 **`Test/Behavior/Gravity.lean`**:
 

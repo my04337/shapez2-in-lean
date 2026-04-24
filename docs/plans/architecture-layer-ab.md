@@ -98,6 +98,26 @@ $$f(s.\mathrm{rotate180}) = f(s.\mathrm{rotateCW}.\mathrm{rotateCW}) = f(s).\mat
 
 **禁止事項**: 操作 `f` について `f_rotateCW_comm` と `f_rotate180_comm` にそれぞれ独立した帰納法・場合分け証明を書くこと。
 
+#### 1.4.1 例外: E/W 参照操作
+
+**cut / halfDestroy / swap / shatterOnCut / eastHalf / westHalf / combineHalves**
+は「絶対方角 E/W」に依存する。CW 90° 回転は E/W 軸を N/S 軸へ写すため、
+これらの操作は CW 等変性を持たない。
+
+反例 (`Shape.cut`): `s = CgRgCrSr` (NE=Cg, SE=Rg, SW=Cr, NW=Sr) のとき
+- `s.rotateCW.cut` の東半分 = `SrCg----`
+- `(s.cut.1).rotateCW` = `--CgRg--`
+
+これらの操作は **180° 回転下でのみ** 綺麗な等変性を持つ。180° 回転は E↔W を
+入れ替えるため、出力タプルの成分も swap される:
+
+$$s.\mathrm{rotate180}.\mathrm{cut} = (s.\mathrm{cut.2}.\mathrm{rotate180},\ s.\mathrm{cut.1}.\mathrm{rotate180})$$
+
+**原則**: E/W 参照操作については `rotate180_comm` を primitive axiom として置き、
+`rotateCW_comm` / `rotateCCW_comm` は成立しないため定義しない。
+CCW_comm も CW 経由では導出できないため、必要になった時点で rotate180 と CW
+を合成した独自の補題として整備する。
+
 ### 1.5 真偽検証先行原則
 
 すべての補題・定理は、証明着手前に次のいずれかで **真と判明するまで signature を確定しない**:

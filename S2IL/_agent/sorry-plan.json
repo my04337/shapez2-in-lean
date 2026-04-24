@@ -3,8 +3,24 @@
   "generated": false,
   "description": "Structured snapshot of active sorry / axiom obligations. Used by agents to quickly identify the current proof target and dependencies.",
   "maintenance": "Update when adding/removing sorrys or axioms. Progress milestones belong to sorry-cards/{symbol}.md. Detailed history: git log.",
-  "updated": "2026-04-24 (Phase A: Archive & Index 廃止。旧 Layer A/B コードは `_archive/pre-greenfield/` に退避、インデックス機構 (symbol-map/sig-digest/dep-graph/route-map/query-playbook) は廃止。sorry = 0, axiom = 0。次アクションは Phase B: Skeleton (axiom による公開 API scaffold)。詳細は docs/plans/layer-ab-rewrite-plan.md。)",
+  "updated": "2026-04-24 (Phase B: Skeleton 完了。Layer A/B の公開 API を axiom で scaffold。axiom = 181, sorry = 0, warning = 0。新構造: Shape/{Types,GameConfig,Arbitrary,Notation,Internal/{Parse,Serialize}} / Kernel/{BFS,Bond,Transform,Internal/{BFSImpl,BondImpl,Rotate180Lemmas}} / Wires/{Signal,Gates,Elements} / Operations/{Common,HalfDestroyer,Cutter,Swapper,Rotator,Painter,ColorMixer,CrystalGenerator,Stacker,PinPusher,Gravity,Shatter,Settled} / Machine。次アクションは Phase C: Layer A 脱 axiom 化。詳細は docs/plans/layer-ab-rewrite-plan.md。)",
   "sorrys": [],
   "recently_completed": [],
-  "axioms": []
+  "axioms": [
+    {
+      "summary": "Phase B scaffold axioms",
+      "count": 181,
+      "note": "全 axiom は Phase B Skeleton で導入された公開 API 宣言。個別追跡は省略し、Phase C/D で脱 axiom 化する際に sorry-cards を新設する。",
+      "locations": [
+        "S2IL/Shape/Types.lean",
+        "S2IL/Shape/GameConfig.lean",
+        "S2IL/Shape/Notation.lean",
+        "S2IL/Kernel/BFS.lean",
+        "S2IL/Kernel/Bond.lean",
+        "S2IL/Kernel/Transform.lean",
+        "S2IL/Wires/Signal.lean",
+        "S2IL/Operations/*.lean"
+      ]
+    }
+  ]
 }
