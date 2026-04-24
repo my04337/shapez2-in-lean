@@ -410,24 +410,28 @@ Phase E  総仕上げ（archive 削除・MILESTONES 整合・全点検）
 
 | 観点 | 結果 | 備考 |
 |---|---|---|
-| **公開 API 境界の妥当性** | ✓ | Internal 配下はすべて placeholder（最大 15 行）。外部参照 0。facade は 14–46 行に収まり薄すぎず厚すぎず |
-| **補題の MECE 性** | ✓ | Defs / Behavior / Equivariance の区分は各操作 1 ファイル内で意味的に分離。等変性は CW 版を中核とし 180° / CCW は 1 行系として実装。重複補題なし |
-| **次レイヤからの使いやすさ** | ✓ | `S2IL.Operations` facade が 13 操作を再エクスポート。Layer C は `import S2IL.Operations` 1 行で全操作アクセス可能 |
+| **公開 API 境界の妥当性** | ✓ | Internal 配下はすべて placeholder（最大 15 行）。外部参照 0（`grep_search "import S2IL\.\w+\.Internal"` で hit なし、docstring 内の文字列参照のみ）。facade は 14–46 行に収まり薄すぎず厚すぎず |
+| **補題の MECE 性** | ✓ | Defs / Behavior / Equivariance の区分は各操作 1 ファイル内で意味的に分離。等変性は CW 版を中核とし 180° / CCW は 1 行系として実装。E/W 依存操作（Cutter/Swapper/Shatter/Cutter.halfDestroy/PinPusher）は architecture §1.4.1 に従い rotate180_comm を primitive とする例外規則を適用済み。重複補題なし |
+| **次レイヤからの使いやすさ** | ✓ | `S2IL.Operations` facade が 13 操作を再エクスポート。Layer C は `import S2IL.Operations` 1 行で全操作アクセス可能。`IsSettled` / `IsNormalized` は Prop-valued predicate として UpperCamelCase 統一、`IsSettled.{rotateCW,rotate180,rotateCCW,normalize}` は namespace-dot パターンで Mathlib 標準に適合 |
 | **認知負荷指標: facade ≤ 150** | ✓ | 最大 46 行（Operations） |
-| **認知負荷指標: 一般 ≤ 300** | ✓ | 最大 131 行（Shape/Types） |
+| **認知負荷指標: 一般 ≤ 300** | ✓ | 最大 131 行（Shape/Types）。Cutter.lean は rule-alignment で 46 → 67 行に増加したが依然十分余裕 |
 | **認知負荷指標: Internal ≤ 300** | ✓ | 最大 15 行 |
 | **認知負荷指標: 1 dir ≤ 8** | ❌ | `Operations/` に 13 本。アーキテクチャ §2 自身が 13 本を列挙しているため既知の設計上の許容逸脱 |
+| **命名規則準拠** | ✓ | 再監査で `IsSettled_*` → `IsSettled.*`, `Shape.gravity_IsSettled` → `Shape.gravity_isSettled`, `Shape.isNormalized` → `Shape.IsNormalized` を修正済（コミット 700fdaa）|
+| **ゲームルール整合** | ✓ | 再監査で E/W 依存の CW 等変性 3 箇所 (Cutter/Swapper/Shatter) を rotate180 等変性に差し替え、`≤5L` 制約 3 箇所を Wave Gravity 対応で削除、`crystallize` / `shatterTopCrystals` / PinPusher セマンティクス docstring を明文化（コミット 31580a6）|
 
 #### 逸脱項目と対応
 
-- **`Operations/` 13 本**: アーキテクチャ §2 に従った結果であり、Phase B で新たに生じた問題ではない。Phase C/D で各操作を `Operations/<Op>/` 配下に展開する際にサブ namespace 化を自然に導入できる見込みのため、アーキテクチャ §1.1 第 3 項（「名前空間を分割」）のタイミングを Phase C/D 着手時に再評価する。Phase B は続行可能と判断
+- [x] **`Operations/` 13 本**: アーキテクチャ §2 に従った結果であり、Phase B で新たに生じた問題ではない。Phase C/D で各操作を `Operations/<Op>/` 配下に展開する際にサブ namespace 化を自然に導入できる見込みのため、アーキテクチャ §1.1 第 3 項（「名前空間を分割」）のタイミングを Phase C/D 着手時に再評価する。Phase B は続行可能と判断
 
 #### 続行条件
 
-1. `lake build` green ✓
-2. axiom スナップショット記録済み ✓
-3. sorry / warning なし ✓
-4. 単一チェーン原則を実装例で検証済み（`gravity_rotate180_comm` / `gravity_rotateCCW_comm` 等）✓
+- [x] 1. `lake build` green
+- [x] 2. axiom スナップショット記録済み（Phase B 終了時 181 → 再監査後 184、差分は E/W rule-alignment での axiom 構造変化）
+- [x] 3. sorry / warning なし
+- [x] 4. 単一チェーン原則を実装例で検証済み（`gravity_rotate180_comm` / `gravity_rotateCCW_comm` / `IsSettled.rotate180` / `IsSettled.rotateCCW` 等）
+- [x] 5. architecture §1.4.1 の E/W 例外原則が実装と整合
+- [x] 6. 命名規則（`docs/lean/naming-conventions.md`）に Phase B axiom/theorem 名が機械的に準拠
 
 → **Phase C 着手可能**
 
