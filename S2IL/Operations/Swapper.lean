@@ -7,28 +7,26 @@ import S2IL.Operations.Cutter
 /-!
 # S2IL.Operations.Swapper
 
-スワップ機 (A-2-1 + B-4-3)。2 つのシェイプの西半分を入れ替える。
+スワップ機 (A-2-1 + B-4-3)（Phase C re-scaffold 済み）。
+`swap` は `eastHalf` + `westHalf` + `combineHalves` の `def` 合成（§8.1.4）。
 
 ## 公開 API
 
-- `Shape.swap : Shape → Shape → Option Shape × Option Shape`
-- 180° 回転等変性
-
-## 単一チェーン原則の例外
-
-`swap` は `cut` と同じく絶対方角 E/W に依存するため CW 等変性を持たない。
-rotate180 下では E↔W の入れ替えが起こるため、出力タプルの成分も swap される
-（Cutter.lean の冒頭コメント参照）。
+- `Shape.swap : Shape → Shape → Shape × Shape`（全関数）
+- 180° 回転等変性（theorem、primitive の系）
 -/
 
 namespace S2IL
 
-axiom Shape.swap : Shape → Shape → Option Shape × Option Shape
+/-- スワップ: 2 つのシェイプの西半分を入れ替える（全関数）。 -/
+noncomputable def Shape.swap (s1 s2 : Shape) : Shape × Shape :=
+  (Shape.combineHalves (Shape.eastHalf s1) (Shape.westHalf s2),
+   Shape.combineHalves (Shape.eastHalf s2) (Shape.westHalf s1))
 
-/-- `swap` と 180° 回転: 2 つの入力を独立に 180° 回転しても、
-    出力は元の swap 出力タプルの成分を swap してから 180° 回転したものに等しい。 -/
-axiom Shape.swap_rotate180_comm (s1 s2 : Shape) :
-    s1.rotate180.swap s2.rotate180 =
-      ((s1.swap s2).2.map Shape.rotate180, (s1.swap s2).1.map Shape.rotate180)
+/-- `swap` と 180° 回転（theorem、eastHalf/westHalf の系）。 -/
+theorem Shape.swap.rotate180_comm (s1 s2 : Shape) :
+    Shape.swap s1.rotate180 s2.rotate180 =
+      ((Shape.swap s1 s2).2.rotate180, (Shape.swap s1 s2).1.rotate180) := by
+  sorry -- Phase C/D で証明。combineHalves_rotate180 axiom が必要
 
 end S2IL

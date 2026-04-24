@@ -86,7 +86,6 @@ metadata:
 | グリーディソートが topological sort を生成 | insertSorted の貪欲停止が順序を壊す |
 | 2-cycle 禁止 → DAG | 3-cycle が存在し得る |
 | foldl settle が置換不変 | 方角列共有ペアが順序依存 |
-| BFS 列挙がリスト等号で変換等変 | 探索順序が変換で変わる |
 | ソート位置がランク関数 | 入力順序依存で位置が変わる |
 
 ## Gotchas

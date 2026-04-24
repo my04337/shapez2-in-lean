@@ -86,7 +86,7 @@ Layer A (Data & Operations) ← 静的データ型と純粋関数
 | 項目 | 概要 |
 |---|---|
 | B-2-1 | `shatterOnCut` / `shatterOnTruncate` の定義 |
-| B-2-2 | BFS による結晶連結成分の抽出と、その完全性 |
+| B-2-2 | 結晶連結成分（クラスタ）の抽出と、その完全性 |
 | B-2-3 | Shatter の CW 回転等変性 |
 
 ### B-3. 安定化 (Settlement / IsSettled)

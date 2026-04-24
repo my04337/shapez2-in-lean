@@ -6,53 +6,49 @@ import S2IL.Kernel
 /-!
 # S2IL.Operations.PinPusher
 
-ピン押し機 (A-2-5 + B-4-4)。シェイプを 1 レイヤ持ち上げピンを生成する。
+ピン押し機 (A-2-5 + B-4-4)（Phase C re-scaffold 済み）。
+全関数化（architecture §1.9）。
 
 ## セマンティクス（ゲーム仕様）
 
-入力は常に settled（ベルト規定、glossary.md 参照）。処理順は:
+入力は常に settled（ベルト規定）。処理順は:
 
-1. `liftUp s` — 全象限を 1 レイヤ上へ移動し、L1 を空にする
-2. `generatePins (liftUp s) pinLayer` — 最下層に `pinLayer` を挿入。
-   `pinLayer` は元の L1 の非空象限位置にピンを配置した Layer
-   （settled 入力では L1 の非空象限と接地象限が一致するため、
-    glossary.md「第1レイヤの空でない各象限の下にピンを押し込む」と一致）
-3. レイヤ上限超過分を `truncate` で廃棄（上位レイヤ側、crystal はクラスタごと砕ける）
-4. `gravity` で安定化して出力
+1. `liftUp s` — 全象限を 1 レイヤ上へ移動し、L0 を空にする
+2. `generatePins (liftUp s) pinLayer` — 最下層にピンを挿入
+3. `truncate` → `shatterTopCrystals` → `gravity` で安定化して出力
 
 ## 公開 API
 
 - `liftUp : Shape → Shape`
 - `generatePins : Shape → Layer → Shape`
-- `pinPush : Shape → GameConfig → Option Shape`
+- `pinPush : Shape → GameConfig → Shape`（全関数）
 - CW 等変性
-
-## 単一チェーン原則
-
-CW 等変性のみ axiom、180° / CCW は 1 行系。
 -/
 
 namespace S2IL
 
 axiom Shape.liftUp : Shape → Shape
 axiom Shape.generatePins : Shape → Layer → Shape
-axiom Shape.pinPush : Shape → GameConfig → Option Shape
 
-axiom Shape.liftUp_layerCount (s : Shape) :
-    s.liftUp.layerCount = s.layerCount + 1
+/-- ピン押し（全関数）。 -/
+axiom Shape.pinPush : Shape → GameConfig → Shape
 
-axiom Shape.liftUp_rotateCW_comm (s : Shape) :
-    s.liftUp.rotateCW = s.rotateCW.liftUp
+axiom Shape.liftUp.layerCount (s : Shape) :
+    (Shape.liftUp s).layerCount = s.layerCount + 1
+
+axiom Shape.liftUp.rotateCW_comm (s : Shape) :
+    Shape.rotateCW (Shape.liftUp s) = Shape.liftUp (Shape.rotateCW s)
 
 /-- `liftUp` と 180° 回転は可換（CW の系）。 -/
-theorem Shape.liftUp_rotate180_comm (s : Shape) :
-    s.liftUp.rotate180 = s.rotate180.liftUp := by
-  show s.liftUp.rotateCW.rotateCW = s.rotateCW.rotateCW.liftUp
-  rw [Shape.liftUp_rotateCW_comm, Shape.liftUp_rotateCW_comm]
+theorem Shape.liftUp.rotate180_comm (s : Shape) :
+    (Shape.liftUp s).rotate180 = (Shape.liftUp s.rotate180) := by
+  simp [Shape.rotate180_eq_rotateCW_rotateCW, Shape.liftUp.rotateCW_comm]
 
 -- NOTE: `generatePins` の CW 等変性は signature 依存のため Phase C で整備する。
 
-axiom Shape.pinPush_rotateCW_comm (s : Shape) (config : GameConfig) :
-    (s.pinPush config).map Shape.rotateCW = s.rotateCW.pinPush config
+/-- `pinPush` と CW 回転は可換（全関数版、直接等式）。 -/
+axiom Shape.pinPush.rotateCW_comm (s : Shape) (config : GameConfig) :
+    Shape.rotateCW (Shape.pinPush s config) =
+      Shape.pinPush (Shape.rotateCW s) config
 
 end S2IL

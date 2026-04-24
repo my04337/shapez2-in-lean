@@ -83,8 +83,8 @@ def Quarter.canFormBond : Quarter → Bool
 
 ### 3.3 アルゴリズム
 
-シェイプは最大 `config.maxLayers` レイヤ × 4 象限（vanilla4 で 16、vanilla5 で 20）であるため、BFS / DFS の素朴な探索で十分である。
-既存の [`CrystalBond.lean`](../../S2IL/Processing/CrystalBond.lean) と同じ BFS パターンを流用する。
+シェイプは最大 `config.maxLayers` レイヤ × 4 象限（vanilla4 で 16、vanilla5 で 20）であるため、
+結合関係の反射推移閉包を有限回反復で求める素朴な算法で十分である（証明側は Mathlib `Relation.ReflTransGen` を利用し、実装側は有限集合の反復で計算する）。
 
 ---
 
@@ -660,12 +660,12 @@ def Quarter.canFormBond : Quarter → Bool
 | 関数 | 役割 | 状態 |
 |---|---|---|
 | `isStructurallyBonded` | 2象限間の構造結合判定 | ✅ 実装済み |
-| `structuralCluster` | BFS による構造クラスタ算出 | ✅ 実装済み |
+| `structuralCluster` | 構造クラスタ算出（反射推移閉包） | ✅ 実装済み |
 | `allStructuralClusters` | 全構造クラスタの列挙 | ✅ 実装済み |
 | `isGroundingContact` | 2象限間の接地接触判定 | ✅ 実装済み |
-| `isUpwardGroundingContact` | 上方向接地接触（BFS 用） | ✅ 実装済み |
-| `groundingEdge` | 接地 BFS の合成エッジ（上方向接触 ∥ 構造結合） | ✅ 実装済み |
-| `isGrounded` | 象限の接地判定（BFS from layer 0） | ✅ 実装済み |
+| `isUpwardGroundingContact` | 上方向接地接触 | ✅ 実装済み |
+| `groundingEdge` | 接地関係の合成エッジ（上方向接触 ∥ 構造結合） | ✅ 実装済み |
+| `isGrounded` | 象限の接地判定（layer 0 からの到達可能性） | ✅ 実装済み |
 | `floatingUnits` | 全落下単位の列挙 | ✅ 実装済み |
 | `process` | 落下シミュレーション（本仕様 6 節のアルゴリズム） | ✅ 実装済み |
 

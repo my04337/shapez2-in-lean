@@ -23,21 +23,21 @@ namespace S2IL
 axiom Shape.paint : Shape → Color → Shape
 
 /-- `paint` は冪等。 -/
-axiom Shape.paint_idempotent (s : Shape) (c : Color) :
-    (s.paint c).paint c = s.paint c
+axiom Shape.paint.idempotent (s : Shape) (c : Color) :
+    (Shape.paint s c).paint c = Shape.paint s c
 
 /-- `paint` と CW 回転は可換。 -/
-axiom Shape.paint_rotateCW_comm (s : Shape) (c : Color) :
-    (s.paint c).rotateCW = s.rotateCW.paint c
+axiom Shape.paint.rotateCW_comm (s : Shape) (c : Color) :
+    (Shape.paint s c).rotateCW = Shape.paint s.rotateCW c
 
 /-- `paint` と 180° 回転は可換（CW の系）。 -/
-theorem Shape.paint_rotate180_comm (s : Shape) (c : Color) :
-    (s.paint c).rotate180 = s.rotate180.paint c := by
-  simp [Shape.rotate180_eq_rotateCW_rotateCW, Shape.paint_rotateCW_comm]
+theorem Shape.paint.rotate180_comm (s : Shape) (c : Color) :
+    (Shape.paint s c).rotate180 = Shape.paint s.rotate180 c := by
+  simp [Shape.rotate180_eq_rotateCW_rotateCW, Shape.paint.rotateCW_comm]
 
 /-- `paint` と CCW 回転は可換（CW の系）。 -/
-theorem Shape.paint_rotateCCW_comm (s : Shape) (c : Color) :
-    (s.paint c).rotateCCW = s.rotateCCW.paint c := by
-  simp [Shape.rotateCCW_eq_rotateCW_rotateCW_rotateCW, Shape.paint_rotateCW_comm]
+theorem Shape.paint.rotateCCW_comm (s : Shape) (c : Color) :
+    (Shape.paint s c).rotateCCW = Shape.paint s.rotateCCW c := by
+  simp [Shape.rotateCCW_eq_rotateCW_rotateCW_rotateCW, Shape.paint.rotateCW_comm]
 
 end S2IL

@@ -31,15 +31,15 @@ end GameConfig
 axiom Shape.truncate : Shape → GameConfig → Shape
 
 /-- 切り詰め後のレイヤ数は上限以下。 -/
-axiom Shape.truncate_layerCount_le (s : Shape) (config : GameConfig) :
-    (s.truncate config).layerCount ≤ config.maxLayers
+axiom Shape.truncate.layerCount_le (s : Shape) (config : GameConfig) :
+    (Shape.truncate s config).layerCount ≤ config.maxLayers
 
 /-- 既に上限以下のシェイプに対する切り詰めは恒等。 -/
-axiom Shape.truncate_of_le (s : Shape) (config : GameConfig) :
-    s.layerCount ≤ config.maxLayers → s.truncate config = s
+axiom Shape.truncate.of_le (s : Shape) (config : GameConfig) :
+    s.layerCount ≤ config.maxLayers → Shape.truncate s config = s
 
 /-- 切り詰めは冪等。 -/
-axiom Shape.truncate_idempotent (s : Shape) (config : GameConfig) :
-    (s.truncate config).truncate config = s.truncate config
+axiom Shape.truncate.idempotent (s : Shape) (config : GameConfig) :
+    Shape.truncate (Shape.truncate s config) config = Shape.truncate s config
 
 end S2IL

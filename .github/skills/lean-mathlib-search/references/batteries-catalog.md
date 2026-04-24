@@ -99,7 +99,6 @@ instance : Std.LawfulLeftIdentity Color.mix Color.white where
 | `any_beq_and` / `any_and_beq` (Shatter) | `BEq`/`LawfulBEq` 固有の簡約ロジック。汎用ライブラリに直接の対応なし |
 | `any_beq_iff_mem` (CrystalBond) | `List.any_eq_true` + `beq_iff_eq` で簡素化可だが、結合の手順がドメイン固有 |
 | 各ファイルの `list_any_map_rotate180` | `List.any_map` で一部簡素化可能だが、ドメイン固有の `beq_rotate180` との組み合わせが必要 |
-| BFS 関連補題群 (`bfs_vis_subset` 等) | ドメイン固有の不変条件。汎用ライブラリに対応なし |
 | `foldMinOption_*` (SettleFoldlEq) | カスタム foldl 変種。汎用ライブラリに対応なし |
 
 ---
@@ -163,7 +162,6 @@ S2IL 本体のコードでは `import Mathlib.Tactic` 経由で Batteries が自
 | `Shatter.lean` | `any_beq_and` / `any_and_beq` | `BEq`/`LawfulBEq` 固有の簡約。Batteries に直接の対応なし |
 | `Gravity/Defs.lean` | `listNatLe_*` | カスタム全順序。汎用補題では表現不可 |
 | `Gravity/SettleFoldlEq/` | `foldMinOption_*` | カスタム foldl 変種。対応なし |
-| BFS 関連 | `bfs_vis_subset` 等 | ドメイン固有の不変条件 |
 
 ---
 

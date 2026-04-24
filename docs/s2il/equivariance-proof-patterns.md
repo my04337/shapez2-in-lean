@@ -5,7 +5,6 @@ S2IL プロジェクトの Lean 4 形式化で確立された、
 
 個別の知見ドキュメント:
 - [`gravity-equivariance-analysis.md`](gravity-equivariance-analysis.md) — Gravity 固有の等変性知見
-- [`bfs-equivariance-proof.md`](bfs-equivariance-proof.md) — BFS 等変性の知見
 
 ---
 
@@ -67,63 +66,6 @@ S2IL プロジェクトの Lean 4 形式化で確立された、
 
 ---
 
-## パターン 3: BFS 列挙の等変性（.any メンバーシップ）
-
-### 概要
-
-BFS の出力に対して「リスト等号」で等変性を主張すると**偽命題**になる。
-代わりに `.any (· == p)` メンバーシップレベルで等変性を述べる。
-
-### なぜリスト等号が偽か
-
-- BFS はノード一覧 `allPos` の順序で neighbors をフィルタする
-- `allPos.map rotate180 ≠ allPos`（Direction の列挙順序が異なる）
-- 探索順序が変わると visited リストも変わり、出力リストの順序が異なる
-
-### 正しい等変性の述べ方
-
-```lean
--- ❌ 偽命題（リスト等号）
-shatterTargetsOnCut s.rotate180 = (shatterTargetsOnCut s).map rotate180
-
--- ✅ 正しい命題（clearPositions レベルで接続）
-clearPositions s.rotate180 targets1 = clearPositions s.rotate180 targets2
-
--- ✅ 正しい命題（.any メンバーシップ）
-∀ p, l1.any (· == p) = l2.any (· == p)
-```
-
-### BFS 等変性の証明パターン
-
-1. **mapped allPos での BFS 等変性**を fuel 帰納法で証明
-   - `bfs s.r180 (allPos.map r180) (visited.map r180) (queue.map r180) fuel`
-   - `= (bfs s allPos visited queue fuel).map r180`
-2. **最終定理は clearPositions レベルに引き上げ**
-   - リスト順序が異なっても空にする位置の「集合」が同じなら結果一致
-
-### 実装上のコツ
-
-- `show` で LHS を具体的な cons 形式に書き換えてから `simp only [bfs]` を適用
-- neighbors のフィルタ等変性は独立補題 `filter_isBonded_map_rotate180` で処理
-- 再帰帰納法内部で別の帰納法が必要な場合は必ず独立補題として切り出す
-
-### CrystalBond での具体的な適用チェーン
-
-CrystalBond モジュールでは以下の層状構成で BFS 等変性を証明済み:
-
-```
-filter_isBonded_map_rotate180          -- neighbors フィルタの等変性
-    ↓
-genericBfs_isBonded_rotate180          -- BFS 全体の等変性（帰納法）
-    ↓
-cluster_rotate180                      -- Finset クラスタの等変性
-```
-
-`isBonded_rotate180` → `genericBfs_isBonded_rotate180` の帰納法構成は構造的に明快で、
-BFS の各ステップで rotate180 マッピングの整合性を維持する。
-
----
-
 ## パターン 4: direction-disjoint → settleStep 可換
 
 ### 概要
@@ -173,12 +115,12 @@ op(r(s)) = r(op(s))
 | 操作 | 分解 |
 |---|---|
 | `gravity.process` | floatingUnits + sortFallingUnits + foldl placeFallingUnit |
-| `shatterOnCut` | allCrystalClusters (BFS) + clearPositions |
+| `shatterOnCut` | allCrystalClusters + clearPositions |
 | `stack` | placeAbove + shatter + gravity + truncate |
 
 ### 注意: 中間表現の等変性の粒度
 
-- **リスト等号**で中間結果の等変性を述べると偽命題になりがち（BFS 順序問題）
+- **リスト等号**で中間結果の等変性を述べると偽命題になりがち（探索順序やソート順序に依存する実装で外がしやすい）
 - **集合等価**（`.any` メンバーシップ）や **結果適用先**レベルで述べるのが安全
 - 各分解ステップで必要な等変性の粒度を事前に確認する
 

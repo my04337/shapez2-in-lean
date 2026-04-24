@@ -8,31 +8,21 @@ import S2IL.Operations.Shatter
 /-!
 # S2IL.Operations.Cutter
 
-切断機 (A-2-1 + B-4-2)。東西切断と安定化を行う。
+切断機 (A-2-1 + B-4-2)（Phase C re-scaffold 済み）。
+Option 追放（§1.9）と合成化（§8.1.4）適用済み。
 
 ## 公開 API
 
-- `Layer.eastHalf` / `Layer.westHalf` / `Layer.combineEastWest`
-- `Shape.eastHalf` / `Shape.westHalf` / `Shape.combineHalves`
-- `Shape.cut : Shape → Option Shape × Option Shape`
-- `Shape.halfDestroy : Shape → Option Shape`
+- `Layer.eastHalf` / `Layer.westHalf` / `Layer.combineHalves` — Layer 基本操作
+- `Shape.eastHalf` / `Shape.westHalf` / `Shape.combineHalves` — Shape primitive（E/W axiom）
+- `Shape.cut : Shape → Shape × Shape` — 全関数、`eastHalf` + `westHalf` の合成 `def`
+- `Shape.halfDestroy : Shape → Shape` — 全関数、`eastHalf` の別名 `def`
 - 構造的恒等式と **180° 回転等変性**
 
-## 単一チェーン原則の例外：E/W 参照操作
+## E/W 参照操作（§1.4.1）
 
-切断系 (cut / halfDestroy / swap / shatterOnCut / eastHalf / westHalf / combineHalves)
-は **絶対方角 E/W** に依存する。CW 90° 回転は E/W 軸を N/S 軸へ写すため、
-`s.rotateCW.cut = (s.cut.1.map rotateCW, s.cut.2.map rotateCW)` は **一般に偽**
-（反例: `CgRgCrSr` の東半分は `CgRg----`、CW 回転後のシェイプ `SrCgRgCr` の
-東半分は `SrCg----`）。
-
-これらの操作は CW ではなく `rotate180` 下で綺麗な等変性を持つ。180° 回転は
-E↔W を入れ替えるため、タプルの成分も swap する:
-
-$$s.\mathrm{rotate180}.\mathrm{cut} = (s.\mathrm{cut.2}.\mathrm{rotate180},\ s.\mathrm{cut.1}.\mathrm{rotate180})$$
-
-本ファイルでは `rotate180_comm` を primitive axiom として置き、CW_comm / CCW_comm
-は導出しない（そもそも成立しない）。architecture-layer-ab.md §1.4 参照。
+primitive: `eastHalf` / `westHalf` / `combineHalves` の 3 操作のみ。
+`cut` / `halfDestroy` は `def` 合成。`rotate180_comm` は primitive の系で導出。
 -/
 
 namespace S2IL
@@ -43,50 +33,61 @@ namespace S2IL
 
 axiom Layer.eastHalf : Layer → Layer
 axiom Layer.westHalf : Layer → Layer
-axiom Layer.combineEastWest : Layer → Layer → Layer
+axiom Layer.combineHalves : Layer → Layer → Layer
 
-axiom Layer.combineEastWest_eastHalf_westHalf (l : Layer) :
-    Layer.combineEastWest l.eastHalf l.westHalf = l
+axiom Layer.combineHalves.eastHalf_westHalf (l : Layer) :
+    Layer.combineHalves (Layer.eastHalf l) (Layer.westHalf l) = l
 
 -- ============================================================
--- Shape level
+-- Shape level — primitive axioms
 -- ============================================================
 
 axiom Shape.eastHalf : Shape → Shape
 axiom Shape.westHalf : Shape → Shape
 axiom Shape.combineHalves : Shape → Shape → Shape
-axiom Shape.cut : Shape → Option Shape × Option Shape
-axiom Shape.halfDestroy : Shape → Option Shape
 
-axiom Shape.combineHalves_eastHalf_westHalf (s : Shape) :
-    Shape.combineHalves s.eastHalf s.westHalf = s
+axiom Shape.combineHalves.eastHalf_westHalf (s : Shape) :
+    Shape.combineHalves (Shape.eastHalf s) (Shape.westHalf s) = s
 
-axiom Shape.halfDestroy_eq_cut_east (s : Shape) :
-    s.halfDestroy = s.cut.1
-
-axiom Shape.combineHalves_self (s : Shape) :
+axiom Shape.combineHalves.self (s : Shape) :
     Shape.combineHalves s s = s
+
+-- ============================================================
+-- Shape level — derived defs（§8.1.4 合成化）
+-- ============================================================
+
+/-- 切断: 東半分と西半分のペア（全関数）。 -/
+noncomputable def Shape.cut (s : Shape) : Shape × Shape :=
+  (Shape.eastHalf s, Shape.westHalf s)
+
+/-- 半壊: 東半分を残す（全関数）。 -/
+noncomputable def Shape.halfDestroy (s : Shape) : Shape :=
+  Shape.eastHalf s
+
+theorem Shape.halfDestroy.eq_cut_fst (s : Shape) :
+    Shape.halfDestroy s = (Shape.cut s).1 := rfl
 
 -- ============================================================
 -- Equivariance (rotate180 only; CW / CCW do NOT hold)
 -- ============================================================
 
-/-- 東半分と 180° 回転: 180° 回転は E↔W を入れ替えるため、
-    元の西半分を 180° 回転したものが rotated の東半分になる。 -/
-axiom Shape.eastHalf_rotate180_comm (s : Shape) :
-    s.rotate180.eastHalf = s.westHalf.rotate180
+/-- 東半分と 180° 回転: 元の西半分の 180° 回転。 -/
+axiom Shape.eastHalf.rotate180_comm (s : Shape) :
+    Shape.eastHalf s.rotate180 = (Shape.westHalf s).rotate180
 
-/-- 西半分と 180° 回転: 対称に、元の東半分の 180° 回転が rotated の西半分。 -/
-axiom Shape.westHalf_rotate180_comm (s : Shape) :
-    s.rotate180.westHalf = s.eastHalf.rotate180
+/-- 西半分と 180° 回転: 元の東半分の 180° 回転。 -/
+axiom Shape.westHalf.rotate180_comm (s : Shape) :
+    Shape.westHalf s.rotate180 = (Shape.eastHalf s).rotate180
 
-/-- `cut` と 180° 回転: 成分が swap される。 -/
-axiom Shape.cut_rotate180_comm (s : Shape) :
-    s.rotate180.cut =
-      (s.cut.2.map Shape.rotate180, s.cut.1.map Shape.rotate180)
+/-- `cut` と 180° 回転: 成分が swap される（theorem、primitive の系）。 -/
+theorem Shape.cut.rotate180_comm (s : Shape) :
+    Shape.cut s.rotate180 =
+      ((Shape.westHalf s).rotate180, (Shape.eastHalf s).rotate180) := by
+  simp only [Shape.cut, Shape.eastHalf.rotate180_comm, Shape.westHalf.rotate180_comm]
 
-/-- `halfDestroy` と 180° 回転: 元の西半分（= `cut.2`）が rotated 後の残存側になる。 -/
-axiom Shape.halfDestroy_rotate180_comm (s : Shape) :
-    s.rotate180.halfDestroy = s.cut.2.map Shape.rotate180
+/-- `halfDestroy` と 180° 回転（theorem、primitive の系）。 -/
+theorem Shape.halfDestroy.rotate180_comm (s : Shape) :
+    Shape.halfDestroy s.rotate180 = (Shape.westHalf s).rotate180 := by
+  simp only [Shape.halfDestroy, Shape.eastHalf.rotate180_comm]
 
 end S2IL

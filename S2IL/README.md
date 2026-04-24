@@ -25,7 +25,7 @@
 | ファイル | 内容 |
 |---------|------|
 | `Rotate.lean` | 回転（CW / CCW / 180°）・合成・逆元定理 |
-| `CrystalBond.lean` | 結晶結合判定・BFS・クラスタ列挙 |
+| `CrystalBond.lean` | 結晶結合判定・クラスタ列挙 |
 | `Shatter.lean` | 砕け散り（切断時 / 落下時 / truncate 時） |
 | `Gravity.lean` | 構造結合・接地判定・落下単位・落下処理 |
 | `Stacker.lean` | 積み重ね（配置 → 砕け散り → 落下 → truncate） |

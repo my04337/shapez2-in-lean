@@ -27,11 +27,11 @@ axiom Shape.shatterOnFall : Shape → List QuarterPos → Shape
 
 /-- `shatterOnCut` と 180° 回転は可換（180° は E↔W を保存するため東西跨ぎ性質は
     rotate180 下で不変）。 -/
-axiom Shape.shatterOnCut_rotate180_comm (s : Shape) :
-    (s.shatterOnCut).rotate180 = s.rotate180.shatterOnCut
+axiom Shape.shatterOnCut.rotate180_comm (s : Shape) :
+    (Shape.shatterOnCut s).rotate180 = Shape.shatterOnCut s.rotate180
 
 /-- `shatterOnFall` と CW 回転は可換（位置リストも回転）。 -/
-axiom Shape.shatterOnFall_rotateCW_comm (s : Shape) (ps : List QuarterPos) :
-    (s.shatterOnFall ps).rotateCW = s.rotateCW.shatterOnFall (ps.map QuarterPos.rotateCW)
+axiom Shape.shatterOnFall.rotateCW_comm (s : Shape) (ps : List QuarterPos) :
+    (Shape.shatterOnFall s ps).rotateCW = Shape.shatterOnFall s.rotateCW (ps.map QuarterPos.rotateCW)
 
 end S2IL

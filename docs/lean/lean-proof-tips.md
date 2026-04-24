@@ -498,8 +498,6 @@ v4.29.0 では `updateGitPkg` が `git clean -xf` をチェックアウト後に
 | `sortFallingUnits_inversion_is_tied` (一般 Perm) | 3L 3色 8628 violations。r180 固有 Perm でのみ真 |
 | sortFallingUnits が正しい topological sort を生成する | insertSorted はグリーディで後方不整合を生む |
 | spb が floatingUnits 上で全順序 | tied ペアが存在する |
-| BFS 列挙結果がリスト等号で r180 等変 | 探索順序が方角で変わる |
-| `floatingUnits_rotate180` (list equality) | BFS order changes (.any メンバーシップのみ等変) |
 | `sortFallingUnits_preserves_spb_order` | 3-cycle 下で insertSorted の順序保存が偽 |
 | `spb_antisymm_of_disjoint` | 位置素のみでは反対称律不成立 |
 | `foldl_sorted_disjoint_flatMap_eq` | flatMap .any 等価 + 位置素では unit 分割不一致 |
@@ -509,7 +507,6 @@ v4.29.0 では `updateGitPkg` が `git clean -xf` をチェックアウト後に
 
 - **ペアワイズ非循環 ≠ DAG**: 全ペアの 2-cycle がなくても 3-cycle 以上が存在しうる
 - **計算検証は十分な規模で**: 2-3L のみの計算検証は 4L+ 反例を見逃す
-- **リスト等号は探索順序依存**: BFS 出力はリスト等号ではなく `.any` メンバーシップで述べる
 - **偽定理に依拠する証明チェーンは直ちに不健全**: sorry 1 個でも上流全体が汚染される
 
 ---

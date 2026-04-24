@@ -54,7 +54,7 @@ private theorem any_pred_ext {l1 l2 : List QuarterPos}
    shouldProcessBefore(v,u)=T → ∃ d2, v.min(d2) < u.min(d2)。d1 ≠ d2。
 2. **minLayerAtDir の witness**: u は d1 に位置を持つ → ∃ p ∈ u.positions, p.dir = d1
 3. **クラスタ内パスの水平ステップ**: u が d1 と d2 に位置を持つ場合、
-   BFS パス中に「水平ステップ」（同レイヤ隣接方角への遷移）が存在。
+   クラスタ連結パス中に「水平ステップ」（同レイヤ隣接方角への遷移）が存在する。
    `genReachable_diff_dir_horizontal` でこれを形式化。
 4. **隣接方角の占有**: 水平ステップの遷移元位置 p に対し、p.dir = d1 かつ
    同レイヤで隣接方角 d2 に別の位置が存在。

@@ -71,7 +71,7 @@ structure OneHom (M : Type) (N : Type) [One M] [One N] where
 
 - 名詞の場合: `Is` 接頭辞を付ける（例: `IsTopologicalRing`, `IsEmpty`）
 - 形容詞の場合: `Is` 接頭辞は不要（例: `Normal`, `Finite`）
-- 述語関数: `is` / `has` 接頭辞を使用（例: `isEven`, `hasDecEq`）
+- 述語関数: `is` / `has` / `can` 接頭辞を使用（例: `isEven`, `hasDecEq`, `isBondable`）
 
 ## 定理名の説明的命名パターン
 
@@ -81,6 +81,29 @@ structure OneHom (M : Type) (N : Type) [One M] [One N] where
 |---|---|---|
 | 結論をそのまま | `mul_zero`, `succ_ne_zero` | `a * 0 = 0`, `succ n ≠ 0` |
 | `_of_` で仮定記述 | `lt_of_succ_le`, `lt_of_le_of_ne` | 仮定の順に列挙 |
+
+## サブ名前空間ドット規約（S2IL 固有）
+
+操作 `f` に関する定理は **`f.property` のドット区切り** で `f` のサブ名前空間に配置する。Lean 4 では `def Shape.gravity` と `theorem Shape.gravity.rotateCW_comm` が共存できる。
+
+```lean
+-- 操作の定義
+axiom Shape.gravity : Shape → Shape
+
+-- 操作に関する定理はサブ名前空間に配置
+axiom Shape.gravity.rotateCW_comm (s : Shape) : ...
+axiom Shape.gravity.isSettled (s : Shape) : ...
+theorem Shape.gravity.rotate180_comm (s : Shape) : ... := by ...
+```
+
+| カテゴリ | パターン | 例 |
+|---|---|---|
+| 等変性 | `<op>.rotate<CW\|180\|CCW>_comm` | `Shape.gravity.rotateCW_comm` |
+| 保存則 | `<Predicate>.<op>` | `IsSettled.rotateCW` |
+| 構造的性質 | `<op>.<property>` | `Shape.placeAbove.layerCount` |
+| Bool/Prop 橋渡し | `<boolFn>.iff` | `isSettled.iff` |
+
+**例外**: `@[simp]` 定義展開 lemma (`:= rfl`) は従来のアンダースコアを維持: `Shape.rotate180_eq_rotateCW_rotateCW`
 
 ---
 

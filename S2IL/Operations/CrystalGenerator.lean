@@ -31,21 +31,21 @@ namespace S2IL
 axiom Shape.crystallize : Shape → Color → Shape
 
 /-- `crystallize` は冪等。 -/
-axiom Shape.crystallize_idempotent (s : Shape) (c : Color) :
-    (s.crystallize c).crystallize c = s.crystallize c
+axiom Shape.crystallize.idempotent (s : Shape) (c : Color) :
+    (Shape.crystallize s c).crystallize c = Shape.crystallize s c
 
 /-- `crystallize` と CW 回転は可換。 -/
-axiom Shape.crystallize_rotateCW_comm (s : Shape) (c : Color) :
-    (s.crystallize c).rotateCW = s.rotateCW.crystallize c
+axiom Shape.crystallize.rotateCW_comm (s : Shape) (c : Color) :
+    (Shape.crystallize s c).rotateCW = Shape.crystallize s.rotateCW c
 
 /-- `crystallize` と 180° 回転は可換（CW の系）。 -/
-theorem Shape.crystallize_rotate180_comm (s : Shape) (c : Color) :
-    (s.crystallize c).rotate180 = s.rotate180.crystallize c := by
-  simp [Shape.rotate180_eq_rotateCW_rotateCW, Shape.crystallize_rotateCW_comm]
+theorem Shape.crystallize.rotate180_comm (s : Shape) (c : Color) :
+    (Shape.crystallize s c).rotate180 = Shape.crystallize s.rotate180 c := by
+  simp [Shape.rotate180_eq_rotateCW_rotateCW, Shape.crystallize.rotateCW_comm]
 
 /-- `crystallize` と CCW 回転は可換（CW の系）。 -/
-theorem Shape.crystallize_rotateCCW_comm (s : Shape) (c : Color) :
-    (s.crystallize c).rotateCCW = s.rotateCCW.crystallize c := by
-  simp [Shape.rotateCCW_eq_rotateCW_rotateCW_rotateCW, Shape.crystallize_rotateCW_comm]
+theorem Shape.crystallize.rotateCCW_comm (s : Shape) (c : Color) :
+    (Shape.crystallize s c).rotateCCW = Shape.crystallize s.rotateCCW c := by
+  simp [Shape.rotateCCW_eq_rotateCW_rotateCW_rotateCW, Shape.crystallize.rotateCW_comm]
 
 end S2IL
