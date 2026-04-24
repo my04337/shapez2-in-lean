@@ -54,37 +54,25 @@
 3. Explore で mathlib ソース検索
 4. 最後に build
 
-## `_agent/` — エージェント向けインデックス
+## `_agent/` — 証明進捗ノート
 
-`S2IL/_agent/` には 4 つのインデックスがある。作業開始時に必要なものを参照すること。
+Phase A (2026-04-24) でインデックス機構（symbol-map / route-map / query-playbook / dep-graph-baseline / sig-digest）は廃止された。
+残存するのは **証明進捗ノート** のみ:
 
-| ファイル | 用途 | 使い方 |
-|---|---|---|
-| `symbol-map.jsonl` | シンボル名 → ファイル・種別・タグ | `grep_search` の**前に**ここを検索。public 宣言のみ収録 |
-| `route-map.json` | 操作モジュールの読み込み順序 | 新しいモジュールを探索する際の出発点 |
-| `query-playbook.json` | タスク別探索レシピ | `equivariance_add` / `sorry_settle` / `symbol_lookup` 等の手順書 |
-| `dep-graph-baseline.json` | モジュール依存グラフ | 影響範囲調査・ビルド順序の確認 |
+| ファイル | 用途 |
+|---|---|
+| `sorry-plan.json` | アクティブな sorry / axiom のスナップショット |
+| `sorry-goals.md` | sorry 位置の宣言シグネチャ一覧（ビルド時に自動生成） |
+| `sorry-cards/*.md` | 個別 sorry の作業ノート（手動メンテ）|
 
-### 使用手順
-
-**シンボル検索**（最優先）:
-```
-grep_search pattern="\"symbol\": \"waveStep\"" includePattern="S2IL/_agent/symbol-map.jsonl"
-```
-→ ファイルパスが判明したら直接 `read_file`。`grep_search` でコードを広範囲検索する前に必ず試す。
-
-**タスク別レシピ**:
-- sorry 解消 → `query-playbook.json` の `sorry_settle` レシピを確認
-- 等変性追加 → `equivariance_add` レシピを確認
-- モジュール探索 → `route-map.json` の `routes.{操作名}` を確認
-
-> インデックスは Stop フック（`regen-indices.ps1`）でビルド成功時に自動再生成される。
+シンボル検索は facade（`S2IL/<Namespace>.lean`）の冒頭目次を読んでから `grep_search` を使う。
+インデックスに相当する機構は Phase E 以降もあえて復活させない（[architecture-layer-ab.md §1.7](../docs/plans/architecture-layer-ab.md)）。
 
 ## 大ファイル探索の制限
 
-- **CommExt 系サブファイル**（FloatUnits / LandingDist / PlaceGrounding / CommNe / SortStability）を `read_file` するときは、同一ファイルへの 2 回目以降の読み込み前に `/memories/session/` に行番号マップを記録する。
+- 200 行超のファイルを `read_file` するときは、該当 namespace の facade (`S2IL/<Namespace>.lean`) の冒頭目次を先に読むこと。
 - 同一ファイルへの `read_file` が 3 回目になったら即座に `Explore` サブエージェントに委譲すること。
-  - 委譲テンプレート: `runSubagent Explore "CommExt/{FileName}.lean の L{X}〜L{Y} 付近で {目的} を探して"`
+  - 委譲テンプレート: `runSubagent Explore "{File}.lean の L{X}〜L{Y} 付近で {目的} を探して"`
 
 ## 構造リファクタ提案の形式
 

@@ -1,19 +1,25 @@
 -- SPDX-FileCopyrightText: 2026 my04337
 -- SPDX-License-Identifier: MIT
 
--- BFS: 汎用 BFS 定義・帰納法テンプレート
-import S2IL.Kernel.BFS.GenericBfs
-
--- Transform: 回転・対称性変換の補題群
-import S2IL.Kernel.Transform.Rotate
-import S2IL.Kernel.Transform.Rotate180Lemmas
-
--- Bond: 結合判定・クラスタ計算
-import S2IL.Kernel.Bond.CrystalBond
-
 /-!
-# Kernel: 共通理論（Gravity 非依存の横断基盤）
+# S2IL.Kernel facade
 
-BFS・Bond・Transform の 3 サブモジュールを集約する re-export ハブ。
-加工操作（Operations）から共通基盤に到達するためのエントリポイント。
+Gravity 非依存の横断基盤 (Layer A)。
+
+## 公開 API
+
+Phase A 時点では空。Phase B で axiom scaffold を追加予定。
+
+## サブモジュール（公開）
+
+- `S2IL.Kernel.BFS`        — genericBFS と完全性定理
+- `S2IL.Kernel.Bond`       — CrystalBond
+- `S2IL.Kernel.Transform`  — rotateCW / rotate180 / rotateCCW
+
+## Internal（外部 import 禁止）
+
+- `S2IL.Kernel.Internal.*`
 -/
+
+namespace S2IL.Kernel
+end S2IL.Kernel

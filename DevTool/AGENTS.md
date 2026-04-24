@@ -6,18 +6,18 @@ DevTool は S2IL 開発を補助する Lean 製 CLI 群。
 
 ## ターゲット
 
-- `lake exe s2il-toolkit <sub>`: S2IL 依存あり
 - `lake exe s2il-diag <sub>`: S2IL 依存なし（ビルド破綻時の診断用）
+
+Phase A (2026-04-24) で `s2il-toolkit` は廃止された（旧 `depgraph` / `symbol-map` / `proof-stats` サブコマンドはインデックス機構に依存していたため）。
+旧ソースは `_archive/pre-greenfield/DevTool/Toolkit/` に退避済み。
 
 ## 主なサブコマンド
 
-- toolkit: `depgraph`, `symbol-map`, `proof-stats`
 - diag: `sorry-list`
 
 ## 使い分け
 
-- S2IL が build 可能: toolkit / diag の両方
-- S2IL が build 不可: diag を優先
+S2IL のビルド状況によらず `s2il-diag` が使える。
 
 ## 保守ルール
 
@@ -26,5 +26,5 @@ DevTool は S2IL 開発を補助する Lean 製 CLI 群。
 
 ## 参考
 
-- 全オプション: `lake exe s2il-toolkit --help`
+- 全オプション: `lake exe s2il-diag --help`
 - 詳細規約: `../AGENTS.md`

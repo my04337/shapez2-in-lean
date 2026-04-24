@@ -26,29 +26,33 @@
 
 ## 情報探索の優先順位
 
+インデックス機構（symbol-map / sig-digest / route-map / query-playbook / dep-graph-baseline）は Phase A (2026-04-24) で廃止された。
+エージェントは **facade を出発点** に、最短経路で目的のコードへ到達する。
+
 次の順で探し、前段で見つかったら後段には進まない:
 
 | # | 目的 | 参照先 |
 |---|---|---|
-| 1 | シンボル名で位置特定 | `grep_search(includePattern="S2IL/_agent/symbol-map.jsonl", query='"symbol":".*名前')` → `line` / `endLine` で `read_file` |
-| 2 | ファイル 1 本の全体構造（200 行超） | `S2IL/_agent/sig-digest/<dotted-module>.md` |
-| 3 | sorry 周辺の候補補題 | sorry-card の「候補補題（事前抽出）」→ なければ `.github/skills/lean-build/scripts/extract-goal-context.ps1 -File <f> -Line <n>` |
-| 4 | Operation 配下の探索 | `S2IL/_agent/route-map.json` |
-| 5 | タスク種別別レシピ | `S2IL/_agent/query-playbook.json` |
-| 6 | sorry 状況 | `sorry-plan.json` → `sorry-goals.md` → `sorry-cards/{symbol}.md` |
-| 7 | それでも不足 | Lean ソースへ `grep_search`（Lean 直 grep は symbol-map 経由後に限る） |
+| 1 | モジュールの入口 | 対応する facade (`S2IL.lean` / `S2IL/<Namespace>.lean`) の冒頭目次コメント |
+| 2 | シンボル名で位置特定 | `grep_search` でシンボル名を検索（対象は `S2IL/**/*.lean`、`_archive/` は除外） |
+| 3 | sorry 状況 | `S2IL/_agent/sorry-plan.json` → `S2IL/_agent/sorry-goals.md` → `S2IL/_agent/sorry-cards/{symbol}.md` |
+| 4 | sorry 周辺のゴール形状 | REPL で `example ... := by sorry` を発行 |
+| 5 | それでも不足 | Lean ソースへ広めに `grep_search` |
+
+構造の正本は [docs/plans/architecture-layer-ab.md](docs/plans/architecture-layer-ab.md)、
+Phase 別の実施計画は [docs/plans/layer-ab-rewrite-plan.md](docs/plans/layer-ab-rewrite-plan.md) を参照。
 
 Lean では `semantic_search` を使わない。検索系は `grep_search` / `file_search` を優先。
 `grep_search` が `No matches found` のときは `includeIgnoredFiles: true` で 1 回だけ再試行する。
+`_archive/pre-greenfield/` 配下は旧実装の退避領域であり、明示指示がない限り `read_file` しない。
 
 ### preflight チェックリスト
 
 `.lean` ファイルを `read_file` する直前に次を確認する:
 
-- [ ] シンボル名が既知なら symbol-map.jsonl を先に参照したか
-- [ ] 200 行超のファイルは sig-digest を先に read したか（直近 3 ターン以内に該当 sig-digest を read していない場合）
-- [ ] sorry 周辺の補題調査は sorry-card の Preflight 行 / extract-goal-context.ps1 を先に使ったか
-- [ ] 会話要約継続セッションで、対象 sorry の「ファイル:行 / コード状態 / 次アクション / ビルド状態」が summary に揃っていれば sig-digest スキップ可
+- [ ] 該当 namespace の facade 冒頭目次を先に読んだか
+- [ ] sorry 周辺なら REPL で `example ... := by sorry` のゴール形状を先に確認したか
+- [ ] 会話要約継続セッションで、対象 sorry の「ファイル:行 / コード状態 / 次アクション / ビルド状態」が summary に揃っていればスキップ可
 
 ## セッションメモリ
 
@@ -80,7 +84,7 @@ Lean では `semantic_search` を使わない。検索系は `grep_search` / `fi
 
 - 新規補題・仮説は証明前に反例検証を優先（`lean-counterexample` / `by plausible` / `#eval`）
 - 既存 sorry の状態確認は `sorry-plan.json` → `sorry-goals.md` → 当該 sorry-card の順
-- 完了済み補題は本文を読まず `symbol-map.jsonl` の `sig` で型だけ確認
+- 完了済み補題は本文を読まず REPL `#check` で型だけ確認
 - 新規 `theorem` / `lemma` を書き込む前に REPL の `#check` / `example ... := by sorry` で型シグネチャを確認する
 - 新規補題名は REPL 型チェック通過後に確定する（仮称を sorry-card / sorry-plan.json に書かない）
 - REPL → `.lean` 移植は `transplant-proof.ps1` を使う（bare `simp` は `-SimpStabilize`）
@@ -109,17 +113,13 @@ Lean では `semantic_search` を使わない。検索系は `grep_search` / `fi
 
 | 生成物 | 用途 |
 |---|---|
-| `sig-digest/*.md` | ファイル概観・宣言行インデックス |
-| `symbol-map.jsonl` | シンボル名 → `line` / `endLine` / `digest` |
-| `sorry-goals.md` | sorry 宣言シグネチャ |
-| `sorry-cards/*.md` の候補補題セクション | extract-goal-context 出力の事前埋込 |
+| `S2IL/_agent/sorry-goals.md` | sorry 宣言シグネチャ一覧 |
 
-手動起動スクリプト（デバッグ用）は [`docs/agent/agent-operations-playbook.md`](docs/agent/agent-operations-playbook.md) 参照。
+`symbol-map` / `sig-digest` / `route-map` / `query-playbook` / `dep-graph-baseline` / `extract-goal-context` は Phase A で廃止済み。
 
 - 新規 API はビルド前に REPL `#check` で型確認
-- 新規ファイル追加時は `route-map.json` で transitive import を確認（重複宣言エラー防止）
+- 新規ファイル追加時は facade の `import` 関係で transitive import を確認（重複宣言エラー防止）
 - 2 ファイル以上の修正は依存下流側から段階ビルド
-- `Verification/` に新規スクリプトを作る前は同種の既存スクリプトを 1 本読む
 
 ## テスト方針
 

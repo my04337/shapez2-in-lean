@@ -1,20 +1,26 @@
--- This module serves as the root of the `S2IL` library.
--- Import modules here that should be built as part of the library.
+-- SPDX-FileCopyrightText: 2026 my04337
+-- SPDX-License-Identifier: MIT
 
--- Shape: シェイプ本体の定義
-import S2IL.Shape.Shape
-import S2IL.Shape.QuarterPos
-import S2IL.Shape.GameConfig
-import S2IL.Shape.Arbitrary
-
--- Kernel: 共通理論（Gravity 非依存の横断基盤）
+import S2IL.Shape
 import S2IL.Kernel
-
--- Operations: 加工操作
+import S2IL.Wires
 import S2IL.Operations
+import S2IL.Machine
 
--- SettledShape: 統合型（Operations 統合後のトップレベル）
-import S2IL.SettledShape
+/-!
+# S2IL ルート facade
 
--- Machine: 加工装置
-import S2IL.Machine.Machine
+Layer A/B Greenfield Rewrite の Phase A: 空 facade。
+各サブ facade を再エクスポートする唯一の入口。
+
+## サブモジュール（公開）
+
+- `S2IL.Shape`        — Shape 型系
+- `S2IL.Kernel`       — 共通理論（BFS / Bond / Transform）
+- `S2IL.Wires`        — ワイヤー系（スケルトン）
+- `S2IL.Operations`   — 加工操作（Layer A 純粋部 + Layer B 振る舞い）
+- `S2IL.Machine`      — Machine 統合層
+
+Phase A 時点ではいずれも空 namespace のみ。Phase B で axiom による公開 API scaffold を追加予定。
+詳細: `docs/plans/layer-ab-rewrite-plan.md`
+-/

@@ -12,22 +12,23 @@
 
 ### 加工操作タスクの探索プロトコル
 
-1. まず `S2IL/_agent/route-map.json` の `routes.{operation}.entry` を読む
-2. entry の公開 API シグネチャ（先頭約 50 行）を確認
-3. 必要時のみ `chain` を辿る（lazy exploration）
-4. Kernel 層には `chain` か `kernel_deps` 経由で到達する（直接 grep しない）
-5. タスク種別が明確なら `S2IL/_agent/query-playbook.json` のレシピを使う
+1. まず対応する facade（`S2IL/<Namespace>.lean`、例: `S2IL/Operations.lean`）の冒頭目次コメントを読む
+2. facade で宣言されている公開 API シグネチャを確認
+3. 具体的な実装が必要な場合は、facade が import している公開部品ファイル (`S2IL/<Namespace>/<Component>.lean`) を辿る
+4. `Internal/` は facade / 同 namespace からのみ参照可能。外部からは触らない
+5. それでも見つからなければ `grep_search` で対象 namespace に限定して検索
 
-### symbol-map 優先
+### シンボル検索
 
-- シンボル名が分かる場合、最初に `S2IL/_agent/symbol-map.jsonl` を検索する
-- symbol-map は `build.ps1` / `build.sh` によるビルド成功時に自動再生成される（`update-symbol-map.ps1` / `update-symbol-map.sh`）
-- 行番号が必要な場合のみ追加検索する
-- symbol-map にないシンボルは「存在しない」と見なしてよい
+- `grep_search` でシンボル名を検索（対象は `S2IL/**/*.lean`、`_archive/` は除外）
+- facade から import 経路で見つけるほうが早ければそちらを優先
+
+Phase A (2026-04-24) で `symbol-map` / `sig-digest` / `route-map` / `query-playbook` / `dep-graph-baseline` は廃止された。
+エージェントは facade 目次をインデックス代替として使う。
 
 ### Explore 委譲の閾値
 
-- 3000 行超ファイルで、同一ファイルに対する探索が 3 回以上続き、目的情報が未取得なら Explore に委譲
+- 長大ファイルで、同一ファイルに対する探索が 3 回以上続き、目的情報が未取得なら Explore に委譲
 - 複数シンボル（3 件以上）の位置特定は、ファイルサイズに関わらず Explore 推奨
 - 同一ファイルへの `grep_search` は原則 2 回まで
 
@@ -56,24 +57,20 @@
 
 ### `lake build` 直接実行時の必須フォロー
 
-VS Code task や `lake build` 単体実行では `symbol-map.jsonl` が自動更新されない。
+VS Code task や `lake build` 単体実行では `sorry-goals.md` が自動更新されない。
 コミット直前に以下を必ず確認する:
 
-1. **symbol-map 更新**: 新規 `theorem` / `lemma` を追加した場合は明示的に実行
-   ```powershell
-   .github/skills/lean-build/scripts/update-symbol-map.ps1
-   ```
-2. **sorry-goals 更新**: sorry が増減した場合
+1. **sorry-goals 更新**: sorry が増減した場合
    ```powershell
    .github/skills/lean-build/scripts/update-sorry-goals.ps1
    ```
-3. **`git status` で未追跡を確認**: `S2IL/_agent/symbol-map.jsonl` / `sorry-goals.md` の差分が想定通りか確認
+2. **`git status` で未追跡を確認**: `S2IL/_agent/sorry-goals.md` の差分が想定通りか確認
 
 ### 推奨: スキル経由のビルド
 
 上記ルーティンが組み込まれているため、手動フォローを省略したい場合は
 [`.github/skills/lean-build/scripts/build.ps1`](../../.github/skills/lean-build/scripts/build.ps1) を直接使う。
-成功時に `update-symbol-map.ps1` が自動実行される。
+成功時に `update-sorry-goals.ps1` が自動実行される。
 
 ## ファイル編集ツール方針（詳細）
 

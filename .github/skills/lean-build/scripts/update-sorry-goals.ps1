@@ -25,7 +25,8 @@ $leanFiles = @()
 foreach ($sub in $ScanRoots) {
     $dir = Join-Path $Root $sub
     if (Test-Path $dir) {
-        $leanFiles += Get-ChildItem -Path $dir -Recurse -Filter '*.lean' -File
+        $leanFiles += Get-ChildItem -Path $dir -Recurse -Filter '*.lean' -File |
+            Where-Object { $_.FullName -notmatch '[\\/]_archive[\\/]' }
     }
 }
 

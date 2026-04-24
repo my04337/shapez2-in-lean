@@ -31,10 +31,10 @@ Skills・Hooks の追加・修正時にはまずここを参照すること。
 
 | 生成物 | 目的 | 手動起動スクリプト（デバッグ用のみ） |
 |---|---|---|
-| `S2IL/_agent/sig-digest/*.md` | ファイル概観・宣言行インデックス | `update-sig-digest.ps1` |
-| `S2IL/_agent/symbol-map.jsonl` | シンボル名 → `line`/`endLine`/`digest` の逆引き | `update-symbol-map.ps1` |
 | `S2IL/_agent/sorry-goals.md` | sorry 宣言シグネチャ（常時最新） | `update-sorry-goals.ps1` |
-| `S2IL/_agent/sorry-cards/*.md` の候補補題セクション | extract-goal-context 出力の事前埋込 | `update-sorry-card-context.ps1` |
+
+Phase A (2026-04-24) で `sig-digest` / `symbol-map` / `extract-goal-context` / sorry-card context 事前埋込は廃止された。
+シンボル位置の特定は facade (`S2IL/<Namespace>.lean`) の冒頭目次を出発点に `grep_search` を使う。
 
 > **手動実行は通常不要**。スクリプト修正・デバッグ時のみ直接実行する。
 

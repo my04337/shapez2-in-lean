@@ -2,7 +2,7 @@
 
 - 作成日: 2026-04-24
 - 最終更新: 2026-04-24
-- ステータス: **Phase 0 完了 / Phase A 着手前**
+- ステータス: **Phase A 完了 / Phase B 着手前**
 - スコープ: S2IL Layer A（Shape / Kernel / Operations 純粋部 / Wires スケルトン / Machine）および Layer B（振る舞い系）の再構築
 - 関連: 構造の正本は [architecture-layer-ab.md](architecture-layer-ab.md)、前身は [archive/gravity-greenfield-rewrite-plan.md](archive/gravity-greenfield-rewrite-plan.md)
 
@@ -324,11 +324,41 @@ Phase E  総仕上げ（archive 削除・MILESTONES 整合・全点検）
 
 ### Phase A 終了時
 
-- 実施日:
-- axiom 数:
+- 実施日: 2026-04-24
+- axiom 数: 0（空 facade のみ）
+- sorry 数: 0
+- warning 数: 0
 - facade 行数一覧:
+  - `S2IL.lean`: 26 行
+  - `S2IL/Shape.lean`: 26 行
+  - `S2IL/Kernel.lean`: 24 行
+  - `S2IL/Wires.lean`: 24 行
+  - `S2IL/Operations.lean`: 37 行
+  - `S2IL/Machine.lean`: 18 行
 - `_agent/` 削除済みファイル:
+  - `symbol-map.jsonl`
+  - `dep-graph-baseline.json`
+  - `sig-digest/` (45 ファイル)
+  - `route-map.json`
+  - `query-playbook.json`
+- 廃止スクリプト:
+  - `update-symbol-map.ps1` / `update-symbol-map.sh`
+  - `update-sig-digest.ps1`
+  - `update-sorry-card-context.ps1`
+  - `extract-goal-context.ps1`
+- 退避先:
+  - `S2IL/_archive/pre-greenfield/` (Shape / Kernel / Operations / Machine / Kernel.lean / Operations.lean / SettledShape.lean / S2IL.lean)
+  - `_archive/pre-greenfield/Test/`
+  - `_archive/pre-greenfield/Verification/`
+  - `_archive/pre-greenfield/DevTool/Toolkit/` + `Toolkit.lean`
+- lakefile 変更:
+  - `defaultTargets` から `Test` を除外
+  - `[[lean_lib]] Test` セクション削除
+  - `[[lean_exe]] s2il-toolkit` セクション削除
 - 特記事項:
+  - clean build green、2026-04-24 時点の toolchain (Lean 4.29.0) で再現
+  - `s2il-diag` は S2IL 非依存なので継続利用可能
+  - `_archive/pre-greenfield/` は Phase E で `pre-greenfield-yyyymmdd` タグ付与後に削除予定
 
 ### Phase B 終了時
 
