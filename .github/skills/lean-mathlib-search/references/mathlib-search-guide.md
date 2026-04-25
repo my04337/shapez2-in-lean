@@ -273,5 +273,5 @@ S2IL のドメイン型（`Shape`、`Layer`、`Quarter` 等）は Mathlib に存
 - **スキル**: `lean-mathlib-search`（検索パイプラインの自動化）
 - **エージェント**: `lean-lemma-finder`（ゴールから補題を自動検索）
 - **補題カタログ**: [`batteries-catalog.md`](batteries-catalog.md)（発見済み補題・置換パターン）
-- **ナレッジ**: [`docs/lean/mathlib-batteries-tips.md`](../../../../docs/lean/mathlib-batteries-tips.md)（`simp` 最適化・`Finset` 設計制約等）
+- **関連ドキュメント**: [`../../../../docs/lean/README.md`](../../../../docs/lean/README.md)（Lean 関連ガイドの入口）
 - **REPL ガイド**: [`repl-guide.md`](repl-guide.md) UC-8

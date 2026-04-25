@@ -21,12 +21,6 @@ Shapez2 in Lean (S2IL) プロジェクトの最終目標・大きな方針・層
 | [architecture-layer-ab.md](architecture-layer-ab.md) | Layer A/B の新ディレクトリ構造と設計原則の正本（Facade / Internal / MECE / 認知負荷制約）|
 | [layer-ab-rewrite-plan.md](layer-ab-rewrite-plan.md) | Layer A/B を Greenfield で再構築するための Phase 別実施計画。各 Phase 末の振り返り手順を含む |
 
-### アーカイブ
-
-| ファイル | 概要 |
-|---|---|
-| [archive/gravity-greenfield-rewrite-plan.md](archive/gravity-greenfield-rewrite-plan.md) | 旧 Gravity 限定再構築計画。`layer-ab-rewrite-plan.md` に統合済み |
-
 ---
 
 ## いつ参照するか

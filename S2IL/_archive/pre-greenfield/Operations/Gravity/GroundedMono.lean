@@ -1043,8 +1043,8 @@ aux-lemma `placeLDGroups_landing_groundingEdge_mono_aux` および補助
 IH 設計は数学的に不健全であり根本再設計が必要。そのため本ブランチをマージ可能な
 sorry-free 状態に戻すため **一時 axiom 化**する。
 
-**de-axiomatization 計画**: `docs/plans/gravity-greenfield-rewrite-plan.md`
-（Greenfield Rewrite）で Gravity 層全体の証明ツリーを再設計する際に、
+**de-axiomatization 計画**: `docs/plans/layer-ab-rewrite-plan.md`
+（Layer A/B Greenfield Rewrite）で Gravity 層全体の証明ツリーを再設計する際に、
 公開 API のファサード化 + internal 補題の隔離を先行整備してから
 本 axiom を定理化する方針。
 

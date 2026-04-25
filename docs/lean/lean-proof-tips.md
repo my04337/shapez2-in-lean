@@ -26,7 +26,7 @@ String.ofList_toList : String.ofList s.toList = s
 String.toList_ofList : (String.ofList l).toList = l
 ```
 
-詳細は [`string-roundtrip-proof.md`](string-roundtrip-proof.md) を参照。
+文字列 round-trip 系の詳細は個別文書を持たず、必要に応じて現行の `S2IL.Shape.Notation` 実装と REPL 検証を直接参照する。
 
 ---
 

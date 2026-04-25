@@ -4,7 +4,7 @@
 - 最終更新: 2026-04-24
 - ステータス: **Phase B 完了 / Phase C 着手前**
 - スコープ: S2IL Layer A（Shape / Kernel / Operations 純粋部 / Wires スケルトン / Machine）および Layer B（振る舞い系）の再構築
-- 関連: 構造の正本は [architecture-layer-ab.md](architecture-layer-ab.md)、前身は [archive/gravity-greenfield-rewrite-plan.md](archive/gravity-greenfield-rewrite-plan.md)
+- 関連: 構造の正本は [architecture-layer-ab.md](architecture-layer-ab.md)
 
 ---
 
@@ -17,7 +17,7 @@
 | `architecture-layer-ab.md` | 構造の正本（ディレクトリ・API 境界・MECE・命名・サイズ上限） |
 | `layer-ab-rewrite-plan.md`（本書） | Phase 構成・着手順序・振り返り手順・リスク管理 |
 
-前身の [archive/gravity-greenfield-rewrite-plan.md](archive/gravity-greenfield-rewrite-plan.md) は Layer B の Gravity 層のみを対象としていた。本計画はそのスコープを **Layer A 全体 + Layer B 全体** に拡張し、従来 `S2IL/_agent/` で支えてきたインデックス機構を **廃止** する前提で新構造を設計する。
+本計画は Layer A/B 全体を対象とし、従来 `S2IL/_agent/` で支えてきたインデックス機構を **廃止** する前提で新構造を設計する。
 
 ---
 
@@ -60,7 +60,7 @@ Phase E  総仕上げ（archive 削除・MILESTONES 整合・全点検）
 
 - [x] [architecture-layer-ab.md](architecture-layer-ab.md) 作成
 - [x] [layer-ab-rewrite-plan.md](layer-ab-rewrite-plan.md) 作成（本書）
-- [x] 既存 `gravity-greenfield-rewrite-plan.md` を [archive/](archive/) へ移動
+- [x] 旧 Gravity 限定計画の内容を本計画へ統合
 - [x] [MILESTONES.md](MILESTONES.md) と [README.md](README.md) の参照を更新
 
 **完了条件**: `docs/plans/` 内の相互リンクが切れていない、Phase A 着手判断ができる。
@@ -567,7 +567,6 @@ Phase B では `axiom Shape : Type` + `axiom Shape.layers : Shape → List Layer
 |---|---|
 | [architecture-layer-ab.md](architecture-layer-ab.md) | 構造の正本 |
 | [MILESTONES.md](MILESTONES.md) | 上位の最終目標 |
-| [archive/gravity-greenfield-rewrite-plan.md](archive/gravity-greenfield-rewrite-plan.md) | 本計画の前身（Gravity 限定）|
 | [docs/agent/proof-plan-current-focus-guide.md](../agent/proof-plan-current-focus-guide.md) | 新規 sorry 着手時の手順 |
 | [docs/agent/proof-retreat-pivot-guide.md](../agent/proof-retreat-pivot-guide.md) | 撤退判断基準 |
 | [.github/skills/lean-counterexample/SKILL.md](../../.github/skills/lean-counterexample/SKILL.md) | 真偽検証 |

@@ -182,6 +182,5 @@ Layer B の基盤を使って証明される加工装置。
 |---|---|
 | [architecture-layer-ab.md](architecture-layer-ab.md) | Layer A/B の新ディレクトリ構造と設計原則の正本 |
 | [layer-ab-rewrite-plan.md](layer-ab-rewrite-plan.md) | Layer A/B Greenfield 再構築の Phase 別実施計画 |
-| [archive/gravity-greenfield-rewrite-plan.md](archive/gravity-greenfield-rewrite-plan.md) | 旧 Gravity 限定再構築計画（`layer-ab-rewrite-plan.md` に統合済み）|
 
 将来的に層ごとの個別計画が必要になった場合、`docs/plans/` に追加する（ケバブケース命名）。

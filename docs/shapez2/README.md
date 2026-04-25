@@ -12,7 +12,7 @@ Shapez2 のゲーム内仕様・用語・操作セマンティクスをまとめ
 
 | ファイル | 概要 |
 |---|---|
-| [glossary.md](glossary.md) | ゲーム内用語集。シェイプ・建物・加工操作などをナレッジパネルのカテゴリ別に定義 |
+| [game-system-overview.md](game-system-overview.md) | ゲームシステム仕様の総覧。シェイプ・建物・加工操作の概念と背景を体系的に説明 |
 | [adjacency.md](adjacency.md) | 隣接関係の定義。結晶結合判定・回転挙動・積み重ね落下判定など、複数操作の基盤となる共通概念 |
 
 ### 加工操作の仕様
@@ -36,11 +36,11 @@ Shapez2 のゲーム内仕様・用語・操作セマンティクスをまとめ
 
 | 作業 | 参照先 |
 |---|---|
-| 新しい操作の Lean 実装着手前 | まず `glossary.md` で用語を確認し、対応する仕様ファイルを読む |
+| 新しい操作の Lean 実装着手前 | まず `game-system-overview.md` で概念を確認し、対応する仕様ファイルを読む |
 | 隣接関係・結合判定に関わる実装 | `adjacency.md` を必ず参照 |
 | 結晶の砕け散りに関わる実装・証明 | `crystal-shatter.md` + `adjacency.md` |
 | Gravity 証明の着手・再開 | `../plans/gravity-proof-cheatsheet.md` を必ず最初に通読 |
-| ゲーム仕様の曖昧な点に遭遇した場合 | `glossary.md` → 対応する仕様ファイルの順に確認 |
+| ゲーム仕様の曖昧な点に遭遇した場合 | `game-system-overview.md` → 対応する仕様ファイルの順に確認 |
 
 ### 新規ファイルの追加基準
 

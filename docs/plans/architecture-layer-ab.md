@@ -455,6 +455,5 @@ theorem gravity_rotate180_comm (s : Shape) :
 |---|---|
 | [layer-ab-rewrite-plan.md](layer-ab-rewrite-plan.md) | 本アーキテクチャを実装する Phase 別手順 |
 | [MILESTONES.md](MILESTONES.md) | 上位の最終目標と Layer 定義 |
-| [archive/gravity-greenfield-rewrite-plan.md](archive/gravity-greenfield-rewrite-plan.md) | 本アーキテクチャの前身（Gravity 限定）|
 | [docs/lean/naming-conventions.md](../lean/naming-conventions.md) | Lean の命名規則 |
 | [docs/agent/proof-plan-current-focus-guide.md](../agent/proof-plan-current-focus-guide.md) | 新規 sorry 着手時の手順 |

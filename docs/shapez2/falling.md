@@ -606,7 +606,7 @@ def Shape.isSettled (s : Shape) : Bool := (Gravity.floatingUnits s).isEmpty
 
 ### 10.2 ゲーム規定
 
-ゲーム上、**ベルトで搬送されるシェイプおよび各加工装置の入出力は常に安定状態であることが保証されている**（[glossary.md](glossary.md) 参照）。
+ゲーム上、**ベルトで搬送されるシェイプおよび各加工装置の入出力は常に安定状態であることが保証されている**（[game-system-overview.md](game-system-overview.md) 参照）。
 
 不安定状態は加工装置の **内部処理** においてのみ一時的に発生する:
 
@@ -686,7 +686,7 @@ def Quarter.canFormBond : Quarter → Bool
 
 ## 12. 用語対応表
 
-| 本仕様での用語 | glossary.md での用語 | Lean コード上の対応 |
+| 本仕様での用語 | game-system-overview.md での用語 | Lean コード上の対応 |
 |---|---|---|
 | 構造結合 (Structural Bond) | — | `Gravity.isStructurallyBonded` |
 | 結合能力 (Bond Capability) | — | `Quarter.canFormBond` |

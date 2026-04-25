@@ -63,6 +63,4 @@
 
 ## 関連ドキュメント
 
-- `docs/s2il/equivariance-proof-patterns.md`
-- `docs/s2il/false-theorem-catalog.md`
 - `.github/skills/lean-repl/references/repl-guide.md`

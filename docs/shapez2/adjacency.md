@@ -188,6 +188,6 @@ structure QuarterPos where
 |---|---|---|
 | **結晶の結合判定** | 同レイヤ内隣接 + 垂直隣接 | [`crystal-shatter.md`](crystal-shatter.md) |
 | **回転** | 方角の円環順序 | `S2IL/Processing/Rotate.lean` |
-| **切断** | East/West Half の分類 | [`glossary.md`](glossary.md) |
+| **切断** | East/West Half の分類 | [`game-system-overview.md`](game-system-overview.md) |
 | **落下（構造結合・接地）** | 同レイヤ内隣接 + 垂直隣接 | [`falling.md`](falling.md) |
 | **積み重ね** | 垂直隣接 | （今後定義予定） |

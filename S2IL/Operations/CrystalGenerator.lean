@@ -11,7 +11,7 @@ import S2IL.Kernel
 ## セマンティクス
 
 - 対象: `Quarter.empty` と `Quarter.pin` の **両方** を指定色の結晶に置換する
-  （glossary.md「隙間 (Gaps) や ピン (Pins)」に対応）
+  （docs/shapez2/game-system-overview.md「隙間 (Gaps) や ピン (Pins)」に対応）
 - 非対象: 既存の通常パーツと結晶は置き換わらない（色も保持）
 - 支持条件なし: 接地・settled 判定を問わず全ての empty/pin を結晶化する
   （ゲーム仕様上、出力が必ず settled になるかは stack/pinPush 側の責務）

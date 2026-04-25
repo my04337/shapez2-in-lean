@@ -214,7 +214,7 @@ Quarter.isFragile : Quarter → Bool
 
 ## 7. 用語対応表
 
-| 本仕様での用語 | glossary.md での用語 | Lean コード上の対応 |
+| 本仕様での用語 | game-system-overview.md での用語 | Lean コード上の対応 |
 |---|---|---|
 | 結晶 (Crystal) | クリスタル (Crystal) | `Quarter.crystal color` |
 | 脆弱 (Fragile) | 脆弱 (Fragile) | `Quarter.isFragile` |

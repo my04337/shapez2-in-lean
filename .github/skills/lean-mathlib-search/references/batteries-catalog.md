@@ -168,6 +168,6 @@ S2IL 本体のコードでは `import Mathlib.Tactic` 経由で Batteries が自
 ## 関連
 
 - **検索ガイド**: [`mathlib-search-guide.md`](mathlib-search-guide.md)（`exact?` / `#leansearch` / `#loogle` の使い方）
-- **設計知識**: [`docs/lean/mathlib-batteries-tips.md`](../../../../docs/lean/mathlib-batteries-tips.md)（`simp` 最適化・`Finset` 設計制約等）
+- **関連ドキュメント**: [`../../../../docs/lean/README.md`](../../../../docs/lean/README.md)（Lean 関連ガイドの入口）
 - **Aesop 活用**: [`docs/lean/aesop-guide.md`](../../../../docs/lean/aesop-guide.md)（等変性補題の自動証明）
 - **Plausible 活用**: [`docs/lean/plausible-guide.md`](../../../../docs/lean/plausible-guide.md)（ランダムテストによる仮説検証）
