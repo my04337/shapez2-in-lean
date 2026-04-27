@@ -3,9 +3,22 @@
   "generated": false,
   "description": "Structured snapshot of active sorry / axiom obligations. Used by agents to quickly identify the current proof target and dependencies.",
   "maintenance": "Update when adding/removing sorrys or axioms. Progress milestones belong to sorry-cards/{symbol}.md. Detailed history: git log.",
-  "updated": "2026-04-28 (Phase C §8.1.12 ・ §8.1.13 完了。Kernel/Bond.lean と Kernel/Cluster.lean が axiom-free に。IsBonded* と ClusterRel は Prop primitive + DecidablePred + Bool 派生、CW 等変性は rotateCW 双射と Relation.ReflTransGen.lift で証明。clusterList / allClusters は Phase D へ遅延。Kernel 配下の axiom ん0、全体 axiom は 125 → 48 に減少（残りは Operations/* と Wires/Signal.lean）。sorry = 0, warning = 0。次は §8.1.14 Operations/*.lean の各 primitive def 化。詳細は docs/plans/layer-ab-rewrite-plan.md。)",
+  "updated": "2026-04-28 (Phase D-1〜D-4 完了。Settled / Painter / CrystalGenerator / ColorMixer の axiom を実証明に置換。Settled は Mathlib Relation.ReflTransGen ベースの構造的接地定義 (IsContact / IsUpwardGroundingContact / IsGroundingEdge / IsGrounded / IsSettled)、CW 等変性を ReflTransGen.lift で証明。Painter / CrystalGenerator は Quarter→Layer→Shape の素直な map で実装し冪等性 + CW 等変性を導出。ColorMixer は Color.mix の Operations alias 化。デッド axiom (`IsSettled.normalize`) は §1.6 に従い削除。axiom 48→38。sorry = 0, warning = 0。次は Cutter (E/W primitive) または Stacker。)",
   "sorrys": [],
   "recently_completed": [
+    {
+      "id": "phase-d-1-4-deaxiom",
+      "completed": "2026-04-28",
+      "summary": "Phase D-1〜D-4 完了。Settled / Painter / CrystalGenerator / ColorMixer が axiom-free に。",
+      "details": [
+        "Operations/Settled.lean: IsContact / IsUpwardGroundingContact / IsGroundingEdge / IsGrounded / IsSettled を Relation.ReflTransGen で定義、Decidable は Classical.decPred、CW 等変性を ReflTransGen.lift と QuarterPos.rotateCW 双射で証明",
+        "Operations/Painter.lean: Quarter.paint / Layer.paint / Shape.paint を具体定義、冪等性と CW 等変性を induction で証明",
+        "Operations/CrystalGenerator.lean: empty/pin → crystal c の per-quarter map で実装、冪等性と CW 等変性を List.map_map で導出",
+        "Operations/ColorMixer.lean: Color.mix の Operations alias、可換性と恒等元補題を 1 行で再公開（noncomputable 削除）",
+        "デッド axiom IsSettled.normalize を §1.6 に従い削除（外部参照 0）",
+        "axiom 48 → 38 (-10)"
+      ]
+    },
     {
       "id": "phase-c-8.1.12-13-kernel-deaxiom",
       "completed": "2026-04-28",
@@ -39,16 +52,13 @@
   ],
   "axioms": [
     {
-      "summary": "Phase C §8.1.12-13 後 axioms（Kernel 配下は全件脱 axiom 済み）",
-      "count": 48,
-      "note": "Phase C 再 scaffold (125) から §8.1.12-13 で -77。残 axiom は 全て Operations/* と Wires/Signal.lean の各 primitive (gravity/paint/crystallize/cut/halfDestroy/swap/stack/pinPush/shatter 等) およびその代表的恒等式 / CW 等変性。§8.1.14 で Operations/*.lean の各 primitive を def 化し、CW 等変性 axiom を theorem に降格する。",
+      "summary": "Phase D-1〜D-4 後 axioms（Settled / Painter / CrystalGenerator / ColorMixer 完了。Kernel 配下は引き続き axiom-free）",
+      "count": 38,
+      "note": "Phase D-1〜D-4 で 48→38（-10）。残 axiom は Operations/Cutter.lean, Operations/Gravity.lean, Operations/PinPusher.lean, Operations/Shatter.lean, Operations/Stacker.lean および Wires/Signal.lean。次は Phase D-5 (Cutter, E/W primitive) → D-6 (Swapper) の順で進める。",
       "locations": [
-        "S2IL/Operations/ColorMixer.lean (3)",
         "S2IL/Operations/Cutter.lean (12)",
         "S2IL/Operations/Gravity.lean (4)",
-        "S2IL/Operations/Painter.lean (3)",
         "S2IL/Operations/PinPusher.lean (6)",
-        "S2IL/Operations/Settled.lean (4)",
         "S2IL/Operations/Shatter.lean (4)",
         "S2IL/Operations/Stacker.lean (7)",
         "S2IL/Wires/Signal.lean (5)"

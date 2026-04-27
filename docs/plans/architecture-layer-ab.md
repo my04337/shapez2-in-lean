@@ -1,8 +1,8 @@
 # Layer A/B アーキテクチャ（Greenfield 正本）
 
 - 作成日: 2026-04-24
-- 最終更新: 2026-04-27
-- ステータス: **Phase C §8.1.1〜§8.1.11 完了。Shape 型系（Layer A-1）の具象化・脱 axiom が完了し正本として確定**
+- 最終更新: 2026-04-28
+- ステータス: **Phase C 完了 + Phase D 着手 (Settled / Painter / CrystalGenerator / ColorMixer 脱 axiom 完了)**
 - スコープ: S2IL Layer A（データ型・Kernel・純粋関数な加工操作）および Layer B（振る舞い系）のコード構造
 - 位置付け: 本ドキュメントは **新構造の正本** である。具体的な実施手順は [layer-ab-rewrite-plan.md](layer-ab-rewrite-plan.md) を参照する
 
@@ -246,6 +246,27 @@ Bool 値述語と Prop 述語のペアは次の規約で統一する（Cluster /
 | **橋渡し** | `theorem p_iff : p x = true ↔ P x := decide_eq_true_iff` | 自動導出（1 行） |
 
 **禁止事項**: Prop 版と Bool 版を独立 axiom として並列宣言し、別個の橋渡し axiom を持たせること。
+
+### 1.12 接地と安定の構造的定義（Settled）
+
+落下・接地は時間発展ではなく **静的な可達性** で定義する（[docs/shapez2/falling.md §4.2](../shapez2/falling.md)）。
+
+| 段 | 表現 | 役割 |
+|---|---|---|
+| **接触層** | `IsContact s a b : Prop` | 同方角・上下隣接（両非空）または同層・隣接方角（両非空・両非ピン） |
+| **上方向接地接触層** | `IsUpwardGroundingContact s a b := IsContact s a b ∧ a.1 ≤ b.1` | 接地パスの方向制約 |
+| **接地エッジ層** | `IsGroundingEdge s a b := IsUpwardGroundingContact s a b ∨ IsBonded s a b` | 結合凍結を含む剛体伝播 |
+| **接地層** | `IsGrounded s p := ∃ p₀, p₀.1 = 0 ∧ ¬(getQuarter s p₀).isEmpty ∧ ReflTransGen (IsGroundingEdge s) p₀ p` | layer 0 の非空象限からの可達性（Mathlib `Relation.ReflTransGen`） |
+| **安定層** | `IsSettled s := ∀ p ∈ allValid s, ¬(getQuarter s p).isEmpty → IsGrounded s p` | 浮遊単位ゼロ |
+
+**規約**:
+
+1. 接地・安定は Cluster と同じ `Relation.ReflTransGen` パターンに統一する（自前 inductive を使わない）
+2. CW 等変性は `ReflTransGen.lift` + `QuarterPos.rotateCW/rotateCCW` の双射で導出（`Kernel.Cluster` の証明テンプレートを使う）
+3. `IsSettled` の決定可能性は `Classical.decPred` 経由で `noncomputable instance` を提供し、`isSettled : Bool` は派生（§1.11）
+4. **`IsSettled.normalize` のような正規化保存は外部参照が発生してから追加する**（Phase D 着手時にデッド補題として削除済み）。新たに必要になった時点で `getQuarter_normalize` 等の補助補題込みで再導入する
+
+実装は `S2IL/Operations/Settled.lean`（axiom 0、`sorry` 0）。
 
 ---
 
