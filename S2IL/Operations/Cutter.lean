@@ -79,6 +79,12 @@ axiom Shape.eastHalf.rotate180_comm (s : Shape) :
 axiom Shape.westHalf.rotate180_comm (s : Shape) :
     Shape.westHalf s.rotate180 = (Shape.eastHalf s).rotate180
 
+/-- `combineHalves` と 180° 回転: 入力が swap されて 180° 回転される
+    （E↔W が swap されるため）。 -/
+axiom Shape.combineHalves.rotate180_comm (a b : Shape) :
+    (Shape.combineHalves a b).rotate180 =
+      Shape.combineHalves b.rotate180 a.rotate180
+
 /-- `cut` と 180° 回転: 成分が swap される（theorem、primitive の系）。 -/
 theorem Shape.cut.rotate180_comm (s : Shape) :
     Shape.cut s.rotate180 =

@@ -59,8 +59,16 @@ axiom IsBonded.symm (s : Shape) (p q : QuarterPos) :
 axiom IsBonded.rotateCW (s : Shape) (p q : QuarterPos) :
     IsBonded s.rotateCW p.rotateCW q.rotateCW ↔ IsBonded s p q
 
--- NOTE: `IsBonded.rotate180` / `IsBonded.rotateCCW` は Phase C で
--- 1 行系として追加する。
+/-- 180° 等変性（CW の系）。 -/
+theorem IsBonded.rotate180 (s : Shape) (p q : QuarterPos) :
+    IsBonded s.rotate180 p.rotateCW.rotateCW q.rotateCW.rotateCW ↔ IsBonded s p q := by
+  simp [Shape.rotate180_eq_rotateCW_rotateCW, IsBonded.rotateCW]
+
+/-- CCW 等変性（CW の系）。 -/
+theorem IsBonded.rotateCCW (s : Shape) (p q : QuarterPos) :
+    IsBonded s.rotateCCW p.rotateCW.rotateCW.rotateCW q.rotateCW.rotateCW.rotateCW ↔
+      IsBonded s p q := by
+  simp [Shape.rotateCCW_eq_rotateCW_rotateCW_rotateCW, IsBonded.rotateCW]
 
 /-- クラスタ関係: `IsBonded` の反射推移閉包。 -/
 def ClusterRel (s : Shape) (p q : QuarterPos) : Prop :=

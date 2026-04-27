@@ -1,8 +1,8 @@
 # Layer A/B Greenfield Rewrite 実施計画
 
 - 作成日: 2026-04-24
-- 最終更新: 2026-04-24
-- ステータス: **Phase B 完了 / Phase C 着手前**
+- 最終更新: 2026-04-27
+- ステータス: **Phase B 完了 / Phase C 冒頭再 scaffold (§8.1.1〜§8.1.8) 完了。Phase C 後半（残 axiom 脱化）着手前**
 - スコープ: S2IL Layer A（Shape / Kernel / Operations 純粋部 / Wires スケルトン / Machine）および Layer B（振る舞い系）の再構築
 - 関連: 構造の正本は [architecture-layer-ab.md](architecture-layer-ab.md)
 
@@ -219,20 +219,27 @@ Phase E  総仕上げ（archive 削除・MILESTONES 整合・全点検）
 
 ### 7.3 Phase C への持ち越しメモ
 
-Phase C 着手直後に §8.1.1〜§8.1.8 の **8 件の再モデリング** を一括実施する。いずれも Phase B で axiom 化した構造に潜む二重証明・多重抽象化・不要な `Option` ラッピング・opaque 型の過剰使用を解消するもので、着手は本証明作業（§8.1 の 9 番以降）より先行させる。Phase C-R のチェックリスト §7.1 「再モデリング残存チェック」行で、新コードに旧モデルが 0 hit であることを確認してから Phase D へ進む。
+**ステータス: 2026-04-27 完了**。 §8.1.1〜§8.1.8 の **8 件の再モデリング** を一括適用済み。
+Phase B 末 184 axiom → Phase C 冒頭再 scaffold 後 125 axiom（**-59**）。
+全項目の新コード残存チェック（`genericBfs` / `GenericReachable` / `Option Shape` 返り型 / 旧 axiom 群）は新コード側で 0 hit を確認済み。
+Phase C 後半（§8.1 の 9. 以降、残 axiom の `def` / `theorem` / `inductive` / `structure` 化）に進む。
 
-| # | 対象 | 旧モデル → 新モデル | axiom 差し引き見込み |
-|---|---|---|---|
-| 1 | BFS / Cluster | `genericBfs` + `GenericReachable` + 閉包規則 + 健全性/完全性 → Mathlib `Relation.ReflTransGen` + `clusterSet : Finset` + `clusterList : List` + 橋渡し 1 本 | `-9 / +3`（最終 0） |
-| 2 | IsSettled | `IsSettled : Prop` + `isSettled : Bool` + `isSettled_iff` → `IsSettled` のみ primitive + `DecidablePred` instance | `-2 / +1` |
-| 3 | Option Shape 追放 | `gravity/cut/swap/stack/pinPush/normalize : … → Option Shape` → 全関数化（0 層許容）。Machine レイヤに `Option` を押し出す | 型簡潔化（axiom 数微減） |
-| 4 | Cutter / Swapper | `cut` / `halfDestroy` / `swap` を individual axiom → `eastHalf` / `westHalf` / `combineHalves` を primitive とした派生 `def` 合成 | `-4 / +0` |
-| 5 | Direction ≃ Fin 4 + Layer | `axiom Direction/Layer/QuarterPos : Type` + 各 `rotateCW` axiom → `Direction := Fin 4` / `Layer := Fin 4 → Quarter` / `QuarterPos := Nat × Fin 4` + 回転は算術、4 周性は `omega` | `-20 以上` |
-| 6 | Normalization | `IsNormalized` + `normalize : Shape → Option Shape` + `truncate` 独立 → `IsNormalized` primitive + `DecidablePred` + `normalize` 全関数派生 + Cluster 同規約 | `-1 / +2` |
-| 7 | Shape := List Layer | `axiom Shape : Type` + `ofLayers : … → Option Shape` + `layers/layerCount/…` → `Shape := List Layer` + 全操作 `def` 化 | `-12 以上` |
-| 8 | Prop/Bool 統一 | `isBonded` 等の Bool axiom → `IsBonded : Prop` + `DecidablePred` + `isBonded := decide` | axiom 統合 |
+| # | 対象 | 旧モデル → 新モデル | axiom 差し引き見込み | 適用状況 |
+|---|---|---|---|---|
+| 1 | BFS / Cluster | `genericBfs` + `GenericReachable` + 閉包規則 + 健全性/完全性 → Mathlib `Relation.ReflTransGen` + `clusterSet : Finset` + `clusterList : List` + 橋渡し 1 本 | `-9 / +3`（最終 0） | ✅ |
+| 2 | IsSettled | `IsSettled : Prop` + `isSettled : Bool` + `isSettled_iff` → `IsSettled` のみ primitive + `DecidablePred` instance | `-2 / +1` | ✅ |
+| 3 | Option Shape 追放 | `gravity/cut/swap/stack/pinPush/normalize : … → Option Shape` → 全関数化（0 層許容）。Machine レイヤに `Option` を押し出す | 型簡潔化（axiom 数微減） | ✅ |
+| 4 | Cutter / Swapper | `cut` / `halfDestroy` / `swap` を individual axiom → `eastHalf` / `westHalf` / `combineHalves` を primitive とした派生 `def` 合成 | `-4 / +0` | ✅ |
+| 5 | Direction ≃ Fin 4 + Layer | `axiom Direction/Layer/QuarterPos : Type` + 各 `rotateCW` axiom → `Direction := Fin 4` / `Layer := Fin 4 → Quarter` / `QuarterPos := Nat × Fin 4` + 回転は算術、4 周性は `omega` | `-20 以上` | ✅ |
+| 6 | Normalization | `IsNormalized` + `normalize : Shape → Option Shape` + `truncate` 独立 → `IsNormalized` primitive + `DecidablePred` + `normalize` 全関数派生 + Cluster 同規約 | `-1 / +2` | ✅ |
+| 7 | Shape := List Layer | `axiom Shape : Type` + `ofLayers : … → Option Shape` + `layers/layerCount/…` → `Shape := List Layer` + 全操作 `def` 化 | `-12 以上` | ✅ |
+| 8 | Prop/Bool 統一 | `isBonded` 等の Bool axiom → `IsBonded : Prop` + `DecidablePred` + `isBonded := decide` | axiom 統合 | ✅ |
 
-合計で Phase B の 184 axiom のうち **50 本以上** が `def` / `theorem` / instance に降格する見込み。Phase D 以降で残り axiom も最終的に theorem 化され、総 axiom 数は 0 に収束する。詳細手順と管理ポイントは §8.1.1〜§8.1.8 を参照。
+合計で Phase B の 184 axiom のうち **59 本** が `def` / `theorem` / instance / `abbrev` に降格した。
+さらに各操作の `rotate180_comm` / `rotateCCW_comm` を [§1.4 単一チェーン原則](architecture-layer-ab.md) に従い **CW 版からの 1 行系 `theorem`** で完備（Cutter / Swapper / Painter / Crystallize / Gravity / Stacker / PinPusher / Shatter / Settled / Bond）。
+Phase D 以降で残り axiom（opaque 型 6 本 + 各操作の primitive と恒等式 + CW 等変性）を最終的に theorem / inductive / structure 化し、総 axiom 数 0 への収束を目指す。
+
+詳細手順と管理ポイントは §8.1.1〜§8.1.8 を参照（実適用済みのため検証用記録として保持）。
 
 ---
 
@@ -242,24 +249,24 @@ Phase C 着手直後に §8.1.1〜§8.1.8 の **8 件の再モデリング** を
 
 ### 8.1 着手順序（低リスク → 高リスク）
 
-Phase B 終了時点で識別された **二重証明・多重抽象化パターン** および **型レベルの構造改善**（[§8.1.1〜§8.1.8](#)）を Phase C 冒頭で一括再 scaffold し、そのうえで残り補題の脱 axiom 化を進める。再 scaffold は **構造変更を伴う** ため、証明着手の前に完了させる。
+Phase B 終了時点で識別された **二重証明・多重抽象化パターン** および **型レベルの構造改善**（[§8.1.1〜§8.1.8](#)）は Phase C 冒頭で一括再 scaffold 済み（[§7.3](#73-phase-c-への持ち越しメモ) 参照、2026-04-27 完了）。
+本節 9. 以降が Phase C 後半の作業対象（残 axiom の脱化）である。
 
-1. **Kernel 再 scaffold**（§8.1.1）: 汎用 BFS 公開廃止と `Kernel/Cluster.lean` 新設
-2. **IsSettled の DecidablePred 化**（§8.1.2）: Prop / Bool 二重化の解消
-3. **Behavior レイヤからの Option Shape 追放**（§8.1.3）: 0 層シェイプ許容による全関数化
-4. **Cutter / Swapper の合成化**（§8.1.4）: `cut` + `combineHalves` の一次合成による E/W axiom 削減
-5. **Direction ≃ Fin 4 + Layer := Fin 4 → Quarter**（§8.1.5）: 回転を Fin 4 算術で具体化し axiom 大幅削減
-6. **Normalization 規約適用**（§8.1.6）: `IsNormalized` / `normalize` を Cluster と同じ関係/計算二層規約で整備
-7. **Shape := List Layer（0 層許容）**（§8.1.7）: `ofLayers` の `Option` 廃止と構造型の具体化
-8. **Prop/Bool 二層規約の統一適用**（§8.1.8）: `IsNormalized` / `isBonded` 等に `DecidablePred` 規約を横展開
-9. `Shape/Types.lean` + `Shape/GameConfig.lean`（構造的性質のみ）
-10. `Shape/Notation.lean`（round-trip 定理、既存資産移植）
-11. `Kernel/Bond.lean`（`isBonded` の実装化、`isBonded_symm` / `isBonded_rotateCW` の証明）
-12. `Kernel/Cluster.lean`（`ClusterRel = Relation.ReflTransGen`、`clusterSet : Finset`、`clusterList : List`、橋渡し補題 `clusterList_toFinset`、等変性 `clusterSet_rotateCW` 1 本）
-13. `Kernel/Transform.lean`（CW / 180° / CCW の基本等式と `rotate180_eq_rotateCW_rotateCW`）
-14. `Operations/*.lean` の Defs 部分（純粋関数定義）
-15. 各操作の `Equivariance.lean`（CW 等変性のみ）
-16. `Wires/*.lean`（スケルトンのみ済ませ、実装は Layer C 着手時に延期してもよい）
+1. ~~**Kernel 再 scaffold**（§8.1.1）~~ ✅ 2026-04-27 完了
+2. ~~**IsSettled の DecidablePred 化**（§8.1.2）~~ ✅ 2026-04-27 完了
+3. ~~**Behavior レイヤからの Option Shape 追放**（§8.1.3）~~ ✅ 2026-04-27 完了
+4. ~~**Cutter / Swapper の合成化**（§8.1.4）~~ ✅ 2026-04-27 完了
+5. ~~**Direction ≃ Fin 4 + Layer := Fin 4 → Quarter**（§8.1.5）~~ ✅ 2026-04-27 完了
+6. ~~**Normalization 規約適用**（§8.1.6）~~ ✅ 2026-04-27 完了
+7. ~~**Shape := List Layer（0 層許容）**（§8.1.7）~~ ✅ 2026-04-27 完了
+8. ~~**Prop/Bool 二層規約の統一適用**（§8.1.8）~~ ✅ 2026-04-27 完了
+9. `Shape/Types.lean` の opaque 型を inductive / structure に降格（`Color` / `Quarter` / `PartCode` / `RegularPartCode`）
+10. `Shape/GameConfig.lean` の `GameConfig` を `structure` 化、`vanilla4` / `vanilla5` / `stress8` を具体値に
+11. `Shape/Notation.lean`（round-trip 定理、既存資産移植）
+12. `Kernel/Bond.lean`（`IsBonded` の具体定義、`IsBonded.symm` / `IsBonded.rotateCW` の証明）
+13. `Kernel/Cluster.lean`（`clusterList` の具体実装、`clusterList.toFinset` / `clusterSet.rotateCW_comm` の証明）
+14. `Operations/*.lean` の各 primitive を `def` 化し、CW 等変性 axiom を theorem に降格
+15. `Wires/*.lean`（スケルトンのみ済ませ、実装は Layer C 着手時に延期してもよい）
 
 **Phase C 開始ゲート**: §8.1.1〜§8.1.8 完了時点で `grep_search` により旧モデル（`genericBfs` / `GenericReachable` / `Option Shape` を返す Behavior 操作 / 旧 `isSettled` axiom ペア / `axiom Layer : Type` / `axiom Direction : Type` / Layer/Shape/QuarterPos の `rotateCW` axiom / `ofLayers.*Option` / `normalize.*Option`）が残存していないことを確認し、軽量レビュー（§8.3）を挟む。
 

@@ -1,8 +1,8 @@
 # Layer A/B アーキテクチャ（Greenfield 正本）
 
 - 作成日: 2026-04-24
-- 最終更新: 2026-04-25
-- ステータス: **Phase C 再 scaffold 後の構成を前提として記述**
+- 最終更新: 2026-04-27
+- ステータス: **Phase C 再 scaffold 完了。新モデルが正本として確定**
 - スコープ: S2IL Layer A（データ型・Kernel・純粋関数な加工操作）および Layer B（振る舞い系）のコード構造
 - 位置付け: 本ドキュメントは **新構造の正本** である。具体的な実施手順は [layer-ab-rewrite-plan.md](layer-ab-rewrite-plan.md) を参照する
 

@@ -23,10 +23,17 @@ noncomputable def Shape.swap (s1 s2 : Shape) : Shape × Shape :=
   (Shape.combineHalves (Shape.eastHalf s1) (Shape.westHalf s2),
    Shape.combineHalves (Shape.eastHalf s2) (Shape.westHalf s1))
 
-/-- `swap` と 180° 回転（theorem、eastHalf/westHalf の系）。 -/
+/-- `swap` と 180° 回転（theorem、`combineHalves` / `eastHalf` / `westHalf` の系）。
+
+    180° 回転下では E↔W が swap されるため、出力タプルの成分も swap される:
+    - `eastHalf s.rotate180 = (westHalf s).rotate180`
+    - `westHalf s.rotate180 = (eastHalf s).rotate180`
+    - `(combineHalves a b).rotate180 = combineHalves b.rotate180 a.rotate180` -/
 theorem Shape.swap.rotate180_comm (s1 s2 : Shape) :
     Shape.swap s1.rotate180 s2.rotate180 =
       ((Shape.swap s1 s2).2.rotate180, (Shape.swap s1 s2).1.rotate180) := by
-  sorry -- Phase C/D で証明。combineHalves_rotate180 axiom が必要
+  simp only [Shape.swap,
+    Shape.eastHalf.rotate180_comm, Shape.westHalf.rotate180_comm,
+    Shape.combineHalves.rotate180_comm]
 
 end S2IL

@@ -24,7 +24,8 @@ Gravity 非依存の横断基盤 (Layer A)。Phase C re-scaffold 済み。
 
 ## Internal（外部 import 禁止）
 
-- `S2IL.Kernel.Internal.ClusterImpl`
 - `S2IL.Kernel.Internal.BondImpl`
 - `S2IL.Kernel.Internal.Rotate180Lemmas`
+
+NOTE: `S2IL.Kernel.Internal.ClusterImpl` は Phase D で `clusterList` 実装時に追加予定。
 -/

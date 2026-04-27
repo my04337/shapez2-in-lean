@@ -44,11 +44,28 @@ theorem Shape.liftUp.rotate180_comm (s : Shape) :
     (Shape.liftUp s).rotate180 = (Shape.liftUp s.rotate180) := by
   simp [Shape.rotate180_eq_rotateCW_rotateCW, Shape.liftUp.rotateCW_comm]
 
+/-- `liftUp` と CCW 回転は可換（CW の系）。 -/
+theorem Shape.liftUp.rotateCCW_comm (s : Shape) :
+    (Shape.liftUp s).rotateCCW = (Shape.liftUp s.rotateCCW) := by
+  simp [Shape.rotateCCW_eq_rotateCW_rotateCW_rotateCW, Shape.liftUp.rotateCW_comm]
+
 -- NOTE: `generatePins` の CW 等変性は signature 依存のため Phase C で整備する。
 
 /-- `pinPush` と CW 回転は可換（全関数版、直接等式）。 -/
 axiom Shape.pinPush.rotateCW_comm (s : Shape) (config : GameConfig) :
     Shape.rotateCW (Shape.pinPush s config) =
       Shape.pinPush (Shape.rotateCW s) config
+
+/-- `pinPush` と 180° 回転は可換（CW の系）。 -/
+theorem Shape.pinPush.rotate180_comm (s : Shape) (config : GameConfig) :
+    (Shape.pinPush s config).rotate180 =
+      Shape.pinPush s.rotate180 config := by
+  simp [Shape.rotate180_eq_rotateCW_rotateCW, Shape.pinPush.rotateCW_comm]
+
+/-- `pinPush` と CCW 回転は可換（CW の系）。 -/
+theorem Shape.pinPush.rotateCCW_comm (s : Shape) (config : GameConfig) :
+    (Shape.pinPush s config).rotateCCW =
+      Shape.pinPush s.rotateCCW config := by
+  simp [Shape.rotateCCW_eq_rotateCW_rotateCW_rotateCW, Shape.pinPush.rotateCW_comm]
 
 end S2IL

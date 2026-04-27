@@ -34,4 +34,19 @@ axiom Shape.shatterOnCut.rotate180_comm (s : Shape) :
 axiom Shape.shatterOnFall.rotateCW_comm (s : Shape) (ps : List QuarterPos) :
     (Shape.shatterOnFall s ps).rotateCW = Shape.shatterOnFall s.rotateCW (ps.map QuarterPos.rotateCW)
 
+/-- `shatterOnFall` と 180° 回転は可換（CW の系）。 -/
+theorem Shape.shatterOnFall.rotate180_comm (s : Shape) (ps : List QuarterPos) :
+    (Shape.shatterOnFall s ps).rotate180 =
+      Shape.shatterOnFall s.rotate180 (ps.map (QuarterPos.rotateCW ∘ QuarterPos.rotateCW)) := by
+  simp [Shape.rotate180_eq_rotateCW_rotateCW, Shape.shatterOnFall.rotateCW_comm,
+    List.map_map]
+
+/-- `shatterOnFall` と CCW 回転は可換（CW の系）。 -/
+theorem Shape.shatterOnFall.rotateCCW_comm (s : Shape) (ps : List QuarterPos) :
+    (Shape.shatterOnFall s ps).rotateCCW =
+      Shape.shatterOnFall s.rotateCCW
+        (ps.map (QuarterPos.rotateCW ∘ QuarterPos.rotateCW ∘ QuarterPos.rotateCW)) := by
+  simp [Shape.rotateCCW_eq_rotateCW_rotateCW_rotateCW, Shape.shatterOnFall.rotateCW_comm,
+    List.map_map]
+
 end S2IL

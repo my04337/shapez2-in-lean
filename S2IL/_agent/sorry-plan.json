@@ -3,23 +3,39 @@
   "generated": false,
   "description": "Structured snapshot of active sorry / axiom obligations. Used by agents to quickly identify the current proof target and dependencies.",
   "maintenance": "Update when adding/removing sorrys or axioms. Progress milestones belong to sorry-cards/{symbol}.md. Detailed history: git log.",
-  "updated": "2026-04-24 (Phase B: Skeleton 完了。Layer A/B の公開 API を axiom で scaffold。axiom = 181, sorry = 0, warning = 0。新構造: Shape/{Types,GameConfig,Arbitrary,Notation,Internal/{Parse,Serialize}} / Kernel/{BFS,Bond,Transform,Internal/{BFSImpl,BondImpl,Rotate180Lemmas}} / Wires/{Signal,Gates,Elements} / Operations/{Common,HalfDestroyer,Cutter,Swapper,Rotator,Painter,ColorMixer,CrystalGenerator,Stacker,PinPusher,Gravity,Shatter,Settled} / Machine。次アクションは Phase C: Layer A 脱 axiom 化。詳細は docs/plans/layer-ab-rewrite-plan.md。)",
+  "updated": "2026-04-27 (Phase C 冒頭再 scaffold 完了。§8.1.1〜§8.1.8 の 8 件の再モデリングを一括適用。Direction:=Fin 4 / Layer:=Fin 4 → Quarter / Shape:=List Layer / QuarterPos:=Nat × Fin 4 を具体化、IsSettled / IsBonded / IsNormalized は Prop primitive + DecidablePred、Cluster は Mathlib Relation.ReflTransGen + clusterSet (Finset) + clusterList (List) + 橋渡し 1 本、Cutter/Swapper は eastHalf/westHalf/combineHalves primitive + cut/halfDestroy/swap 派生 def、Operations 全関数 (Option Shape 追放)、各操作の rotate180/rotateCCW は単一チェーン原則で CW の 1 行系。axiom = 125 (Phase B 184 から -59 削減), sorry = 0, warning = 0。次アクションは Phase C: Layer A 脱 axiom 化 (§8.1 の 9. 以降)。詳細は docs/plans/layer-ab-rewrite-plan.md。)",
   "sorrys": [],
-  "recently_completed": [],
+  "recently_completed": [
+    {
+      "id": "phase-c-rescaffold",
+      "completed": "2026-04-27",
+      "summary": "§8.1.1〜§8.1.8 の 8 件の再モデリングを一括適用。axiom 184→125。",
+      "details": [
+        "§8.1.1 BFS/Cluster: genericBfs/GenericReachable 廃止、Mathlib Relation.ReflTransGen + clusterSet (Finset) + clusterList (List) + 橋渡し 1 本",
+        "§8.1.2 IsSettled: Prop primitive + DecidablePred + isSettled := decide",
+        "§8.1.3 Option Shape 追放: gravity/cut/swap/stack/pinPush/normalize 全関数化",
+        "§8.1.4 Cutter/Swapper: eastHalf/westHalf/combineHalves primitive + cut/halfDestroy/swap 派生 def",
+        "§8.1.5 Direction := Fin 4 / Layer := Fin 4 → Quarter / QuarterPos := Nat × Fin 4 具体化",
+        "§8.1.6 Normalization: IsNormalized primitive + DecidablePred + normalize 全関数",
+        "§8.1.7 Shape := List Layer (0 層許容)、layerCount は List.length",
+        "§8.1.8 Prop/Bool 統一: IsBonded primitive + DecidablePred + isBonded := decide",
+        "各操作の rotate180_comm / rotateCCW_comm を単一チェーン原則で CW の 1 行系として整備"
+      ]
+    }
+  ],
   "axioms": [
     {
-      "summary": "Phase B scaffold axioms",
-      "count": 181,
-      "note": "全 axiom は Phase B Skeleton で導入された公開 API 宣言。個別追跡は省略し、Phase C/D で脱 axiom 化する際に sorry-cards を新設する。",
+      "summary": "Phase C 再 scaffold 後 axioms",
+      "count": 125,
+      "note": "Phase B Skeleton (184) から §8.1.1〜§8.1.8 一括再モデリングで -59。残 axiom は (1) opaque 型 (Color/Quarter/PartCode/RegularPartCode/GameConfig/WireSignal) の primitive + コンストラクタ、(2) 各操作の primitive (gravity/paint/crystallize/eastHalf/westHalf/combineHalves/stack/pinPush/liftUp/shatter*/clearPositions/setQuarter 等)、(3) 各 primitive の代表的恒等式と CW 等変性。Phase D で opaque 型を inductive / structure に降格、Phase C 後半で各操作の def 化を進める。",
       "locations": [
-        "S2IL/Shape/Types.lean",
-        "S2IL/Shape/GameConfig.lean",
-        "S2IL/Shape/Notation.lean",
-        "S2IL/Kernel/BFS.lean",
-        "S2IL/Kernel/Bond.lean",
-        "S2IL/Kernel/Transform.lean",
-        "S2IL/Wires/Signal.lean",
-        "S2IL/Operations/*.lean"
+        "S2IL/Shape/Types.lean (opaque types: Color/Quarter/PartCode/RegularPartCode + 操作 axiom)",
+        "S2IL/Shape/GameConfig.lean (GameConfig + truncate)",
+        "S2IL/Shape/Notation.lean (toString/ofString? + round-trip)",
+        "S2IL/Kernel/Bond.lean (IsBonded* + symm + rotateCW)",
+        "S2IL/Kernel/Cluster.lean (clusterSet/clusterList + 橋渡し + rotateCW_comm)",
+        "S2IL/Wires/Signal.lean (WireSignal + コンストラクタ)",
+        "S2IL/Operations/*.lean (各操作 primitive + 恒等式 + rotateCW_comm)"
       ]
     }
   ]

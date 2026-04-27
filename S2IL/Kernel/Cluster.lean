@@ -27,7 +27,7 @@ Mathlib `Relation.ReflTransGen` を関係層として利用する（architecture
 
 ## Internal
 
-- `S2IL.Kernel.Internal.ClusterImpl` — `clusterList` の実装
+- `S2IL.Kernel.Internal.ClusterImpl` — `clusterList` の実装（Phase D で追加予定）
 -/
 
 namespace S2IL
