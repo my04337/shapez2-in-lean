@@ -24,6 +24,10 @@ name = "S2IL"
 name = "DevTool"
 globs = ["DevTool.+"]
 
+[[lean_lib]]
+name = "Test"
+globs = ["Test.+"]
+
 [[lean_exe]]
 name = "s2il-diag"
 root = "DevTool.Diag"
