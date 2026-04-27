@@ -3,9 +3,23 @@
   "generated": false,
   "description": "Structured snapshot of active sorry / axiom obligations. Used by agents to quickly identify the current proof target and dependencies.",
   "maintenance": "Update when adding/removing sorrys or axioms. Progress milestones belong to sorry-cards/{symbol}.md. Detailed history: git log.",
-  "updated": "2026-04-27 (Phase C 冒頭再 scaffold 完了。§8.1.1〜§8.1.8 の 8 件の再モデリングを一括適用。Direction:=Fin 4 / Layer:=Fin 4 → Quarter / Shape:=List Layer / QuarterPos:=Nat × Fin 4 を具体化、IsSettled / IsBonded / IsNormalized は Prop primitive + DecidablePred、Cluster は Mathlib Relation.ReflTransGen + clusterSet (Finset) + clusterList (List) + 橋渡し 1 本、Cutter/Swapper は eastHalf/westHalf/combineHalves primitive + cut/halfDestroy/swap 派生 def、Operations 全関数 (Option Shape 追放)、各操作の rotate180/rotateCCW は単一チェーン原則で CW の 1 行系。axiom = 125 (Phase B 184 から -59 削減), sorry = 0, warning = 0。次アクションは Phase C: Layer A 脱 axiom 化 (§8.1 の 9. 以降)。詳細は docs/plans/layer-ab-rewrite-plan.md。)",
+  "updated": "2026-04-28 (Phase C §8.1.12 ・ §8.1.13 完了。Kernel/Bond.lean と Kernel/Cluster.lean が axiom-free に。IsBonded* と ClusterRel は Prop primitive + DecidablePred + Bool 派生、CW 等変性は rotateCW 双射と Relation.ReflTransGen.lift で証明。clusterList / allClusters は Phase D へ遅延。Kernel 配下の axiom ん0、全体 axiom は 125 → 48 に減少（残りは Operations/* と Wires/Signal.lean）。sorry = 0, warning = 0。次は §8.1.14 Operations/*.lean の各 primitive def 化。詳細は docs/plans/layer-ab-rewrite-plan.md。)",
   "sorrys": [],
   "recently_completed": [
+    {
+      "id": "phase-c-8.1.12-13-kernel-deaxiom",
+      "completed": "2026-04-28",
+      "summary": "§8.1.12 (Bond) / §8.1.13 (Cluster) 完了。Kernel 配下が axiom-freeに。",
+      "details": [
+        "Kernel/Bond.lean: IsBondedInLayer/CrossLayer/IsBonded を Prop で具体化、DecidablePred instance + isBonded := decide",
+        "Kernel/Bond.lean: IsBonded.symm / IsBonded.rotateCW (Iff) を証明、rotate180/rotateCCW は 1 行系",
+        "Kernel/Cluster.lean: ClusterRel := Relation.ReflTransGen IsBonded、clusterSet は noncomputable Finset.filter (Classical.decPred)",
+        "Kernel/Cluster.lean: ClusterRel.rotateCW (双方向 lift), clusterSet.rotateCW_comm を証明",
+        "Kernel/Transform.lean: QuarterPos.rotateCCW を追加し rotateCW との双射 (rotateCW_rotateCCW / rotateCCW_rotateCW), QuarterPos.allValid_rotateCW / mem_allValid を追加",
+        "clusterList / allClusters は Phase D で MAM/Shatter が必要になるまで遅延",
+        "axiom 125 → 48 (§7 本 -77 削減)"
+      ]
+    },
     {
       "id": "phase-c-rescaffold",
       "completed": "2026-04-27",
@@ -25,17 +39,19 @@
   ],
   "axioms": [
     {
-      "summary": "Phase C 再 scaffold 後 axioms",
-      "count": 125,
-      "note": "Phase B Skeleton (184) から §8.1.1〜§8.1.8 一括再モデリングで -59。残 axiom は (1) opaque 型 (Color/Quarter/PartCode/RegularPartCode/GameConfig/WireSignal) の primitive + コンストラクタ、(2) 各操作の primitive (gravity/paint/crystallize/eastHalf/westHalf/combineHalves/stack/pinPush/liftUp/shatter*/clearPositions/setQuarter 等)、(3) 各 primitive の代表的恒等式と CW 等変性。Phase D で opaque 型を inductive / structure に降格、Phase C 後半で各操作の def 化を進める。",
+      "summary": "Phase C §8.1.12-13 後 axioms（Kernel 配下は全件脱 axiom 済み）",
+      "count": 48,
+      "note": "Phase C 再 scaffold (125) から §8.1.12-13 で -77。残 axiom は 全て Operations/* と Wires/Signal.lean の各 primitive (gravity/paint/crystallize/cut/halfDestroy/swap/stack/pinPush/shatter 等) およびその代表的恒等式 / CW 等変性。§8.1.14 で Operations/*.lean の各 primitive を def 化し、CW 等変性 axiom を theorem に降格する。",
       "locations": [
-        "S2IL/Shape/Types.lean (opaque types: Color/Quarter/PartCode/RegularPartCode + 操作 axiom)",
-        "S2IL/Shape/GameConfig.lean (GameConfig + truncate)",
-        "S2IL/Shape/Notation.lean (toString/ofString? + round-trip)",
-        "S2IL/Kernel/Bond.lean (IsBonded* + symm + rotateCW)",
-        "S2IL/Kernel/Cluster.lean (clusterSet/clusterList + 橋渡し + rotateCW_comm)",
-        "S2IL/Wires/Signal.lean (WireSignal + コンストラクタ)",
-        "S2IL/Operations/*.lean (各操作 primitive + 恒等式 + rotateCW_comm)"
+        "S2IL/Operations/ColorMixer.lean (3)",
+        "S2IL/Operations/Cutter.lean (12)",
+        "S2IL/Operations/Gravity.lean (4)",
+        "S2IL/Operations/Painter.lean (3)",
+        "S2IL/Operations/PinPusher.lean (6)",
+        "S2IL/Operations/Settled.lean (4)",
+        "S2IL/Operations/Shatter.lean (4)",
+        "S2IL/Operations/Stacker.lean (7)",
+        "S2IL/Wires/Signal.lean (5)"
       ]
     }
   ]

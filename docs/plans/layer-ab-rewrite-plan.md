@@ -265,8 +265,8 @@ Phase B 終了時点で識別された **二重証明・多重抽象化パター
 9. ~~`Shape/Types.lean` の opaque 型を inductive / structure に降格（`Color` / `Quarter` / `PartCode` / `RegularPartCode`）~~ ✅ 2026-04-27 完了
 10. ~~`Shape/GameConfig.lean` の `GameConfig` を `structure` 化、`vanilla4` / `vanilla5` / `stress8` を具体値に~~ ✅ 2026-04-27 完了
 11. ~~`Shape/Notation.lean`（round-trip 定理、既存資産移植）~~ ✅ 2026-04-27 完了
-12. `Kernel/Bond.lean`（`IsBonded` の具体定義、`IsBonded.symm` / `IsBonded.rotateCW` の証明）
-13. `Kernel/Cluster.lean`（`clusterList` の具体実装、`clusterList.toFinset` / `clusterSet.rotateCW_comm` の証明）
+12. ~~`Kernel/Bond.lean`（`IsBonded` の具体定義、`IsBonded.symm` / `IsBonded.rotateCW` の証明）~~ ✅ 2026-04-28 完了
+13. ~~`Kernel/Cluster.lean`（`ClusterRel := Relation.ReflTransGen IsBonded`、`clusterSet` (noncomputable Finset)、`clusterSet.rotateCW_comm` の証明）~~ ✅ 2026-04-29 完了（`clusterList` / `allClusters` は Phase D で MAM/Shatter 必要時に追加）
 14. `Operations/*.lean` の各 primitive を `def` 化し、CW 等変性 axiom を theorem に降格
 15. `Wires/*.lean`（スケルトンのみ済ませ、実装は Layer C 着手時に延期してもよい）
 

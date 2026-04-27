@@ -51,6 +51,11 @@ def isWest (d : Direction) : Bool := 2 ≤ d.val
 def isAdjacent (d1 d2 : Direction) : Bool :=
   d1 - d2 = 1 || d2 - d1 = 1
 
+/-- 隣接判定の対称性。 -/
+theorem isAdjacent_symm (d1 d2 : Direction) :
+    isAdjacent d1 d2 = isAdjacent d2 d1 := by
+  simp only [isAdjacent, Bool.or_comm]
+
 end Direction
 
 -- ============================================================
@@ -85,6 +90,23 @@ def canFormBond : Quarter → Bool
 def isFragile : Quarter → Bool
   | crystal _ => true
   | _         => false
+
+/-- 結晶判定（Bool）。 -/
+def isCrystal : Quarter → Bool
+  | crystal _ => true
+  | _         => false
+
+/-- 結晶判定（Prop）。`isCrystal` の Prop 層（§1.11 規約）。 -/
+def IsCrystal (q : Quarter) : Prop := q.isCrystal = true
+
+instance : DecidablePred IsCrystal := fun q =>
+  inferInstanceAs (Decidable (q.isCrystal = true))
+
+@[simp] theorem isCrystal_crystal (c : Color) : isCrystal (crystal c) = true := rfl
+@[simp] theorem isCrystal_empty : isCrystal empty = false := rfl
+@[simp] theorem isCrystal_pin : isCrystal pin = false := rfl
+@[simp] theorem isCrystal_colored (p : RegularPartCode) (c : Color) :
+    isCrystal (colored p c) = false := rfl
 
 /-- 象限のパーツコード（空は `none`）。 -/
 def partCode? : Quarter → Option PartCode
@@ -239,6 +261,9 @@ def allValid (s : Shape) : List QuarterPos :=
 
 /-- 時計回り 90° 回転: 方角を +1。 -/
 def rotateCW (pos : QuarterPos) : QuarterPos := (pos.1, pos.2 + 1)
+
+/-- 反時計回り 90° 回転: 方角を -1。 -/
+def rotateCCW (pos : QuarterPos) : QuarterPos := (pos.1, pos.2 - 1)
 
 end QuarterPos
 
