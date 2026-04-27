@@ -2,7 +2,7 @@
 
 - 作成日: 2026-04-24
 - 最終更新: 2026-04-27
-- ステータス: **Phase B 完了 / Phase C 冒頭再 scaffold (§8.1.1〜§8.1.8) 完了。Phase C 後半（残 axiom 脱化）着手前**
+- ステータス: **Phase B 完了 / Phase C §8.1.1〜§8.1.11 完了。Shape 型系（Types/GameConfig/Notation/Arbitrary）の脱 axiom 完了。Kernel/Operations 着手前**
 - スコープ: S2IL Layer A（Shape / Kernel / Operations 純粋部 / Wires スケルトン / Machine）および Layer B（振る舞い系）の再構築
 - 関連: 構造の正本は [architecture-layer-ab.md](architecture-layer-ab.md)
 
@@ -30,6 +30,8 @@
 3. **インデックス機構（symbol-map / dep-graph-baseline / sig-digest / route-map / query-playbook）なしで** エージェントが運用できる
 
 既存の証明資産は全 archive した上で、**補題単位で再評価** して新構造へ取り込む。
+
+> **注記（2026-04-27）**: 旧コードの混色補題を再評価・移植する際は、`Color` の構成（`black` 追加）と `mix` の規則がゲーム側のアップデートに伴い更新されている点に注意する。新仕様は [docs/shapez2/game-system-overview.md](../shapez2/game-system-overview.md) の「混色規則」節を参照。特に **`mix_self` は `a = white` で不成立**（`w + w = k`）であり、`Std.IdempotentOp Color.mix` インスタンスは持たせない。
 
 ---
 
@@ -260,9 +262,9 @@ Phase B 終了時点で識別された **二重証明・多重抽象化パター
 6. ~~**Normalization 規約適用**（§8.1.6）~~ ✅ 2026-04-27 完了
 7. ~~**Shape := List Layer（0 層許容）**（§8.1.7）~~ ✅ 2026-04-27 完了
 8. ~~**Prop/Bool 二層規約の統一適用**（§8.1.8）~~ ✅ 2026-04-27 完了
-9. `Shape/Types.lean` の opaque 型を inductive / structure に降格（`Color` / `Quarter` / `PartCode` / `RegularPartCode`）
-10. `Shape/GameConfig.lean` の `GameConfig` を `structure` 化、`vanilla4` / `vanilla5` / `stress8` を具体値に
-11. `Shape/Notation.lean`（round-trip 定理、既存資産移植）
+9. ~~`Shape/Types.lean` の opaque 型を inductive / structure に降格（`Color` / `Quarter` / `PartCode` / `RegularPartCode`）~~ ✅ 2026-04-27 完了
+10. ~~`Shape/GameConfig.lean` の `GameConfig` を `structure` 化、`vanilla4` / `vanilla5` / `stress8` を具体値に~~ ✅ 2026-04-27 完了
+11. ~~`Shape/Notation.lean`（round-trip 定理、既存資産移植）~~ ✅ 2026-04-27 完了
 12. `Kernel/Bond.lean`（`IsBonded` の具体定義、`IsBonded.symm` / `IsBonded.rotateCW` の証明）
 13. `Kernel/Cluster.lean`（`clusterList` の具体実装、`clusterList.toFinset` / `clusterSet.rotateCW_comm` の証明）
 14. `Operations/*.lean` の各 primitive を `def` 化し、CW 等変性 axiom を theorem に降格

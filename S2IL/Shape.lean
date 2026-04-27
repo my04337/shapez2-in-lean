@@ -5,6 +5,7 @@ import S2IL.Shape.Types
 import S2IL.Shape.GameConfig
 import S2IL.Shape.Arbitrary
 import S2IL.Shape.Notation
+import S2IL.Shape.Notation.Atom
 
 /-!
 # S2IL.Shape facade

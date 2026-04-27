@@ -1,16 +1,12 @@
 -- SPDX-FileCopyrightText: 2026 my04337
 -- SPDX-License-Identifier: MIT
 
-import S2IL.Shape.Types
-
 /-!
-# Internal: Shape Code シリアライザ実装
+# Internal: シェイプコードのシリアライズ補助
 
-このファイルは `S2IL.Shape` namespace の補助補題を集める。
+`S2IL.Shape.Notation` の round-trip 証明で必要となる構造的補題は
+すべて Notation.lean に直接記述する方が読みやすいため、当ファイルは
+将来の拡張用プレースホルダとして空のまま残す。
+
 **外部モジュール（`S2IL/Shape.lean`, `S2IL/Shape/*.lean` 以外）からは import 禁止**。
-
-Phase B 時点では中身なし。Phase C でシリアライザ実装を追加する。
 -/
-
-namespace S2IL.Shape.Internal.Serialize
-end S2IL.Shape.Internal.Serialize

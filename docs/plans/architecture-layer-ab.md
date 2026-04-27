@@ -2,7 +2,7 @@
 
 - 作成日: 2026-04-24
 - 最終更新: 2026-04-27
-- ステータス: **Phase C 再 scaffold 完了。新モデルが正本として確定**
+- ステータス: **Phase C §8.1.1〜§8.1.11 完了。Shape 型系（Layer A-1）の具象化・脱 axiom が完了し正本として確定**
 - スコープ: S2IL Layer A（データ型・Kernel・純粋関数な加工操作）および Layer B（振る舞い系）のコード構造
 - 位置付け: 本ドキュメントは **新構造の正本** である。具体的な実施手順は [layer-ab-rewrite-plan.md](layer-ab-rewrite-plan.md) を参照する
 
@@ -254,13 +254,17 @@ S2IL/
 ├── Shape.lean                     # Shape 型系 facade
 ├── Shape/
 │   ├── Types.lean                 # Direction:=Fin 4 / Quarter / Layer:=Fin 4→Quarter /
-│   │                              #   Shape:=List Layer / QuarterPos:=Nat×Fin 4 / Color
-│   ├── GameConfig.lean
+│   │                              #   Shape:=List Layer / QuarterPos:=Nat×Fin 4
+│   ├── Types/
+│   │   └── Atom.lean              # Color / PartCode / RegularPartCode（inductive）
+│   ├── GameConfig.lean            # GameConfig structure + vanilla4/vanilla5/stress8 + truncate
 │   ├── Arbitrary.lean             # Plausible インスタンス
-│   ├── Notation.lean              # Shape Code parse/serialize 公開 API + round-trip 定理
+│   ├── Notation.lean              # Quarter / Layer / Shape の文字列表現 + round-trip 定理
+│   ├── Notation/
+│   │   └── Atom.lean              # Color / PartCode / RegularPartCode の 1 文字表現
 │   └── Internal/
-│       ├── Parse.lean             # パーサ実装
-│       └── Serialize.lean
+│       ├── Parse.lean             # `:` 分割パーサ補助
+│       └── Serialize.lean         # （プレースホルダ）
 │
 │   ── Layer A: カーネル ──
 ├── Kernel.lean                    # Kernel facade
