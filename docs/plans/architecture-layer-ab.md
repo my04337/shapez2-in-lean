@@ -1,8 +1,8 @@
 # Layer A/B アーキテクチャ（Greenfield 正本）
 
 - 作成日: 2026-04-24
-- 最終更新: 2026-04-28
-- ステータス: **Phase C 完了 + Phase D 着手 (Settled / Painter / CrystalGenerator / ColorMixer 脱 axiom 完了)**
+- 最終更新: 2026-04-29
+- ステータス: **Phase C 完了 + Phase D 進行中 (Settled / Painter / CrystalGenerator / ColorMixer / Cutter / Swapper 脱 axiom 完了、axiom 26)**
 - スコープ: S2IL Layer A（データ型・Kernel・純粋関数な加工操作）および Layer B（振る舞い系）のコード構造
 - 位置付け: 本ドキュメントは **新構造の正本** である。具体的な実施手順は [layer-ab-rewrite-plan.md](layer-ab-rewrite-plan.md) を参照する
 
@@ -113,6 +113,18 @@ $$f(s.\mathrm{rotate180}) = f(s.\mathrm{rotateCW}.\mathrm{rotateCW}) = f(s).\mat
 $$s.\mathrm{rotate180}.\mathrm{cut} = (s.\mathrm{cut.2}.\mathrm{rotate180},\ s.\mathrm{cut.1}.\mathrm{rotate180})$$
 
 **原則**: E/W 参照操作の primitive（`eastHalf` / `westHalf` / `combineHalves`）については `rotate180_comm` を証明対象とし、CW_comm / CCW_comm は定義しない。合成操作（`cut` / `halfDestroy` / `swap`）の `rotate180_comm` は primitive 版の系として `theorem` 化する。
+
+**Phase D-5/D-6 完了形（2026-04-29）**:
+
+| 層 | 定義 | 主補題 |
+|---|---|---|
+| Layer | `Layer.eastHalf l := fun d => if d.val < 2 then l d else .empty` 等 | `Layer.{eastHalf,westHalf,combineHalves}.rotate180_comm` |
+| Shape primitive | `Shape.eastHalf := ·.map Layer.eastHalf` / `Shape.combineHalves := List.zipWith Layer.combineHalves` | `Shape.{eastHalf,westHalf}.rotate180_comm`（List.map_map）/ `Shape.combineHalves.rotate180_comm`（zipWith induction） |
+| Shape 派生 | `Shape.cut s := (Shape.eastHalf s, Shape.westHalf s)` / `Shape.halfDestroy := Shape.eastHalf` / `Shape.swap` は `combineHalves` 2 本 | `cut.rotate180_comm` / `halfDestroy.rotate180_comm` / `swap.rotate180_comm` は primitive の `simp only` 一行系 |
+
+`Shape.combineHalves` は `List.zipWith` 実装のため、長さの異なるシェイプを合成すると短い方に揃う。これは `combineHalves.eastHalf_westHalf` / `combineHalves.self` の両方を満たすために必要な選択である。
+
+実装は `S2IL/Operations/Cutter.lean`（axiom 0、`sorry` 0）/ `S2IL/Operations/Swapper.lean`（axiom 0、`sorry` 0）。
 
 ### 1.5 真偽検証先行原則
 

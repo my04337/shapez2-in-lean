@@ -18,8 +18,14 @@ import S2IL.Operations.Cutter
 
 namespace S2IL
 
-/-- スワップ: 2 つのシェイプの西半分を入れ替える（全関数）。 -/
-noncomputable def Shape.swap (s1 s2 : Shape) : Shape × Shape :=
+/-- スワップ: 2 つのシェイプの西半分を入れ替える（全関数）。
+
+    出力タプル `(out1, out2)`:
+    - `out1 = combineHalves (eastHalf s1) (westHalf s2)` — `s1` の東半分 + `s2` の西半分
+    - `out2 = combineHalves (eastHalf s2) (westHalf s1)` — `s2` の東半分 + `s1` の西半分
+
+    `Shape.combineHalves` は `List.zipWith` 実装のため、出力長は両入力の短い方に揃う。 -/
+def Shape.swap (s1 s2 : Shape) : Shape × Shape :=
   (Shape.combineHalves (Shape.eastHalf s1) (Shape.westHalf s2),
    Shape.combineHalves (Shape.eastHalf s2) (Shape.westHalf s1))
 

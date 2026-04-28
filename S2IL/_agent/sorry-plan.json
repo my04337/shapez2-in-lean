@@ -3,9 +3,23 @@
   "generated": false,
   "description": "Structured snapshot of active sorry / axiom obligations. Used by agents to quickly identify the current proof target and dependencies.",
   "maintenance": "Update when adding/removing sorrys or axioms. Progress milestones belong to sorry-cards/{symbol}.md. Detailed history: git log.",
-  "updated": "2026-04-28 (Phase D-1〜D-4 完了。Settled / Painter / CrystalGenerator / ColorMixer の axiom を実証明に置換。Settled は Mathlib Relation.ReflTransGen ベースの構造的接地定義 (IsContact / IsUpwardGroundingContact / IsGroundingEdge / IsGrounded / IsSettled)、CW 等変性を ReflTransGen.lift で証明。Painter / CrystalGenerator は Quarter→Layer→Shape の素直な map で実装し冪等性 + CW 等変性を導出。ColorMixer は Color.mix の Operations alias 化。デッド axiom (`IsSettled.normalize`) は §1.6 に従い削除。axiom 48→38。sorry = 0, warning = 0。次は Cutter (E/W primitive) または Stacker。)",
+  "updated": "2026-04-29 (Phase D-5・D-6 完了。Cutter / Swapper の axiom を実証明に置換。Layer.eastHalf / westHalf / combineHalves を if d.val < 2 ベースで具体化し、Shape 版は List.map / List.zipWith で深める。構造的恒等式 (combineHalves.eastHalf_westHalf / combineHalves.self) と 180° 等変性 (E↔W swap) を induction + match で証明。CW/CCW 等変性は §1.4.1 例外規則に従い独立チェーン不要。Swapper は cut + combineHalves の §8.1.4 派生 def として swap.rotate180_comm を 1 行系で証明。axiom 38→26。sorry = 0, warning = 0。次は Stacker (placeAbove / shatterTopCrystals) または Shatter。)",
   "sorrys": [],
   "recently_completed": [
+    {
+      "id": "phase-d-5-6-cutter-swapper-deaxiom",
+      "completed": "2026-04-29",
+      "summary": "Phase D-5・D-6 完了。Cutter / Swapper が axiom-free に。",
+      "details": [
+        "Operations/Cutter.lean: Layer.eastHalf / westHalf / combineHalves を if d.val < 2 ベースで具体化",
+        "Shape.eastHalf / westHalf は s.map Layer.eastHalf / Layer.westHalf、Shape.combineHalves は List.zipWith Layer.combineHalves",
+        "Shape.cut / Shape.halfDestroy は primitive の §8.1.4 派生 defを維持（noncomputable 削除）",
+        "構造的恒等式 combineHalves.eastHalf_westHalf / combineHalves.self を Layer/Shape 両レベルで induction 証明",
+        "180° 等変性 (E↔W swap) を Layer.rotate180_apply (private helper) + match v, hv で証明、Shape 版は List.map_map / List.zipWith induction で導出",
+        "Operations/Swapper.lean: noncomputable 削除、swap.rotate180_comm は primitive の simp only 一行系",
+        "axiom 38 → 26 (-12)"
+      ]
+    },
     {
       "id": "phase-d-1-4-deaxiom",
       "completed": "2026-04-28",
@@ -52,11 +66,10 @@
   ],
   "axioms": [
     {
-      "summary": "Phase D-1〜D-4 後 axioms（Settled / Painter / CrystalGenerator / ColorMixer 完了。Kernel 配下は引き続き axiom-free）",
-      "count": 38,
-      "note": "Phase D-1〜D-4 で 48→38（-10）。残 axiom は Operations/Cutter.lean, Operations/Gravity.lean, Operations/PinPusher.lean, Operations/Shatter.lean, Operations/Stacker.lean および Wires/Signal.lean。次は Phase D-5 (Cutter, E/W primitive) → D-6 (Swapper) の順で進める。",
+      "summary": "Phase D-5・D-6 後 axioms（Cutter / Swapper 完了。Kernel 配下は引き続き axiom-free）",
+      "count": 26,
+      "note": "Phase D-5・D-6 で 38→26（-12）。残 axiom は Operations/Gravity.lean, Operations/PinPusher.lean, Operations/Shatter.lean, Operations/Stacker.lean および Wires/Signal.lean。次は Phase D-7 (Stacker) → D-8 (PinPusher) → D-9 (Shatter) → D-10 (Gravity) の順で進める。",
       "locations": [
-        "S2IL/Operations/Cutter.lean (12)",
         "S2IL/Operations/Gravity.lean (4)",
         "S2IL/Operations/PinPusher.lean (6)",
         "S2IL/Operations/Shatter.lean (4)",
