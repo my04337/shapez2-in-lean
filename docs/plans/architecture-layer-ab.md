@@ -148,8 +148,33 @@ $$s.\mathrm{rotate180}.\mathrm{cut} = (s.\mathrm{cut.2}.\mathrm{rotate180},\ s.\
 3. `Shape.bottomLayer` の CW 等変性（`s.rotateCW.bottomLayer = s.bottomLayer.rotateCW`）は `Operations.Common` で公開する
 4. `Shape.truncate` の CW 等変性（`(truncate s c).rotateCW = truncate s.rotateCW c`）も同じく `Operations.Common` で公開する。`Shape/GameConfig.lean` は Kernel.Transform に依存しないため、回転系補題は `Operations.Common` 側に置く
 
-実装は `S2IL/Operations/Stacker.lean`（axiom 2: `shatterTopCrystals` / `shatterTopCrystals.rotateCW_comm`、`sorry` 0）/ `S2IL/Operations/PinPusher.lean`（axiom 0、`sorry` 0）/ `S2IL/Operations/Common.lean`（axiom 0、`sorry` 0）。
-残存 axiom は `Operations.Shatter`（Phase D-9）/ `Operations.Gravity`（Phase D-10）の脱 axiom と同期して降格する。
+実装は `S2IL/Operations/Stacker.lean`（axiom 0、`sorry` 0）/ `S2IL/Operations/PinPusher.lean`（axiom 0、`sorry` 0）/ `S2IL/Operations/Common.lean`（axiom 0、`sorry` 0）。
+残存 axiom は `Operations.Gravity`（Phase D-10）の脱 axiom と同期して降格する。
+
+### 1.4.3 砕け散り操作（Shatter）
+
+クリスタル砕け散りの 3 種類（落下時 / 切断時 / 切り詰め時）は、いずれも
+**「ある位置 `p` が砕けるか否か」を Prop 述語で定義し、`shatterMask` primitive で
+該当位置の Quarter を `empty` に置換する** 統一構造で実装する。
+
+**Phase D-9 完了形（2026-04-29）**:
+
+| 層 | 定義 | 主補題 |
+|---|---|---|
+| Mask primitive | `Shape.shatterMask (s : Shape) (P : QuarterPos → Bool) : Shape`（位置述語に応じて Quarter を消去） | `shatterMask.rotateCW_comm` / `.rotate180_comm` / `.rotateCCW_comm`（述語の CW シフトに対する可換性） |
+| 落下時 | `IsShatteredOnFall s ps p := ∃ t ∈ ps, (getQuarter s t).isFragile = true ∧ ClusterRel s t p` / `noncomputable def Shape.shatterOnFall s ps := s.shatterMask (decide ∘ IsShatteredOnFall s ps)` | `shatterOnFall.rotateCW_comm`（位置リストも CW 回転）/ `.rotate180_comm` / `.rotateCCW_comm`（CW の系） |
+| 切り詰め時 | `IsShatteredOnTruncate s threshold p := ∃ t, threshold ≤ t.1 ∧ (getQuarter s t).isCrystal ∧ ClusterRel s t p` / `noncomputable def Shape.shatterTopCrystals s threshold` | `shatterTopCrystals.rotateCW_comm`（しきい値は不変）/ `.rotate180_comm` / `.rotateCCW_comm` |
+| 切断時（E/W 軸依存） | `IsShatteredOnCut s p := ∃ t, isCrystal ∧ ClusterRel s t p ∧ (∃ pE, ClusterRel ∧ pE.2.isEast) ∧ (∃ pW, ClusterRel ∧ pW.2.isWest)` / `noncomputable def Shape.shatterOnCut s` | `shatterOnCut.rotate180_comm` のみ（§1.4.1 例外。CW witness を 180° で swap） |
+
+**規約**:
+
+1. `shatterMask` は Bool 述語を受ける純粋関数 primitive とする。決定可能性は `Classical.decPred` で `shatterOnFall` / `shatterTopCrystals` / `shatterOnCut` の各述語に与える（`noncomputable` で許容）
+2. 各操作の等変性は **述語の CW シフトに対する可換性** に帰着させ、`shatterMask.rotateCW_comm` を 1 度通せば良い構造とする
+3. `IsShatteredOnCut` の 180° 等変性証明では「E witness ↔ W witness の swap」を `Direction.isEast d → Direction.isWest (d+1+1)` の `decide` 補題 2 本（`hEW` / `hWE`）で閉じる
+4. `Kernel.Cluster` の `ClusterRel.rotateCW (s p q) : ClusterRel s.rotateCW p.rotateCW q.rotateCW ↔ ClusterRel s p q` を直接使い、`clusterList` のような順序依存の列挙を経由しない
+
+実装は `S2IL/Operations/Shatter.lean`（axiom 0、`sorry` 0、289 行）。`Stacker` / `PinPusher` の `shatterTopCrystals` 利用は Shatter facade からの import に切り替え済み。
+残存 axiom は `Operations.Gravity`（Phase D-10）のみ。
 
 ### 1.5 真偽検証先行原則
 

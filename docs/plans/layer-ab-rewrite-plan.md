@@ -123,7 +123,7 @@ Phase B 末 184 axiom → Phase C 末 **48 axiom**（-136）。Shape 型系 / Ke
 6. `Operations/Swapper.lean`（cut + combineHalves の派生） ✅ 2026-04-29
 7. `Operations/Stacker.lean`（placeAbove / shatterTopCrystals / stack） ✅ 2026-04-29
 8. `Operations/PinPusher.lean`（liftUp / generatePins / pinPush） ✅ 2026-04-29
-9. `Operations/Shatter.lean`（Cluster 基盤に依存。`clusterList` を Phase D 内で導入する場合はここで追加）
+9. `Operations/Shatter.lean`（Cluster 基盤に依存。`clusterList` を Phase D 内で導入する場合はここで追加） ✅ 2026-04-29
 10. `Operations/Gravity.lean`（最大難所。GroundingMono / ProcessWave / waveStep 終端性。旧 `_archive/pre-greenfield/Operations/Gravity/` の証明構造を §4.2 Step 2 で評価してから移植テンプレートとする）
 11. `Wires/*.lean`（Layer C 着手時まで延期可。スケルトンのまま残してもよい）
 
