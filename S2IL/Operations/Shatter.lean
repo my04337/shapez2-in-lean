@@ -57,8 +57,7 @@ private theorem shatterMaskFrom.rotateCW_eq
           = (if P' n d then Quarter.empty else l (d - 1))
       have hkey : P n (d - 1) = P' n d := by
         have := h n (d - 1)
-        have he : (d - 1 : Fin 4) + 1 = d := by ext; simp [Fin.sub_def, Fin.add_def]; omega
-        rwa [he] at this
+        rwa [Direction.sub_one_add_one] at this
       rw [hkey]
     · exact ih (n + 1)
 
@@ -261,20 +260,11 @@ theorem Shape.shatterOnCut.rotate180_comm (s : Shape) :
   · rintro ⟨t, hCry, hRel, ⟨pE, hRelE, hE⟩, ⟨pW, hRelW, hW⟩⟩
     refine ⟨t.rotateCW.rotateCW, ?_, ?_, ?_, ?_⟩
     · rw [QuarterPos.getQuarter_rotateCW, QuarterPos.getQuarter_rotateCW]; exact hCry
-    · -- ClusterRel s.rotateCW.rotateCW t.rotateCW.rotateCW p.rotateCW.rotateCW
-      have h1 : ClusterRel s.rotateCW t.rotateCW p.rotateCW :=
-        (ClusterRel.rotateCW s t p).mpr hRel
-      exact (ClusterRel.rotateCW s.rotateCW t.rotateCW p.rotateCW).mpr h1
+    · exact (ClusterRel.rotateCW_two s t p).mpr hRel
     · -- 旧 W witness pW を新しい E witness pW.rotateCW.rotateCW として使う。
-      refine ⟨pW.rotateCW.rotateCW, ?_, hWE pW.2 hW⟩
-      have h1 : ClusterRel s.rotateCW t.rotateCW pW.rotateCW :=
-        (ClusterRel.rotateCW s t pW).mpr hRelW
-      exact (ClusterRel.rotateCW s.rotateCW t.rotateCW pW.rotateCW).mpr h1
+      exact ⟨pW.rotateCW.rotateCW, (ClusterRel.rotateCW_two s t pW).mpr hRelW, hWE pW.2 hW⟩
     · -- 旧 E witness pE を新しい W witness pE.rotateCW.rotateCW として使う。
-      refine ⟨pE.rotateCW.rotateCW, ?_, hEW pE.2 hE⟩
-      have h1 : ClusterRel s.rotateCW t.rotateCW pE.rotateCW :=
-        (ClusterRel.rotateCW s t pE).mpr hRelE
-      exact (ClusterRel.rotateCW s.rotateCW t.rotateCW pE.rotateCW).mpr h1
+      exact ⟨pE.rotateCW.rotateCW, (ClusterRel.rotateCW_two s t pE).mpr hRelE, hEW pE.2 hE⟩
   · rintro ⟨t', hCry', hRel', ⟨pE', hRelE', hE'⟩, ⟨pW', hRelW', hW'⟩⟩
     -- 逆方向: t'.rotateCCW.rotateCCW を取り、E/W witness も逆回転して swap。
     refine ⟨t'.rotateCCW.rotateCCW, ?_, ?_, ?_, ?_⟩
@@ -285,42 +275,27 @@ theorem Shape.shatterOnCut.rotate180_comm (s : Shape) :
     · have hr : ClusterRel s.rotateCW.rotateCW
                   t'.rotateCCW.rotateCCW.rotateCW.rotateCW
                   p.rotateCW.rotateCW := by
-        simp [QuarterPos.rotateCW_rotateCCW]
-        exact hRel'
-      have h1 := (ClusterRel.rotateCW s.rotateCW t'.rotateCCW.rotateCCW.rotateCW p.rotateCW).mp hr
-      exact (ClusterRel.rotateCW s t'.rotateCCW.rotateCCW p).mp h1
+        simp [QuarterPos.rotateCW_rotateCCW]; exact hRel'
+      exact (ClusterRel.rotateCW_two s t'.rotateCCW.rotateCCW p).mp hr
     · -- 旧（rotated 側）W witness pW' を逆回転して新 E witness。
       refine ⟨pW'.rotateCCW.rotateCCW, ?_, ?_⟩
       · have hr : ClusterRel s.rotateCW.rotateCW
                   t'.rotateCCW.rotateCCW.rotateCW.rotateCW
                   pW'.rotateCCW.rotateCCW.rotateCW.rotateCW := by
-          simp [QuarterPos.rotateCW_rotateCCW]
-          exact hRelW'
-        have h1 := (ClusterRel.rotateCW s.rotateCW
-                      t'.rotateCCW.rotateCCW.rotateCW
-                      pW'.rotateCCW.rotateCCW.rotateCW).mp hr
-        exact (ClusterRel.rotateCW s t'.rotateCCW.rotateCCW pW'.rotateCCW.rotateCCW).mp h1
+          simp [QuarterPos.rotateCW_rotateCCW]; exact hRelW'
+        exact (ClusterRel.rotateCW_two s t'.rotateCCW.rotateCCW pW'.rotateCCW.rotateCCW).mp hr
       · -- (pW'.rotateCCW.rotateCCW).2.isEast = true ← pW'.2.isWest = true
-        have : pW'.rotateCCW.rotateCCW.2 = pW'.2 - 1 - 1 := rfl
-        rw [this]
-        -- pW'.2 - 1 - 1 = pW'.2 + 1 + 1 in Fin 4
-        have hEq : pW'.2 - 1 - 1 = pW'.2 + 1 + 1 := by ext; simp [Fin.sub_def, Fin.add_def]; omega
-        rw [hEq]
+        show Direction.isEast (pW'.2 - 1 - 1) = true
+        rw [Direction.sub_two_eq_add_two]
         exact hWE pW'.2 hW'
     · refine ⟨pE'.rotateCCW.rotateCCW, ?_, ?_⟩
       · have hr : ClusterRel s.rotateCW.rotateCW
                   t'.rotateCCW.rotateCCW.rotateCW.rotateCW
                   pE'.rotateCCW.rotateCCW.rotateCW.rotateCW := by
-          simp [QuarterPos.rotateCW_rotateCCW]
-          exact hRelE'
-        have h1 := (ClusterRel.rotateCW s.rotateCW
-                      t'.rotateCCW.rotateCCW.rotateCW
-                      pE'.rotateCCW.rotateCCW.rotateCW).mp hr
-        exact (ClusterRel.rotateCW s t'.rotateCCW.rotateCCW pE'.rotateCCW.rotateCCW).mp h1
-      · have : pE'.rotateCCW.rotateCCW.2 = pE'.2 - 1 - 1 := rfl
-        rw [this]
-        have hEq : pE'.2 - 1 - 1 = pE'.2 + 1 + 1 := by ext; simp [Fin.sub_def, Fin.add_def]; omega
-        rw [hEq]
+          simp [QuarterPos.rotateCW_rotateCCW]; exact hRelE'
+        exact (ClusterRel.rotateCW_two s t'.rotateCCW.rotateCCW pE'.rotateCCW.rotateCCW).mp hr
+      · show Direction.isWest (pE'.2 - 1 - 1) = true
+        rw [Direction.sub_two_eq_add_two]
         exact hEW pE'.2 hE'
 
 end S2IL

@@ -83,6 +83,18 @@ theorem ClusterRel.rotateCW (s : Shape) (p q : QuarterPos) :
     exact h.lift QuarterPos.rotateCW (fun a b hab =>
       (IsBonded.rotateCW s a b).mpr hab)
 
+/-- `ClusterRel` の 180° 等変性（CW を 2 段重ねた系）。 -/
+theorem ClusterRel.rotateCW_two (s : Shape) (p q : QuarterPos) :
+    ClusterRel s.rotateCW.rotateCW p.rotateCW.rotateCW q.rotateCW.rotateCW ↔
+      ClusterRel s p q := by
+  rw [ClusterRel.rotateCW, ClusterRel.rotateCW]
+
+/-- `ClusterRel` の CCW 等変性（CW を 3 段重ねた系）。 -/
+theorem ClusterRel.rotateCW_three (s : Shape) (p q : QuarterPos) :
+    ClusterRel s.rotateCW.rotateCW.rotateCW p.rotateCW.rotateCW.rotateCW
+        q.rotateCW.rotateCW.rotateCW ↔ ClusterRel s p q := by
+  rw [ClusterRel.rotateCW, ClusterRel.rotateCW, ClusterRel.rotateCW]
+
 -- ============================================================
 -- Finset 表現（noncomputable）
 -- ============================================================

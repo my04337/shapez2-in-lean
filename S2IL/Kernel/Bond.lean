@@ -121,18 +121,7 @@ theorem IsBondedCrossLayer.rotateCW (s : Shape) (p q : QuarterPos) :
     IsBondedCrossLayer s.rotateCW p.rotateCW q.rotateCW ↔ IsBondedCrossLayer s p q := by
   unfold IsBondedCrossLayer
   rw [QuarterPos.getQuarter_rotateCW, QuarterPos.getQuarter_rotateCW]
-  simp only [QuarterPos.rotateCW_fst, QuarterPos.rotateCW_snd]
-  have hd : p.2 + 1 = q.2 + 1 ↔ p.2 = q.2 := by
-    constructor
-    · intro h
-      have h' : p.2 + 1 - 1 = q.2 + 1 - 1 := by rw [h]
-      have e1 : p.2 + 1 - 1 = p.2 := by
-        ext; simp [Fin.sub_def, Fin.add_def]; omega
-      have e2 : q.2 + 1 - 1 = q.2 := by
-        ext; simp [Fin.sub_def, Fin.add_def]; omega
-      rw [e1, e2] at h'; exact h'
-    · intro h; rw [h]
-  rw [hd]
+  simp only [QuarterPos.rotateCW_fst, QuarterPos.rotateCW_snd, Direction.add_one_inj]
 
 theorem IsBonded.rotateCW (s : Shape) (p q : QuarterPos) :
     IsBonded s.rotateCW p.rotateCW q.rotateCW ↔ IsBonded s p q := by

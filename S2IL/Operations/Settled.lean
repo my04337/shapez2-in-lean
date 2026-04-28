@@ -104,14 +104,7 @@ private theorem IsContact.rotateCW (s : Shape) (a b : QuarterPos) :
   simp only [QuarterPos.rotateCW_fst, QuarterPos.rotateCW_snd]
   rw [QuarterPos.getQuarter_rotateCW, QuarterPos.getQuarter_rotateCW]
   -- 方角の +1 同士の等式を相殺
-  have hd : a.2 + 1 = b.2 + 1 ↔ a.2 = b.2 := by
-    constructor
-    · intro h
-      have h' : a.2 + 1 - 1 = b.2 + 1 - 1 := by rw [h]
-      have e1 : a.2 + 1 - 1 = a.2 := by ext; simp [Fin.sub_def, Fin.add_def]; omega
-      have e2 : b.2 + 1 - 1 = b.2 := by ext; simp [Fin.sub_def, Fin.add_def]; omega
-      rw [e1, e2] at h'; exact h'
-    · intro h; rw [h]
+  have hd : a.2 + 1 = b.2 + 1 ↔ a.2 = b.2 := Direction.add_one_inj
   rw [hd, Direction.isAdjacent_rotateCW]
 
 private theorem IsUpwardGroundingContact.rotateCW (s : Shape) (a b : QuarterPos) :

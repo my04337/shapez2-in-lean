@@ -118,8 +118,7 @@ theorem Shape.layerCount.rotateCCW (s : Shape) :
 @[simp] theorem Layer.rotateCW_apply_succ (l : Layer) (d : Fin 4) :
     l.rotateCW (d + 1) = l d := by
   show l ((d + 1) - 1) = l d
-  congr 1
-  ext; simp [Fin.sub_def, Fin.add_def]; omega
+  rw [Direction.add_one_sub_one]
 
 /-- `getQuarter` は CW 回転と可換: `s.rotateCW.getQuarter p.rotateCW = s.getQuarter p`。 -/
 theorem QuarterPos.getQuarter_rotateCW (s : Shape) (p : QuarterPos) :
@@ -135,12 +134,7 @@ theorem QuarterPos.getQuarter_rotateCW (s : Shape) (p : QuarterPos) :
 /-- `Direction.isAdjacent` は CW 回転で不変。 -/
 theorem Direction.isAdjacent_rotateCW (d1 d2 : Direction) :
     Direction.isAdjacent (d1 + 1) (d2 + 1) = Direction.isAdjacent d1 d2 := by
-  simp only [Direction.isAdjacent]
-  have h1 : d1 + 1 - (d2 + 1) = d1 - d2 := by
-    ext; simp [Fin.sub_def, Fin.add_def]; omega
-  have h2 : d2 + 1 - (d1 + 1) = d2 - d1 := by
-    ext; simp [Fin.sub_def, Fin.add_def]; omega
-  rw [h1, h2]
+  simp only [Direction.isAdjacent, Direction.add_one_sub_add_one]
 
 -- ============================================================
 -- QuarterPos.rotateCW 双射と allValid 不変
@@ -151,16 +145,14 @@ theorem Direction.isAdjacent_rotateCW (d1 d2 : Direction) :
     p.rotateCCW.rotateCW = p := by
   obtain ⟨n, d⟩ := p
   show (n, d - 1 + 1) = (n, d)
-  congr 1
-  ext; simp [Fin.sub_def, Fin.add_def]; omega
+  rw [Direction.sub_one_add_one]
 
 /-- CW と CCW の打ち消し（右）。 -/
 @[simp] theorem QuarterPos.rotateCCW_rotateCW (p : QuarterPos) :
     p.rotateCW.rotateCCW = p := by
   obtain ⟨n, d⟩ := p
   show (n, d + 1 - 1) = (n, d)
-  congr 1
-  ext; simp [Fin.sub_def, Fin.add_def]; omega
+  rw [Direction.add_one_sub_one]
 
 /-- `QuarterPos.rotateCW` は単射（双射の片側）。 -/
 theorem QuarterPos.rotateCW_injective : Function.Injective QuarterPos.rotateCW := by
