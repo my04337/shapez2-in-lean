@@ -2,7 +2,7 @@
 
 - 作成日: 2026-04-24
 - 最終更新: 2026-04-29
-- ステータス: **Phase C 完了 + Phase D 進行中 (Settled / Painter / CrystalGenerator / ColorMixer / Cutter / Swapper 脱 axiom 完了、axiom 26)**
+- ステータス: **Phase C 完了 + Phase D 進行中 (Settled / Painter / CrystalGenerator / ColorMixer / Cutter / Swapper / Stacker / PinPusher 脱 axiom 完了、axiom 15)**
 - スコープ: S2IL Layer A（データ型・Kernel・純粋関数な加工操作）および Layer B（振る舞い系）のコード構造
 - 位置付け: 本ドキュメントは **新構造の正本** である。具体的な実施手順は [layer-ab-rewrite-plan.md](layer-ab-rewrite-plan.md) を参照する
 
@@ -125,6 +125,31 @@ $$s.\mathrm{rotate180}.\mathrm{cut} = (s.\mathrm{cut.2}.\mathrm{rotate180},\ s.\
 `Shape.combineHalves` は `List.zipWith` 実装のため、長さの異なるシェイプを合成すると短い方に揃う。これは `combineHalves.eastHalf_westHalf` / `combineHalves.self` の両方を満たすために必要な選択である。
 
 実装は `S2IL/Operations/Cutter.lean`（axiom 0、`sorry` 0）/ `S2IL/Operations/Swapper.lean`（axiom 0、`sorry` 0）。
+
+### 1.4.2 パイプライン操作（Stacker / PinPusher）
+
+`Stacker` / `PinPusher` のような複合操作は、純粋関数 primitive を組み合わせた
+**合成 def** として定義する。CW 等変性は primitive 各層の `rotateCW_comm` を
+連鎖させて導出する。
+
+**Phase D-7/D-8 完了形（2026-04-29）**:
+
+| 層 | 定義 | 主補題 |
+|---|---|---|
+| Stacker primitive | `Shape.placeAbove bottom top := bottom ++ top` | `placeAbove.layerCount`（`List.length_append`）/ `placeAbove.rotateCW_comm`（`List.map_append`） |
+| Stacker 合成 | `Shape.stack bottom top config := gravity (shatterTopCrystals (truncate (placeAbove ...) config) config.maxLayers)`（noncomputable）| `stack.rotateCW_comm` は primitive 4 段の `rw` チェーン |
+| PinPusher primitive | `Shape.liftUp s := Layer.empty :: s` / `Shape.generatePins lifted pinLayer := pinLayer :: lifted.tail` / `Shape.pinLayerOf s := fun d => if (s.bottomLayer d).isEmpty then .empty else .pin` | `liftUp.{layerCount,rotateCW_comm}` / `generatePins.rotateCW_comm`（Shape × Layer 同時 CW 持ち上げ）/ `pinLayerOf.rotateCW_comm` |
+| PinPusher 合成 | `Shape.pinPush s config := gravity (shatterTopCrystals (truncate (generatePins s.liftUp s.pinLayerOf) config) config.maxLayers)`（noncomputable）| `pinPush.rotateCW_comm` は primitive 5 段の `rw` チェーン |
+
+**規約**:
+
+1. `gravity` / `shatterTopCrystals` が axiom である間、合成 def は `noncomputable` で宣言する
+2. `generatePins` の CW 等変性は **2 引数同時持ち上げ**（`Shape` と `Layer` の両方を CW 化）として証明する。これは `pinPush.rotateCW_comm` で `s.pinLayerOf.rotateCW = s.rotateCW.pinLayerOf` を経由するためである
+3. `Shape.bottomLayer` の CW 等変性（`s.rotateCW.bottomLayer = s.bottomLayer.rotateCW`）は `Operations.Common` で公開する
+4. `Shape.truncate` の CW 等変性（`(truncate s c).rotateCW = truncate s.rotateCW c`）も同じく `Operations.Common` で公開する。`Shape/GameConfig.lean` は Kernel.Transform に依存しないため、回転系補題は `Operations.Common` 側に置く
+
+実装は `S2IL/Operations/Stacker.lean`（axiom 2: `shatterTopCrystals` / `shatterTopCrystals.rotateCW_comm`、`sorry` 0）/ `S2IL/Operations/PinPusher.lean`（axiom 0、`sorry` 0）/ `S2IL/Operations/Common.lean`（axiom 0、`sorry` 0）。
+残存 axiom は `Operations.Shatter`（Phase D-9）/ `Operations.Gravity`（Phase D-10）の脱 axiom と同期して降格する。
 
 ### 1.5 真偽検証先行原則
 

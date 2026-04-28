@@ -2,6 +2,7 @@
 -- SPDX-License-Identifier: MIT
 
 import S2IL.Kernel
+import S2IL.Operations.Common
 import S2IL.Operations.Settled
 import S2IL.Operations.Gravity
 import S2IL.Operations.Shatter
@@ -9,36 +10,66 @@ import S2IL.Operations.Shatter
 /-!
 # S2IL.Operations.Stacker
 
-積層機 (A-2-4 + B-4-1)（Phase C re-scaffold 済み）。
-全操作を全関数化（architecture §1.9）。
+積層機 (A-2-4 + B-4-1)。Phase D-7 で部分的に axiom-free 化。
+
+## セマンティクス（ゲーム仕様）
+
+`stack(bottom, top, config)` は次のパイプラインで定義される
+（[docs/shapez2/mam.md §4-2](../../docs/shapez2/mam.md)）:
+
+1. `placeAbove bottom top` — bottom の上に top を積む（List 連結）
+2. `truncate ... config` — レイヤ上限超過分を捨てる
+3. `shatterTopCrystals ... config.maxLayers` — 切り詰め境界に
+   触れる結晶クラスタを砕け散らせる（[docs/shapez2/crystal-shatter.md §3.1](../../docs/shapez2/crystal-shatter.md)）
+4. `gravity` — 浮遊単位を落下させ安定化
 
 ## 公開 API
 
-- `placeAbove : Shape → Shape → Shape`
-- `shatterTopCrystals : Shape → Nat → Shape`
-- `stack : Shape → Shape → GameConfig → Shape`（全関数）
-- CW 等変性
+- `Shape.placeAbove : Shape → Shape → Shape`（≃ `bottom ++ top`、全関数）
+- `Shape.shatterTopCrystals : Shape → Nat → Shape`（axiom：Phase D-9 で降格予定）
+- `Shape.stack : Shape → Shape → GameConfig → Shape`（合成 def、全関数）
+- 構造的恒等式 (`placeAbove.layerCount`)
+- CW 等変性 (`placeAbove.rotateCW_comm` 他) と 180° / CCW 1 行系
+
+## 単一チェーン原則
+
+CW 等変性のみを直接証明、180° / CCW は 1 行系。
+`shatterTopCrystals` は cluster 基盤（`Operations.Shatter` Phase D-9）に依存するため
+CW 等変性は axiom のまま残し、`stack.rotateCW_comm` は合成チェーンで導出する。
+
+## 残存 axiom
+
+- `Shape.shatterTopCrystals`（cluster 計算は Phase D-9 で実装）
+- `Shape.shatterTopCrystals.rotateCW_comm`（同上）
+- `Shape.gravity` 関連は `Operations.Gravity` 側で残存（Phase D-10）
 -/
 
 namespace S2IL
 
-axiom Shape.placeAbove : Shape → Shape → Shape
+-- ============================================================
+-- placeAbove: bottom の上に top を積む
+-- ============================================================
 
-/-- `shatterTopCrystals s n`: レイヤ番号 ≥ n にある結晶を含む結合クラスタを
-    すべて `Quarter.empty` に置換する。 -/
-axiom Shape.shatterTopCrystals : Shape → Nat → Shape
+/-- 積層: bottom の上に top を積み重ねる（List 連結）。 -/
+def Shape.placeAbove (bottom top : Shape) : Shape := bottom ++ top
 
-/-- 積層（全関数）。0 層入力に対しても well-defined。 -/
-axiom Shape.stack : Shape → Shape → GameConfig → Shape
+@[simp] theorem Shape.placeAbove_nil_left (top : Shape) :
+    Shape.placeAbove [] top = top := rfl
+
+@[simp] theorem Shape.placeAbove_nil_right (bottom : Shape) :
+    Shape.placeAbove bottom [] = bottom := by
+  simp [Shape.placeAbove]
 
 /-- `placeAbove` のレイヤ数は加算。 -/
-axiom Shape.placeAbove.layerCount (bottom top : Shape) :
-    (Shape.placeAbove bottom top).layerCount = bottom.layerCount + top.layerCount
+@[simp] theorem Shape.placeAbove.layerCount (bottom top : Shape) :
+    (Shape.placeAbove bottom top).layerCount = bottom.layerCount + top.layerCount := by
+  simp [Shape.placeAbove, Shape.layerCount, List.length_append]
 
 /-- `placeAbove` と CW 回転は可換。 -/
-axiom Shape.placeAbove.rotateCW_comm (bottom top : Shape) :
+theorem Shape.placeAbove.rotateCW_comm (bottom top : Shape) :
     Shape.rotateCW (Shape.placeAbove bottom top) =
-      Shape.placeAbove (Shape.rotateCW bottom) (Shape.rotateCW top)
+      Shape.placeAbove (Shape.rotateCW bottom) (Shape.rotateCW top) := by
+  simp [Shape.placeAbove, Shape.rotateCW, List.map_append]
 
 /-- `placeAbove` と 180° 回転は可換（CW の系）。 -/
 theorem Shape.placeAbove.rotate180_comm (bottom top : Shape) :
@@ -52,7 +83,16 @@ theorem Shape.placeAbove.rotateCCW_comm (bottom top : Shape) :
       Shape.placeAbove bottom.rotateCCW top.rotateCCW := by
   simp [Shape.rotateCCW_eq_rotateCW_rotateCW_rotateCW, Shape.placeAbove.rotateCW_comm]
 
-/-- `shatterTopCrystals` と CW 回転は可換。 -/
+-- ============================================================
+-- shatterTopCrystals: cluster ベース（axiom のまま、Phase D-9 で降格）
+-- ============================================================
+
+/-- `shatterTopCrystals s n`: レイヤ番号 ≥ n にある結晶を含む結晶結合クラスタ
+    全体を `Quarter.empty` に置換する。
+    Phase D-9（`Operations.Shatter` の脱 axiom）で実装される予定。 -/
+axiom Shape.shatterTopCrystals : Shape → Nat → Shape
+
+/-- `shatterTopCrystals` と CW 回転は可換（Phase D-9 で theorem へ）。 -/
 axiom Shape.shatterTopCrystals.rotateCW_comm (s : Shape) (n : Nat) :
     Shape.rotateCW (Shape.shatterTopCrystals s n) =
       Shape.shatterTopCrystals (Shape.rotateCW s) n
@@ -67,12 +107,31 @@ theorem Shape.shatterTopCrystals.rotate180_comm (s : Shape) (n : Nat) :
 theorem Shape.shatterTopCrystals.rotateCCW_comm (s : Shape) (n : Nat) :
     (Shape.shatterTopCrystals s n).rotateCCW =
       Shape.shatterTopCrystals s.rotateCCW n := by
-  simp [Shape.rotateCCW_eq_rotateCW_rotateCW_rotateCW, Shape.shatterTopCrystals.rotateCW_comm]
+  simp [Shape.rotateCCW_eq_rotateCW_rotateCW_rotateCW,
+        Shape.shatterTopCrystals.rotateCW_comm]
 
-/-- `stack` と CW 回転は可換（全関数版、直接等式）。 -/
-axiom Shape.stack.rotateCW_comm (bottom top : Shape) (config : GameConfig) :
+-- ============================================================
+-- stack: パイプライン全体（全関数 def）
+-- ============================================================
+
+/-- 積層機（全関数）。
+    `gravity ∘ shatterTopCrystals(maxLayers) ∘ truncate ∘ placeAbove`。
+    `gravity` / `shatterTopCrystals` がまだ axiom のため `noncomputable`。 -/
+noncomputable def Shape.stack (bottom top : Shape) (config : GameConfig) : Shape :=
+  Shape.gravity
+    (Shape.shatterTopCrystals
+      (Shape.truncate (Shape.placeAbove bottom top) config)
+      config.maxLayers)
+
+/-- `stack` と CW 回転は可換（合成チェーン）。 -/
+theorem Shape.stack.rotateCW_comm (bottom top : Shape) (config : GameConfig) :
     Shape.rotateCW (Shape.stack bottom top config) =
-      Shape.stack (Shape.rotateCW bottom) (Shape.rotateCW top) config
+      Shape.stack (Shape.rotateCW bottom) (Shape.rotateCW top) config := by
+  unfold Shape.stack
+  rw [Shape.gravity.rotateCW_comm,
+      Shape.shatterTopCrystals.rotateCW_comm,
+      Shape.truncate.rotateCW_comm,
+      Shape.placeAbove.rotateCW_comm]
 
 /-- `stack` と 180° 回転は可換（CW の系）。 -/
 theorem Shape.stack.rotate180_comm (bottom top : Shape) (config : GameConfig) :

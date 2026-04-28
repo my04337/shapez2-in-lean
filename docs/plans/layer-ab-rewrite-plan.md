@@ -2,7 +2,7 @@
 
 - 作成日: 2026-04-24
 - 最終更新: 2026-04-29
-- ステータス: **Phase 0 / A / A-R / B / B-R / C / C-R 完了。Phase D 進行中（Settled / Painter / CrystalGenerator / ColorMixer / Cutter / Swapper 完了、axiom 48→26）**
+- ステータス: **Phase 0 / A / A-R / B / B-R / C / C-R 完了。Phase D 進行中（Settled / Painter / CrystalGenerator / ColorMixer / Cutter / Swapper / Stacker / PinPusher 完了、axiom 48→15）**
 - スコープ: S2IL Layer A（Shape / Kernel / Operations 純粋部 / Wires スケルトン / Machine）および Layer B（振る舞い系）の再構築
 - 関連: 構造の正本は [architecture-layer-ab.md](architecture-layer-ab.md)
 
@@ -121,8 +121,8 @@ Phase B 末 184 axiom → Phase C 末 **48 axiom**（-136）。Shape 型系 / Ke
 4. `Operations/ColorMixer.lean`（混色系、Color.mix 経由） ✅ 2026-04-28
 5. `Operations/Cutter.lean`（E/W primitive、§1.4.1 例外規則） ✅ 2026-04-29
 6. `Operations/Swapper.lean`（cut + combineHalves の派生） ✅ 2026-04-29
-7. `Operations/Stacker.lean`（placeAbove / shatterTopCrystals / stack）
-8. `Operations/PinPusher.lean`（liftUp / generatePins / pinPush）
+7. `Operations/Stacker.lean`（placeAbove / shatterTopCrystals / stack） ✅ 2026-04-29
+8. `Operations/PinPusher.lean`（liftUp / generatePins / pinPush） ✅ 2026-04-29
 9. `Operations/Shatter.lean`（Cluster 基盤に依存。`clusterList` を Phase D 内で導入する場合はここで追加）
 10. `Operations/Gravity.lean`（最大難所。GroundingMono / ProcessWave / waveStep 終端性。旧 `_archive/pre-greenfield/Operations/Gravity/` の証明構造を §4.2 Step 2 で評価してから移植テンプレートとする）
 11. `Wires/*.lean`（Layer C 着手時まで延期可。スケルトンのまま残してもよい）
