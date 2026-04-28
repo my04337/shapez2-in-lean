@@ -124,16 +124,53 @@ Phase B 末 184 axiom → Phase C 末 **48 axiom**（-136）。Shape 型系 / Ke
 7. `Operations/Stacker.lean`（placeAbove / shatterTopCrystals / stack） ✅ 2026-04-29
 8. `Operations/PinPusher.lean`（liftUp / generatePins / pinPush） ✅ 2026-04-29
 9. `Operations/Shatter.lean`（Cluster 基盤に依存。`clusterList` を Phase D 内で導入する場合はここで追加） ✅ 2026-04-29
-10. `Operations/Gravity.lean`（最大難所。GroundingMono / ProcessWave / waveStep 終端性。旧 `_archive/pre-greenfield/Operations/Gravity/` の証明構造を §4.2 Step 2 で評価してから移植テンプレートとする）
+10. `Operations/Gravity.lean` — **§4.3 で別管理**（深い設計検討を別セッションで実施してから着手）
 11. `Wires/*.lean`（Layer C 着手時まで延期可。スケルトンのまま残してもよい）
 
 ### 4.2 注意
 
 - 各操作につき CW 版の等変性のみを証明し、180° / CCW は facade の 1 行系で済ませる
-- 旧 Gravity の GroundingMono 複雑帰納（旧 B3b 相当）は Internal/Place の再設計を先に完了させてから着手する
+- 旧 Gravity の GroundingMono 複雑帰納（旧 B3b 相当）は Internal/Place の再設計を先に完了させてから着手する（→ §4.3 で詳述）
 - `clusterList` / `allClusters` は Shatter / MAM 等が実際に必要としたタイミングで `Kernel/Internal/ClusterImpl.lean` として追加する（Cluster.lean の公開 API には影響しない）
 - 各補題の着手前に [architecture-layer-ab.md §1.5](architecture-layer-ab.md) 真偽検証先行原則と `lean-proof-planning` skill を実行
 - 大きな単位（例: Stacker 全体完了時）ごとに §5 のチェックリストを軽量実施し違反を即修正
+
+### 4.3 Phase D-10 — `Operations/Gravity.lean` の脱 axiom（独立セクション）
+
+**位置付け**: Phase D で残る最後の axiom 群。`Shape.gravity` / `gravity.isSettled` / `gravity.of_isSettled` / `gravity.rotateCW_comm` の 4 本を実装と証明に置換する。Layer B 全体で唯一の重実装ノード（Layer A は完了、Operations 配下は Gravity 以外すべて axiom-free）。
+
+**現状（2026-04-29 時点）**:
+
+- `S2IL/Operations/Gravity.lean` は 36 行のスケルトン。`Kernel.Cluster` / `Operations.Settled` の `IsBonded` / `IsContact` / `IsGroundingEdge` / `IsGrounded` / `IsSettled` 述語基盤は完成済みで、Gravity の意味論を述語で語る土台が揃っている。
+- Phase D-9 完了で Operations 全体（Gravity 以外）が axiom 0 / sorry 0、非アーカイブ axiom は Wires.Signal の型 axiom 5 本と Gravity の 4 本のみ。
+
+**今セッション（Phase D-9 末）の見解**:
+
+1. **定義方針が未決**: `gravity` の executable 定義として 3 候補がある。
+    - **(a) `gravityStep` の有限反復**（旧 `_archive/pre-greenfield/Operations/Gravity/` 採用）。`waveStep_grounding_mono_persistence` 系の終端性証明が極めて重く、過去に証明破綻（`/memories/repo/waveStep-grounding-mono-persistence.md`）。
+    - **(b) `IsSettled` 判定 + `Classical.choice`**（`noncomputable def` で「最小の安定後継状態」を選ぶ）。等変性は容易だが `#eval` 不可、MAM（Layer D）の計算的完全性証明で詰む可能性。
+    - **(c) LDGroup（Locally Detected Group）一発配置**。旧 `placeLDGroups` を再構築。構造的に綺麗だが Internal/Place の再設計が前提条件。
+2. **既存資産の再評価が必要**: `_archive/pre-greenfield/Operations/Gravity/Equivariance/Clusters.lean` / `GroundedMono.lean` には旧 axiom（`waveStep_rotate180_comm` / `placeLDGroups_landing_groundingEdge_mono`）が残存しており、これらの教訓を抽出してから新実装に進む必要がある。
+3. **基盤の活用余地**: 今回新設した `Direction.add_one_sub_one` 等の集約補題、`ClusterRel.rotateCW_two` / `rotateCW_three`、`Operations.Settled` の `IsGrounded` 述語は Gravity 等変性証明で多用される見込み。Phase D-9 までの整理が Gravity の証明シナリオを軽くする方向に効く。
+4. **MECE 観点の懸念**: Gravity の意味論（「不安定象限が落下して安定状態に至る」）と `IsSettled` 判定（既に存在）は同じ言語で語れるが、`gravity` の構成と `gravity_isSettled` の証明では `Operations.Settled` の補題群がどこまで使えるかの境界を切る必要がある。
+
+**判断**: Phase D-10 は **本セッションでは着手しない**。次の独立セッションで以下を順に実施する:
+
+1. `lean-proof-planning` SKILL の徹底実行（証明戦略の事前検証）
+2. `_archive/pre-greenfield/Operations/Gravity/` の証明構造を読み解き、(a)/(b)/(c) のどれが「数学的美しさ × 実装可能性 × MAM 互換」の最大化となるか評価（`/memories/repo/waveStep-grounding-mono-persistence.md` の失敗ノートを起点）
+3. [architecture-layer-ab.md](architecture-layer-ab.md) §1.4.4 として「落下機構（Gravity）」設計セクションを追加
+4. 反例検証先行原則に従い、`vanilla4` / `vanilla5` で `gravity` の期待出力を `#eval` できる定義（候補 (a) または (c) 推奨）を選好
+5. 最小スケルトン（定義 + 等変性主補題 + sorry）を作成し、`sorry-cards/` 配下で個別 sorry の作業ノートを開始
+6. その後本格証明（GroundingMono / 終端性 / 不動点性）に着手
+
+**前提条件（Phase D-10 着手 GO 条件）**:
+
+- [ ] §1.4.4 が記述され、定義方針 (a)/(b)/(c) の選択根拠が文章化されている
+- [ ] `_archive` の旧証明から「移植可能な補題」と「破綻パスを避けるべき方向」が抽出されている
+- [ ] `vanilla4` / `vanilla5` の期待出力が反例検証で確認可能な形になっている
+- [ ] 必要な Internal ファイル（`Kernel/Internal/ClusterImpl.lean` 等）の追加要否が判断されている
+
+これらが揃わないまま着手すると過去の `waveStep_grounding_mono_persistence` 失敗の再演リスクが高い。**焦って着手しない** ことを明記する。
 
 ---
 
