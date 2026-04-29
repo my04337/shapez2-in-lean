@@ -1,11 +1,15 @@
 ---
 name: lean-counterexample
 description: >
-  Systematically check theorem candidates for counterexamples before proving.
+  Catalog of boundary-value and 3-element interaction tests for counterexample search,
+  plus GameConfig tier guidance (vanilla4 / vanilla5 / stress8).
   Use when: check counterexample, verify theorem, is this true, validate lemma,
-  false theorem, counterexample search, theorem verification, check if provable.
+  false theorem, counterexample search, theorem verification, check if provable,
+  反例, 反例チェック, 真偽確認.
+  Returns: test-case catalog by type + tier selection table.
+  Don't call when: you want the agent to actually run the checks (use agent `lean-sorry-investigator`).
 metadata:
-  argument-hint: 'Pass theorem signature to check for counterexamples'
+  argument-hint: 'Reference: counterexample test catalog'
 ---
 
 # 反例チェックスキル
@@ -195,4 +199,4 @@ lake env lean Scratch/FooCheck.lean
 
 ## 関連
 
-**lean-proof-planning**（証明戦略の全体フロー） / **lean-theorem-checker** サブエージェント（自動反例チェック）
+**lean-proof-planning**（証明戦略の全体フロー） / **lean-sorry-investigator** サブエージェント（自動反例チェック + タクティク試行 + 補題探索を一括実行）

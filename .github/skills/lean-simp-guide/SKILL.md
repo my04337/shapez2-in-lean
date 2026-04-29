@@ -1,12 +1,15 @@
 ---
 name: lean-simp-guide
 description: >
-  Guide simp tactic selection and simp -> simp only stabilization in Lean 4.
+  Reference for simp family selection (`simp` / `simp_all` / `simpa` / `dsimp`),
+  the bulk simp-stabilization pipeline, and known caveats (nested parens, chain lines).
   Use when: simp usage, simp only, simp stabilization, simp lemma, simp vs dsimp,
   simp_all, simpa, simp attribute, simp not working, simp too slow, simp loop,
-  stabilize simp, replace simp with simp only.
+  bulk simp stabilization, simp 安定化, 裸 simp, simp 一括変換.
+  Returns: tactic comparison table + bulk pipeline command + caveats.
+  Don't call when: stabilizing one specific line (use agent `lean-simp-stabilizer`).
 metadata:
-  argument-hint: 'Describe simp issue or pass file:line'
+  argument-hint: 'Reference: simp family + bulk stabilization'
 ---
 
 # simp ガイドスキル

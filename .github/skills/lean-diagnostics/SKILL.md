@@ -1,8 +1,14 @@
 ---
 name: lean-diagnostics
-description: 'Parse and triage Lean 4 build diagnostics. Use when: analyze build errors, triage warnings, prioritize fixes, parse diagnostics, review build output, sorry detection.'
+description: >
+  Reference for parsing Lean 4 build diagnostics JSONL: severity classes, error pattern → fix-class routing, warning vs sorry distinction.
+  Use when: analyze build errors, triage warnings, prioritize fixes, parse diagnostics,
+  review build output, sorry detection, error classification,
+  診断, ビルド診断, エラー分類, トリアージ.
+  Returns: error pattern routing table + JSONL parse recipes.
+  Don't call when: you want a one-shot diagnosis report (use agent `lean-build-doctor`).
 metadata:
-  argument-hint: 'Pass build output or diagnostics file path'
+  argument-hint: 'Reference: diagnostics JSONL format and routing'
 ---
 
 # ビルド診断スキル
@@ -49,7 +55,7 @@ $diags | Where-Object { $_.severity -eq "warning" -and !$_.isSorry } # 非sorry 
 | `unknown identifier '...'` | `lean-mathlib-search` スキル → `#loogle` / `#leansearch` | REPL `exact?` | Mathlib/Batteries の名前変更・移動が原因のことが多い |
 | `unknown constant '...'` | `grep_search` で定義箇所を検索 | `import` 追加 | ファイル内定義の参照漏れ or import 不足 |
 | `type mismatch` | REPL でゴール型を確認 → `norm_cast` / `push_cast` | `lean-tactic-select` スキル | 型変換（Nat↔Int, Fin↔Nat 等）が原因 |
-| `unsolved goals` | `lean-goal-advisor` エージェント | `lean-tactic-select` スキル | ゴール形状を分析して適切なタクティクを選択 |
+| `unsolved goals` | `lean-sorry-investigator` エージェント | `lean-tactic-select` スキル | ゴール形状を分析して適切なタクティクを選択 |
 | `application type mismatch` | 引数の型を REPL `#check` で確認 | `@` で明示適用 | 暗黙引数の推論失敗が多い |
 | `function expected` | 括弧・適用の構文を確認 | — | 通常は構文ミス |
 | `declaration uses 'sorry'` | `lean-proof-planning` スキル | — | sorry 解消の計画を立てる |
@@ -67,15 +73,15 @@ $diags | Where-Object { $_.severity -eq "warning" -and !$_.isSorry } # 非sorry 
 
 ### ルーティング判断フロー
 
-> **自動修正**: error が複数ある場合は **lean-error-fixer** エージェントに委譲すると、
+> **自動修正**: error が複数ある場合は **lean-build-doctor** エージェントに委譲すると、
 > 分類→修正候補生成→REPL検証を自動実行できる。
 
 ```
 エラーメッセージを取得
-  ├─ 複数 error → lean-error-fixer エージェントに一括委譲（推奨）
+  ├─ 複数 error → lean-build-doctor エージェントに一括委譲（推奨）
   ├─ `unknown identifier` / `unknown constant` → 補題検索（lean-mathlib-search）
   ├─ `type mismatch` / `application type mismatch` → 型分析（REPL #check）
-  ├─ `unsolved goals` → ゴール分析（lean-goal-advisor）
+  ├─ `unsolved goals` → ゴール分析（lean-sorry-investigator）
   ├─ `sorry` → 証明計画（lean-proof-planning）
   ├─ 複数エラー連鎖 → Sorrifier パターン（最内側優先 sorry 化）
   └─ その他 → メッセージを読んで手動判断
@@ -102,11 +108,11 @@ Get-Content .lake/build-diagnostics.jsonl | ConvertFrom-Json |
 
 ## sorry の依存関係分析
 
-`lean-sorry-snapshot` エージェントでビルド→sorry 抽出→depgraph→依存分類を一括実行可能。
-詳細な sorry 分類（独立/依存/被依存）と依存グラフの取得は `lean-sorry-snapshot` エージェントに委ねる。
+`lean-build-doctor` エージェントでビルド→sorry 抽出→依存分類（sorry-plan.json ベース）を一括実行可能。
+詳細な sorry 分類（独立/依存/被依存）は `lean-build-doctor` エージェントに委ねる。
 
 ## 関連スキル
 
-**lean-build** / **lean-proof-progress** / **lean-error-fixer**（エラー自動修正スキル）
+**lean-build** / **lean-proof-progress** / エージェント **lean-build-doctor**（エラー修正候補を含む診断レポート）
 
 ツール: **s2il-diag**（sorry-list）

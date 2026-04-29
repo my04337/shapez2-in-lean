@@ -1,12 +1,14 @@
 ---
 name: lean-tactic-select
 description: >
-  Classify Lean 4 proof goal shape and return prioritized tactic candidates.
+  Goal-shape → prioritized tactic mapping (equality / arith / ∀ / ∃ / ∧ / ∨ / inductive / decidable / contradiction).
   Use when: which tactic, tactic selection, goal analysis, what tactic to use, stuck on goal,
-  tactic advice, proof step, next tactic, tactic recommendation, goal shape, choose tactic,
-  tactic for equality, tactic for induction, tactic for arithmetic.
+  tactic advice, next tactic, tactic recommendation, goal shape, choose tactic,
+  どのタクティク, タクティク選択, ゴール分類.
+  Returns: priority map keyed by goal shape + tie-breaking heuristics.
+  Don't call when: you want the agent to actually try the tactics (use agent `lean-sorry-investigator`).
 metadata:
-  argument-hint: 'Pass goal state or describe the goal shape'
+  argument-hint: 'Reference: goal shape → tactic priority map'
 ---
 
 # タクティク選択スキル
@@ -195,7 +197,7 @@ sorry のゴール状態を見て「次に何を打つか」を即答する。
 - **帰納法・高階関数・算術ゴールには向かない**（`induction` / `omega` を先に使う）
 - 詳細: [`docs/lean/duper-guide.md`](../../../docs/lean/duper-guide.md)
 
-> **補題名が不明な場合**: `exact?` で見つからなければ **lean-mathlib-search** スキル（または **lean-lemma-finder** エージェント）で `#leansearch` / `#loogle` を含む段階的検索を実行する。
+> **補題名が不明な場合**: `exact?` で見つからなければ **lean-mathlib-search** スキル（または **lean-sorry-investigator** エージェント）で `#leansearch` / `#loogle` を含む段階的検索を実行する。
 
 ---
 
@@ -240,5 +242,5 @@ ring, linarith, nlinarith, exact?, funext, simp?, aesop, plausible, duper 等す
 - **[Aesop 活用ガイド](../../../docs/lean/aesop-guide.md)** — aesop のルール設計基準・良い/悪い使い方
 - **[Duper 活用ガイド](../../../docs/lean/duper-guide.md)** — duper (超位置推論 ATP) の良い/悪い使い方・デバッグ方法
 - **[Plausible 活用ガイド](../../../docs/lean/plausible-guide.md)** — plausible タクティクの良い/悪い使い方・S2IL での適用範囲
-- **lean-goal-advisor** エージェント — ゴールに対してタクティクを自動試行
+- **lean-sorry-investigator** エージェント — 1 件の sorry に対してタクティクを自動試行し要約を返す
 - **lean-proof-planning** — 証明全体の戦略立案

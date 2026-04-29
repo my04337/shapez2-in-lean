@@ -18,18 +18,10 @@ try {
 
     $messages = [System.Collections.ArrayList]::new()
 
-    $null = $messages.Add("⚠ Context compaction is about to occur. Please do the following:")
-    $null = $messages.Add("")
-    $null = $messages.Add("1. Save current work state to /memories/session/")
-    $null = $messages.Add("   - If no session memory exists yet, create one immediately before anything else")
-    $null = $messages.Add("   - Files being edited and line ranges")
-    $null = $messages.Add("   - Proof strategy and unsolved goals")
-    $null = $messages.Add("   - Next steps")
-    $null = $messages.Add("2. Verify the todo list is up to date")
-    $null = $messages.Add("3. After saving session memory, **continue working**.")
-    $null = $messages.Add("   Proceed to the next task unless the user explicitly asks to stop.")
-    $null = $messages.Add("   Context compaction is not a reason to pause work.")
-    $null = $messages.Add("4. Do not postpone memory save to a later turn.")
+    # Opus 4.7 は長いホックメッセージを無視しがちなため 3 行以内に絞る。
+    # ポジティブ表現（「保存してから作業を続行する」）で next action を明示する。
+    $null = $messages.Add("Save current focus to /memories/session/ (target file:line + next 1–3 actions + sorry/error counts), then resume the next task.")
+    $null = $messages.Add("Use str_replace/insert to update existing memory; create only if no session memory exists yet.")
 
     # --- sorry 残数の補足情報 ---
     $diagFile = Join-Path $cwd ".lake/build-diagnostics.jsonl"
@@ -47,8 +39,7 @@ try {
             }
         }
         if ($sorryCount -gt 0) {
-            $null = $messages.Add("")
-            $null = $messages.Add("Current sorry count: $sorryCount (as of the last build)")
+            $null = $messages.Add("Current sorry count (last build): $sorryCount.")
         }
     }
 

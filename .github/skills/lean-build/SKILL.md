@@ -1,8 +1,13 @@
 ---
 name: lean-build
-description: 'Build Lean project via lake build and report errors/sorries/warnings. Use when: build lean project, compile lean code, lake build, check compilation errors, resolve build failures.'
+description: >
+  Reference for `lake build` invocation and the diagnostics JSONL it emits.
+  Use when: build lean project, compile lean code, lake build,
+  check compilation errors, resolve build failures, diagnostics file path,
+  ビルド, lake ビルド, 診断 JSONL.
+  Returns: command examples + diagnostics file layout. Don't call when: you only need to triage already-built diagnostics (use agent `lean-build-doctor`).
 metadata:
-  argument-hint: 'Run lake build'
+  argument-hint: 'Reference: how to run lake build and locate diagnostics'
 ---
 
 # Lean Build スキル

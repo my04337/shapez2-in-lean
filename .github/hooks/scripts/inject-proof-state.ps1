@@ -32,16 +32,14 @@ try {
 
     $messages = [System.Collections.ArrayList]::new()
 
-    # --- 0. .gitignore の主要除外パスを通知 ---
+    # --- 0. .gitignore \u306e\u4e3b\u8981\u9664\u5916\u30d1\u30b9\u3092\u901a\u77e5 ---
+    # Opus 4.7 \u306f\u30c8\u30b9\u30c8\u4ed8\u304d\u30b3\u30f3\u30c6\u30ad\u30b9\u30c8\u3092\u30b9\u30ad\u30c3\u30d7\u3057\u304c\u3061\u306a\u305f\u3081\u3001\u500b\u6570\u3060\u3051\u793a\u3057\u3001\u30c7\u30a3\u30ec\u30af\u30c8\u30ea\u4e00\u89a7\u306f\u30b9\u30ad\u30c3\u30d7\u3059\u308b\u3002
     $gitignoreFile = Join-Path $cwd ".gitignore"
     if (Test-Path $gitignoreFile) {
-        $ignoredDirs = @(Get-Content $gitignoreFile |
-            Where-Object { $_ -match '^\s*[^#]' -and $_ -match '/' } |
-            ForEach-Object { $_.Trim().TrimEnd('/') } |
-            Where-Object { $_ -ne '' })
-        if ($ignoredDirs.Count -gt 0) {
-            $ignoreList = ($ignoredDirs | ForEach-Object { $_ }) -join ", "
-            $null = $messages.Add("⚠ Gitignore excluded dirs: $ignoreList — Files placed here are not tracked by git. Use Verification/ or similar for files that need to persist.")
+        $ignoredCount = @(Get-Content $gitignoreFile |
+            Where-Object { $_ -match '^\s*[^#]' -and $_ -match '/' }).Count
+        if ($ignoredCount -gt 0) {
+            $null = $messages.Add("Gitignore: $ignoredCount excluded paths. Place persistent files outside ignored dirs.")
         }
     }
 

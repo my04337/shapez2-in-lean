@@ -1,13 +1,15 @@
 ---
 name: lean-repl
 description: >
-  Interactively evaluate Lean 4 snippets, tactics, and counterexamples via REPL
-  (auto-imports S2IL + Mathlib.Tactic + Plausible + Duper).
+  Reference for the persistent Lean 4 REPL (JSONL command files + `repl.ps1` / `repl.sh`),
+  pre-loaded with S2IL + Mathlib.Tactic + Plausible + Duper.
   Use when: interactive eval, quick snippet check, tactic step exploration, sorry goal inspect,
-  fast counterexample, repl session, lean repl, tactic mode, proofState, pickle env,
-  eval without full build, instant lean check.
+  fast counterexample, repl session, lean repl, proofState, pickle env,
+  REPL, JSONL, セッション ID.
+  Returns: command file format + invocation patterns + result schema.
+  Don't call when: a full `lake build` is required to verify (use skill `lean-build`).
 metadata:
-  argument-hint: 'Pass Lean snippet for immediate REPL evaluation'
+  argument-hint: 'Reference: REPL JSONL invocation format'
 ---
 
 # Lean REPL スキル

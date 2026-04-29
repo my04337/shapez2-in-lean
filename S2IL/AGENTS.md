@@ -35,7 +35,7 @@
 - 最終形は `simp only [...]` を使う（裸 `simp` を残さない）
 ## 証明ワークフロー（要点）
 
-- Proof-First-Test: 証明前に `lean-theorem-checker` または REPL で真偽確認
+- Proof-First-Test: 証明前に `lean-sorry-investigator` エージェントまたは REPL で真偽確認
 - 3 アプローチ以上の推論停滞時は REPL / Scratch 検証へ切り替える
 - 長大ファイルの探索は Explore でバッチ取得してから着手する
 

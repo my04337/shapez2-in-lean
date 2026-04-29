@@ -150,33 +150,37 @@ tools: ['*']
 | 実装 | `search`, `read`, `execute`, `edit` |
 | デバッグ | すべて（必要に応じて） |
 
-### 5.2 description を丁寧に書く
+### 5.2 description は When / Returns / Don't call when の 3 段
 
-`description` はエージェント選択時のヒントとして表示される。
-また、サブエージェントとして呼び出される際の判断材料になる。
+Opus 4.7 はサブエージェント起動に慎重になったため、`description` は「いつ、何を返し、いつ呼ばないか」が一人人とりで読める必要がある。
 
 ```yaml
-# ✅ 良い: 目的とトリガー条件が明確
+# ✅ 良い: 3 段構造
 description: >
-  Lean 4 の sorry ゴールを分析し、候補タクティクを REPL で実際に試行して
-  最良結果を返す自動アドバイザー。Use when: stuck on sorry, what tactic to use,
-  goal advisor, tactic suggestion.
+  Investigate one Lean 4 sorry end-to-end (counterexample → skeleton → lemma search → tactic trial)
+  and return a compact verdict.
+  **When**: triage a single sorry, settle a candidate lemma, fan-out across multiple sorrys.
+  **Returns**: verdict (likely-true / counterexample / uncertain) + recommended next tactic + lemma candidates.
+  **Don't call when**: a single tactic obviously closes the goal, or the work is editing an existing proof.
 
-# ❌ 悪い: 曖昧
+# ❌ 悪い: 何を返すか不明
 description: 証明を手伝う。
 ```
 
-### 5.3 指示は具体的に・簡潔に
+トリガー語句には日本語と英語を両方含める（プロジェクト言語が混在するため）。
+詳細設計原則は [opus-47-design-principles.md](opus-47-design-principles.md) を参照。
 
-本文の指示はエージェントが **知らなければ間違える情報** に絞る。
-汎用的な AI 知識の重複は不要。
+### 5.3 指示は具体的・ポジティブ・簡潔
+
+Opus 4.7 は Adaptive Thinking を使うため、ステップを細かく読み上げるより「ゴール + 受け入れ基準 + 折り返し不能な制約」を明示するほうが効く。ネガティブ指示（「〜するな」）はポジティブ例示に置き換える。
 
 | 書くべき | 書くべきでない |
 |---|---|
 | プロジェクト固有の制約・規約 | プログラミング言語の基本文法 |
-| ツールの呼び出し手順（プロジェクト固有部分） | ツールの一般的な使い方 |
-| 出力フォーマットの指定 | 「エラーを適切に処理せよ」等の一般論 |
-| 落とし穴（Gotchas） | 自明な注意事項 |
+| ツール呼び出しのプロジェクト固有手順 | ツールの一般的な使い方 |
+| 期待する出力フォーマットのテンプレート | 「エラーを適切に処理せよ」等の一般論 |
+| Gotchas（現地で間違えたものを追記） | 自明な注意事項 |
+| 「必ず X をしてから Y をする」のポジティブ表現 | 「X をさずに Y をするな」のネガティブ表現 |
 
 ### 5.4 サブエージェントの設計
 
@@ -235,24 +239,22 @@ handoffs:
 
 ### 6.1 ファイル配置
 
-本プロジェクトでは `.github/agents/` にカスタムエージェントを配置する。
+本プロジェクトでは `.github/agents/` にカスタムエージェントを配置する。Opus 4.7 向けに集約済み（4 エージェント）。
 
 ```
 .github/agents/
-├── lean-error-fixer.agent.md
-├── lean-goal-advisor.agent.md
-├── lean-lemma-finder.agent.md
-├── lean-proof-skeleton.agent.md
-├── lean-session-restorer.agent.md
-├── lean-simp-stabilizer.agent.md
-├── lean-sorry-snapshot.agent.md
-└── lean-theorem-checker.agent.md
+├── lean-build-doctor.agent.md        # build → error triage + sorry inventory
+├── lean-session-restorer.agent.md    # 差分付き session restart オーケストレータ
+├── lean-simp-stabilizer.agent.md     # 1 行の simp → simp only 化
+└── lean-sorry-investigator.agent.md  # 1 件の sorry / 候補定理の A→Z 調査
 ```
+
+> 設計原則: [opus-47-design-principles.md](opus-47-design-principles.md)
 
 ### 6.2 命名規則
 
 - ファイル名: `<domain>-<role>.agent.md`（ケバブケース）
-- 例: `lean-goal-advisor.agent.md`, `lean-sorry-snapshot.agent.md`
+- 例: `lean-build-doctor.agent.md`, `lean-sorry-investigator.agent.md`
 
 ### 6.3 共通パターン
 

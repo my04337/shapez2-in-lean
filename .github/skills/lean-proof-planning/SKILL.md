@@ -1,12 +1,15 @@
 ---
 name: lean-proof-planning
 description: >
-  Plan and pre-validate Lean 4 proof strategy before starting; prevents false-theorem waste.
+  Pre-proof checklist and decision guide that prevents investing in false theorems.
   Use when: prove theorem, proof strategy, settle sorry, plan proof, stuck on proof,
   start proof, proof approach, verify lemma truth, false theorem check,
-  switch proof approach, new proof strategy, proof approach change, after false lemma discovery.
+  switch proof approach, new proof strategy, after false lemma discovery,
+  証明戦略, 証明計画, 証明着手前チェック, 偽定理回避.
+  Returns: pre-flight checklist + branching decision tree.
+  Don't call when: you only need to run the checks (delegate to agent `lean-sorry-investigator`).
 metadata:
-  argument-hint: 'Pass theorem signature or describe the proof goal'
+  argument-hint: 'Reference: pre-proof planning checklist'
 ---
 
 # 証明戦略スキル
@@ -18,7 +21,7 @@ metadata:
 ### 補題の真偽ゲート（着手前）
 
 - [ ] 型シグネチャ（量化変数・仮定・結論・暗黙引数）を正確に読んだ
-- [ ] 反例チェックを実施: `lean-theorem-checker` エージェント / REPL `by plausible` / `#eval decide`
+- [ ] 反例チェックを実施: `lean-sorry-investigator` エージェント / REPL `by plausible` / `#eval decide`
   - 基本型の全称命題は `by plausible` が最速
   - S2IL 型（`Color`, `Quarter`, `Layer`, `Shape`, `Direction`, `QuarterPos`, `GameConfig` 等）も `SampleableExt` 定義済みで `plausible` 可
   - 層数指針は `lean-counterexample` スキル参照（vanilla4 デフォルト、vanilla5 最終確認）
@@ -97,7 +100,7 @@ metadata:
 ## 関連
 
 - **lean-counterexample** / **lean-proof-progress** スキル
-- **lean-theorem-checker** エージェント（自動反例検証）
+- **lean-sorry-investigator** エージェント（1 件の sorry / 仮定理に対する反例チェック + タクティク試行 + 補題探索の一括調査）
 
 ### Duper 試行フロー
 

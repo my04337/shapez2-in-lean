@@ -126,16 +126,22 @@ name: pdf--processing  # 連続ハイフン不可
 
 ### 良い例 / 悪い例
 
+Opus 4.7 はスキルをデフォルトで読まないため、`description` に **When + Returns + Don't call when** の 3 段を含めると起動率が上がる。
+
 ```yaml
-# ✅ 良い: 機能 + トリガーキーワード
+# ✅ 良い: 3 段構造 + 日英トリガー
 description: >
-  Lean 4 プロジェクトを lake build でビルドする。
-  Use when: build lean project, compile lean code, lake build,
-  check compilation errors, resolve build failures.
+  Reference for `lake build` invocation and the diagnostics JSONL it emits.
+  Use when: build lean project, compile lean code, lake build, check compilation errors,
+  ビルド, lake ビルド, 診断 JSONL.
+  Returns: command examples + diagnostics file layout.
+  Don't call when: you only need to triage already-built diagnostics (use agent `lean-build-doctor`).
 
 # ❌ 悪い: 曖昧すぎる
 description: ビルドを手伝う。
 ```
+
+詳細設計原則: [opus-47-design-principles.md](opus-47-design-principles.md)
 
 ### description のテスト方法
 

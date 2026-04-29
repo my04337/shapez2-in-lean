@@ -243,7 +243,7 @@ S2IL/Operations/Gravity/
 
 すべての補題・定理は、証明着手前に次のいずれかで **真と判明するまで signature を確定しない**:
 
-1. `lean-theorem-checker` で有効な Shape に対する反例検索
+1. `lean-sorry-investigator` で有効な Shape に対する反例検索
 2. REPL `#eval` / `plausible` によるランダム検証
 3. 数学的導出（既存の真定理からの含意）
 

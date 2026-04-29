@@ -14,7 +14,7 @@
 
 1. **`lean-proof-planning` SKILL.md を読む**（未読なら必ず）
 2. **REPL で sorry-skeleton を試す** — `example ... := by sorry` でゴール形状を確認
-3. **`lean-goal-advisor` エージェントを呼ぶ** — ゴールと sorry 行を渡して候補タクティクを試す
+3. **`lean-sorry-investigator` エージェントを呼ぶ** — sorry の file:line または定理型を渡して反例チェック + 候補タクティク試行 + 補題探索を一括実行させる
 
 この 3 ステップを経ずに pivot したら、セッションメモに記録して次セッションで補完する。
 
@@ -27,7 +27,7 @@
 | **反例** | `lean-counterexample` / `by plausible` / 具体値 `#eval` で反例が見つかった |
 | **循環依存** | 代替補題の仮定の充足に元のゴールが必要（1〜2 ステップで確認可能） |
 | **scaffold 構造** | 現在の induction motive / generalize / type class 設定では前提が再確立できないと静的分析で確定 |
-| **REPL 失敗** | 3 以上のタクティク候補が REPL で全滅（`lean-goal-advisor` 使用後） |
+| **REPL 失敗** | 3 以上のタクティク候補が REPL で全滅（`lean-sorry-investigator` 使用後） |
 | **累積失敗** | 3 セッション or 8 アプローチ失敗（AGENTS.md 準拠） |
 
 ## Pivot 記録テンプレート（sorry-card マイルストーン表）

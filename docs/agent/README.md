@@ -10,18 +10,17 @@ Skills・Hooks の追加・修正時にはまずここを参照すること。
 
 | ファイル | 概要 |
 |---|---|
+| [opus-47-design-principles.md](opus-47-design-principles.md) | Opus 4.7 向けエージェント・スキル設計原則。委任思想・サブエージェント 5 原則・スキル 3 原則・指示文の書き方 |
 | [custom-agent-guide.md](custom-agent-guide.md) | カスタムエージェント ベストプラクティスガイド。`.agent.md` のフォーマット・設計パターン |
 | [skill-authoring-guide.md](skill-authoring-guide.md) | Agent Skills 記述ガイド。SKILL.md のフォーマット・ベストプラクティス |
 | [hooks-guide.md](hooks-guide.md) | GitHub Copilot Hooks リファレンス。ライフサイクルイベント・設定 |
-| [license-policy.md](license-policy.md) | 外部ライブラリのライセンス方針 |
-| [powershell-conventions.md](powershell-conventions.md) | PowerShell 文字列置換の規則 |
-| [session-memory-guide.md](session-memory-guide.md) | セッションメモリ運用ガイド。テンプレート・更新ルール・クリーンアップ手順 |
 | [agent-operations-playbook.md](agent-operations-playbook.md) | AGENTS.md から移設した詳細運用ルール集。検索閾値・撤退基準・編集ツール方針 |
+| [session-memory-guide.md](session-memory-guide.md) | セッションメモリ運用ガイド。テンプレート・更新ルール・クリーンアップ手順 |
 | [proof-plan-current-focus-guide.md](proof-plan-current-focus-guide.md) | 証明計画策定時の Current Focus 整備手順。計画ファイル・sorry-plan.json・sorry-cards の一貫した作成チェックリスト |
 | [proof-retreat-pivot-guide.md](proof-retreat-pivot-guide.md) | 証明の撤退・pivot 判断手順。sorry-card マイルストーン記述テンプレート・`remaining_steps` status の使い分け |
 | [repl-session-state-guide.md](repl-session-state-guide.md) | REPL セッション状態ファイル (`Scratch/_state/`) の書式・運用 |
-
-アーカイブ済: `archive/` 配下（subagent 最適化提案 2026-04-18、内容は AGENTS.md / 各スキルに吸収済み）
+| [powershell-conventions.md](powershell-conventions.md) | PowerShell 文字列置換の規則 |
+| [license-policy.md](license-policy.md) | 外部ライブラリのライセンス方針 |
 
 ---
 
@@ -40,13 +39,35 @@ Phase A (2026-04-24) で `sig-digest` / `symbol-map` / `extract-goal-context` / 
 
 ---
 
+## エージェント一覧
+
+`.github/agents/` 配下の 4 エージェント。設計原則は [opus-47-design-principles.md](opus-47-design-principles.md) を参照。
+
+| エージェント | 役割 | 主な用途 |
+|---|---|---|
+| `lean-build-doctor` | `lake build` 後の診断スキャン（エラー triage + sorry インベントリ） | セッション開始 / 大きな編集後 / コミット前の健康診断 |
+| `lean-sorry-investigator` | 1 件の sorry / 候補定理を反例→骨格→補題探索→タクティク試行で A→Z 調査 | 単一 sorry の triage、複数 sorry の並列 fan-out |
+| `lean-simp-stabilizer` | 1 行の `simp` を `simp only [...]` に安定化 | コミット前の bare simp 解消 |
+| `lean-session-restorer` | 前回記録との差分計算 + 着手推奨（内部で build-doctor + sorry-investigator を委任） | セッション再開・`/compact` 後の復元 |
+
+---
+
 ## スキル一覧
 
 | スキル | 概要 | 発動条件 |
 |---|---|---|
-| `lean-error-fixer` | ビルドエラーの自動分類・修正候補生成・REPL 検証 | ビルドエラーの修正を依頼された場合 |
-| `lean-session-restorer` | セッション再開準備の自動化（差分比較・WIP 確認・着手推奨） | セッション再開・作業再開を依頼された場合 |
-| `session-efficiency` | セッションの効率分析・改善提案 | **手動実行のみ**。明示的に指示された場合 |
+| `lean-build` | `lake build` 起動と診断 JSONL の参照リファレンス | ビルドコマンド・JSONL レイアウト確認 |
+| `lean-counterexample` | 反例テストケースカタログと GameConfig tier 指針 | 反例検証ロジックの参照 |
+| `lean-diagnostics` | 診断 JSONL の解析と error pattern → 修正クラスのルーティング | エラー分類ロジックの参照 |
+| `lean-mathlib-search` | Mathlib/Batteries 補題検索のクエリパターンとカタログ | 補題探索クエリ参照 |
+| `lean-proof-planning` | 着手前チェックリスト・偽定理回避 | 証明戦略決定時 |
+| `lean-proof-progress` | 長期 sorry 進捗・撤退判断基準 | 進捗トラッキング・pivot 判断 |
+| `lean-repl` | REPL JSONL 起動と結果スキーマ | REPL 利用時 |
+| `lean-run` | `lake exe` 実行（手動のみ） | 実行可能ターゲット起動時 |
+| `lean-setup` | elan/lake/lean PATH 解決（手動のみ） | toolchain トラブルシュート時 |
+| `lean-simp-guide` | simp 系比較とバルク安定化パイプライン | simp 系判断・10 行超のバルク変換 |
+| `lean-tactic-select` | ゴール形状 → タクティク優先マップ | タクティク選択時 |
+| `session-efficiency` | セッション効率分析・改善提案 | **手動実行のみ** |
 
 ---
 

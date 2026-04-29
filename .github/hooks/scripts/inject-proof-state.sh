@@ -38,12 +38,12 @@ fi
 
 MESSAGES=""
 
-# --- 0. .gitignore の主要除外パスを通知 ---
+# --- 0. .gitignore の除外パス件数のみ通知（Opus 4.7 は長い列挙をスキップしがち） ---
 GITIGNORE_FILE="$CWD/.gitignore"
 if [ -f "$GITIGNORE_FILE" ]; then
-    IGNORED_DIRS=$(grep -E '^\s*[^#].*/' "$GITIGNORE_FILE" | sed 's|/.*||; s/^[[:space:]]*//' | sort -u | tr '\n' ', ' | sed 's/, $//')
-    if [ -n "$IGNORED_DIRS" ]; then
-        MESSAGES="⚠ Gitignore excluded dirs: ${IGNORED_DIRS} — Files placed here are not tracked by git. Use Verification/ or similar for files that need to persist."
+    IGNORED_COUNT=$(grep -E '^\s*[^#].*/' "$GITIGNORE_FILE" | wc -l | tr -d '[:space:]')
+    if [ "$IGNORED_COUNT" -gt 0 ]; then
+        MESSAGES="Gitignore: ${IGNORED_COUNT} excluded paths. Place persistent files outside ignored dirs."
     fi
 fi
 
