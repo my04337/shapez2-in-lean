@@ -3,38 +3,47 @@
 
 import S2IL.Kernel
 import S2IL.Operations.Settled
+import S2IL.Operations.Gravity.Defs
+import S2IL.Operations.Gravity.Internal.ShareDirection
 
 /-!
 # S2IL.Operations.Gravity
 
-落下機構 (B-1)（Phase C re-scaffold 済み）。
+落下機構 (B-1)（Phase D-10B 進行中: Layer A 部 `def` 化済み）。
 全関数版: `gravity : Shape → Shape`（architecture §1.9 Option 追放原則）。
 
 ## 公開 API
 
-- `gravity : Shape → Shape` — メイン落下処理（全関数）
-- `gravity_isSettled` — 出力は常に `IsSettled`
-- `gravity_of_isSettled` — 安定入力に対する不動点性
-- `gravity_rotateCW_comm` — CW 等変性
+- `Shape.gravity : Shape → Shape` — 計算可能な実装（`Defs.lean`）
+- `Shape.gravity.isSettled` — 出力は常に `IsSettled`（D-10D で theorem 化予定）
+- `Shape.gravity.of_isSettled` — 安定入力に対する不動点性（D-10C で theorem 化予定）
+- `Shape.gravity.rotateCW_comm` — CW 等変性（D-10E で theorem 化予定）
+
+## Phase 状況
+
+| Phase | 内容 | 状態 |
+|---|---|---|
+| D-10A | 反例検証先行 | ✅ 完了 |
+| D-10B | Layer A 定義群 | 🔧 本ファイル |
+| D-10C | 不動点・終端性 | ⏳ |
+| D-10D | 安定性主定理 | ⏳ |
+| D-10E | 等変性主定理 | ⏳ |
 
 ## 単一チェーン原則
 
-CW 等変性のみ axiom、180° / CCW は 1 行系。
+CW 等変性のみ axiom（一時）、180° / CCW は 1 行系。
 -/
 
 namespace S2IL
 
-/-- メイン落下処理（全関数）。0 層シェイプには恒等。 -/
-axiom Shape.gravity : Shape → Shape
-
-/-- `gravity` の出力は常に `IsSettled`。 -/
+/-- `gravity` の出力は常に `IsSettled`。Phase D-10D で theorem 化。 -/
 axiom Shape.gravity.isSettled (s : Shape) : IsSettled (Shape.gravity s)
 
-/-- 安定入力に対する不動点性（Phase D で theorem へ降格予定）。 -/
+/-- 安定入力に対する不動点性。Phase D-10C で theorem 化。 -/
 axiom Shape.gravity.of_isSettled {s : Shape} :
     IsSettled s → Shape.gravity s = s
 
-/-- `gravity` と CW 回転は可換。 -/
+/-- `gravity` と CW 回転は可換。Phase D-10E で theorem 化。 -/
 axiom Shape.gravity.rotateCW_comm (s : Shape) :
     Shape.rotateCW (Shape.gravity s) = Shape.gravity (Shape.rotateCW s)
 

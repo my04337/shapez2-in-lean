@@ -3,9 +3,24 @@
   "generated": false,
   "description": "Structured snapshot of active sorry / axiom obligations. Used by agents to quickly identify the current proof target and dependencies.",
   "maintenance": "Update when adding/removing sorrys or axioms. Progress milestones belong to sorry-cards/{symbol}.md. Detailed history: git log.",
-  "updated": "2026-04-29 (Phase D-5・D-6 完了。Cutter / Swapper の axiom を実証明に置換。Layer.eastHalf / westHalf / combineHalves を if d.val < 2 ベースで具体化し、Shape 版は List.map / List.zipWith で深める。構造的恒等式 (combineHalves.eastHalf_westHalf / combineHalves.self) と 180° 等変性 (E↔W swap) を induction + match で証明。CW/CCW 等変性は §1.4.1 例外規則に従い独立チェーン不要。Swapper は cut + combineHalves の §8.1.4 派生 def として swap.rotate180_comm を 1 行系で証明。axiom 38→26。sorry = 0, warning = 0。次は Stacker (placeAbove / shatterTopCrystals) または Shatter。)",
+  "updated": "2026-04-29 (Phase D-10B 完了。`Shape.gravity` を axiom から def に格上げ。Layer A 計算可能定義群 (`structuralNeighbors` / `structuralCluster` / `floatingUnits` / `landingDistance` / `Shape.gravity`) と well-founded 関係 (`shareDirection.symm` / `precedes_wf`) を実装。§4.1 の 9 例 + §4.1.1 I-1/I-2 = 計 11 件の `#guard` パス、Plausible で `layerCount` 単調減少 + 冪等性のランダム検証もクリア。Operations/Gravity の axiom は 4→3。次は Phase D-10C (`gravity.of_isSettled` / `dropOf_le_minLayer`)。)",
   "sorrys": [],
   "recently_completed": [
+    {
+      "id": "phase-d-10b-gravity-layer-a",
+      "completed": "2026-04-29",
+      "summary": "Phase D-10B 完了。`Shape.gravity` を axiom から def に格上げ、Layer A 計算可能定義群を整備。",
+      "details": [
+        "S2IL/Operations/Gravity/Defs.lean 新設: structuralNeighbors / structuralCluster / floatingUnits / landingDistance / Shape.gravity を計算可能 def で実装",
+        "S2IL/Operations/Gravity/Internal/ShareDirection.lean 新設: shareDirection.symm 証明 + precedes の WellFoundedRelation インスタンス",
+        "Operations/Gravity.lean facade: axiom Shape.gravity を削除し新 def を公開、3 axiom (isSettled / of_isSettled / rotateCW_comm) は D-10C/D/E に持ち越し",
+        "spec [falling.md §2.2] の構造結合 (canFormBond) を採用 (当初計画の clusterSet=結晶結合のみ から修正)",
+        "spec [falling.md §6.3] の着地距離: 「最小の d ≥ 1 で床到達 or 直下障害物」(当初の最大有効 d から修正)",
+        "Scratch/PhaseD10B_GravityCheck.lean: §4.1 (9 例) + §4.1.1 I-1 (5 層, 結晶版) + I-2 (凹×凹 8 層) = 11 件すべて #guard パス",
+        "Scratch/PhaseD10B_GravityPlausible.lean: layerCount 単調減少 + 冪等性 (toString) を Plausible 100 件で counter-example なし",
+        "axiom 26 → 25 (-1)"
+      ]
+    },
     {
       "id": "phase-d-5-6-cutter-swapper-deaxiom",
       "completed": "2026-04-29",
@@ -66,11 +81,11 @@
   ],
   "axioms": [
     {
-      "summary": "Phase D-5・D-6 後 axioms（Cutter / Swapper 完了。Kernel 配下は引き続き axiom-free）",
-      "count": 26,
-      "note": "Phase D-5・D-6 で 38→26（-12）。残 axiom は Operations/Gravity.lean, Operations/PinPusher.lean, Operations/Shatter.lean, Operations/Stacker.lean および Wires/Signal.lean。次は Phase D-7 (Stacker) → D-8 (PinPusher) → D-9 (Shatter) → D-10 (Gravity) の順で進める。",
+      "summary": "Phase D-10B 後 axioms（Gravity Layer A 完了。残 Layer B 安定性 / 等変性）",
+      "count": 25,
+      "note": "Phase D-10B で Operations/Gravity の `Shape.gravity` 自体を def 化（axiom 26→25）。残 axiom は Operations/Gravity.lean (3: isSettled / of_isSettled / rotateCW_comm), Operations/PinPusher.lean (6), Operations/Shatter.lean (4), Operations/Stacker.lean (7), Wires/Signal.lean (5)。次は Phase D-10C (`gravity.of_isSettled` + `dropOf_le_minLayer`)。",
       "locations": [
-        "S2IL/Operations/Gravity.lean (4)",
+        "S2IL/Operations/Gravity.lean (3)",
         "S2IL/Operations/PinPusher.lean (6)",
         "S2IL/Operations/Shatter.lean (4)",
         "S2IL/Operations/Stacker.lean (7)",

@@ -2,7 +2,7 @@
 
 - 作成日: 2026-04-29
 - 最終更新: 2026-04-29
-- ステータス: **Phase D-10A 完了（反例検証 GO 条件達成、D-10B 着手可）**
+- ステータス: **Phase D-10B 完了（Layer A 定義群実装 + §4.1/§4.1.1 全例パス、D-10C 着手可）**
 - スコープ: `S2IL/Operations/Gravity.lean` の脱 axiom（Phase D 最終 4 axiom）
 - 上位計画: [layer-ab-rewrite-plan.md §4.3](layer-ab-rewrite-plan.md)
 - 構造拘束: [architecture-layer-ab.md §1.4.4](architecture-layer-ab.md)
@@ -503,10 +503,24 @@ S2IL/Operations/Gravity/
 
 **GO 判定**: D-10B 着手可能。
 
-### Phase D-10B: Layer A 部 — 1〜2 セッション想定
+### Phase D-10B: Layer A 部 — 1〜2 セッション想定 — **完了 2026-04-29**
 
 `Defs.lean` の定義群と `Internal/ShareDirection.lean` の well-founded 関係を実装。
 `#eval gravity (...)` で §4.1 の代表例が一致することを確認。
+
+**実装結果**:
+
+- [`S2IL/Operations/Gravity/Defs.lean`](../../S2IL/Operations/Gravity/Defs.lean): 計算可能な Layer A 定義群（`structuralNeighbors` / `structuralCluster` / `floatingUnits` / `landingDistance` / `Shape.gravity`）。`Shape.gravity` は axiom から `def` に格上げ。
+- [`S2IL/Operations/Gravity/Internal/ShareDirection.lean`](../../S2IL/Operations/Gravity/Internal/ShareDirection.lean): `shareDirection.symm` 証明 + `precedes` の well-founded 関係（`Nat.strong_induction_on` on `minLayer`）。
+- [`S2IL/Operations/Gravity.lean`](../../S2IL/Operations/Gravity.lean): facade 更新、axiom は 4→3（`isSettled` / `of_isSettled` / `rotateCW_comm`、`gravity` 自体は def 化）。
+- 検証: [`Scratch/PhaseD10B_GravityCheck.lean`](../../Scratch/PhaseD10B_GravityCheck.lean) — §4.1 の 9 例 + §4.1.1 I-1（5 層、結晶版）+ I-2（凹×凹 縦二段、8 層）= 計 11 件すべて `#guard` パス。レイヤ数不増 4 件 + 冪等性 6 件もパス。
+- Plausible: [`Scratch/PhaseD10B_GravityPlausible.lean`](../../Scratch/PhaseD10B_GravityPlausible.lean) — `layerCount` 単調減少 + 冪等性（toString レベル）を Plausible 100 件で `Unable to find a counter-example`。
+
+**設計上の修正（重要）**: §3.5 / §6.1 当初記述の `clusterSet`（`Kernel.IsBonded` 経由 = 結晶結合のみ）は、仕様 [falling.md §2.2](../shapez2/falling.md) の **構造結合**（`Quarter.canFormBond` で「非ピンかつ非空の隣接」を許容）と異なる。実装では構造結合を採用し、新規述語 `structuralNeighbors` / `structuralCluster` として導入した。結晶結合は shatter のみで使用する。
+
+**着地距離の修正**: 当初の「最大の有効 d（着地点が空のまま降下できる最大量）」は仕様 [§6.3](../shapez2/falling.md) の落下物理と不一致。実装では「**最小の d ≥ 1** で『床到達 (q.1 = d)』または『直下に障害物』のいずれかが成立する d」（`landingDistance`）を採用。`#eval` 全例で仕様一致を確認。
+
+**GO 判定**: D-10C 着手可能。`gravity` は def なので `#eval gravity s = ...` 形式の振る舞い検証は今後 Layer B 補題証明中に随時 REPL で確認できる。
 
 ### Phase D-10C: 不動点・終端性 — 1 セッション想定
 
