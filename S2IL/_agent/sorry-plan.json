@@ -3,8 +3,40 @@
   "generated": false,
   "description": "Structured snapshot of active sorry / axiom obligations. Used by agents to quickly identify the current proof target and dependencies.",
   "maintenance": "Update when adding/removing sorrys or axioms. Progress milestones belong to sorry-cards/{symbol}.md. Detailed history: git log.",
-  "updated": "2026-04-29 (Phase D-10C 完了。`Behavior.lean` 新設で `landingDistance_le_minLayer` を axiom-free 証明、`gravity.of_isSettled` を `IsNormalized` 追加仮定の theorem に格上げ。旧 `IsSettled s → gravity s = s` axiom は反例 `[L_grounded, L_empty]` を持つため取り下げ、`IsNormalized` を追加。ブリッジ axiom `floatingUnits_eq_nil_of_isSettled` 1 本に集約（D-10D で `Internal/Collision.lean` の BFS 完全性から theorem 化予定）。総 axiom 数は 25 で不変、Gravity 配下は 3 (isSettled / floatingUnits_eq_nil_of_isSettled / rotateCW_comm) に組み替え。)",
-  "sorrys": [],
+  "updated": "2026-04-29 (Phase D-10D セッション 1: 骨格作成。`Internal/Collision.lean` 新設し BFS 主定理・structuralCluster 構造不変・floatingUnits ブリッジ・gravity.isSettled の全補題名と証明戦略コメントをステートし 9 sorry として配置。ビルドグリーン、axiom 25 不変。次セッションで edge correspondence (§1) ・BFS 双向同値 (§2-3) を順に証明し、完了時に axiom 25 -> 24 ＋sorry 0。)",
+  "sorrys": [
+    {
+      "id": "phase-d-10d-collision",
+      "file": "S2IL/Operations/Gravity/Internal/Collision.lean",
+      "count": 9,
+      "summary": "BFS 主定理 + structuralCluster 構造不変 + floatingUnits ブリッジ + gravity.isSettled の骨格。",
+      "obligations": [
+        "groundingNeighbors_subset_groundingEdge (soundness, edge level)",
+        "groundingNeighbors_supset_groundingEdge (completeness, edge level)",
+        "isAdjacent_iff_succ_or_pred (足場補題)",
+        "isGrounded_of_isGroundedFast (BFS soundness)",
+        "isGroundedFast_of_isGrounded (BFS completeness)",
+        "structuralCluster_canFormBond (構造不変)",
+        "structuralCluster_nonEmpty (canFormBond → ¬ isEmpty)",
+        "floatingClusters_eq_nil_of_isSettled",
+        "floatingPins_eq_nil_of_isSettled",
+        "gravity_isSettled_collision (主定理)"
+      ],
+      "depends_on_private_defs": [
+        "horizontalAdj (Defs.lean)",
+        "reachClosure (Defs.lean)",
+        "quarterAt (Defs.lean)"
+      ],
+      "next_actions": [
+        "Phase D-10D-1: edge correspondence §1 を axiom-free 証明 (Defs.lean の horizontalAdj をパブリック化か Internal/BFS.lean に移管)",
+        "Phase D-10D-2: reachClosure の不変補題 (Defs.lean の private を外すか BFS.lean に集約)",
+        "Phase D-10D-3: BFS 双向同値 §3 主定理",
+        "Phase D-10D-4: structuralCluster 構造不変 §4",
+        "Phase D-10D-5: floatingUnits_eq_nil_of_isSettled を theorem 化し、Behavior.lean の axiom を削除",
+        "Phase D-10D-6: gravity.isSettled を dropOf 構造から構成的に証明し、Operations/Gravity.lean facade の axiom を削除"
+      ]
+    }
+  ],
   "recently_completed": [
     {
       "id": "phase-d-10c-gravity-behavior",
@@ -96,9 +128,9 @@
   ],
   "axioms": [
     {
-      "summary": "Phase D-10C 後 axioms（Gravity 不動点 + 着地境界完了。残 BFS 完全性 / 安定性 / 等変性）",
+      "summary": "Phase D-10D セッション 1 骨格作成後（axiom 数は不変、Internal/Collision.lean に 9 sorry を配置）",
       "count": 25,
-      "note": "Phase D-10C で `gravity.of_isSettled` を `IsNormalized` 仮定の theorem に格上げし、`landingDistance_le_minLayer` を axiom-free 証明。代わりに BFS 完全性ブリッジ axiom `floatingUnits_eq_nil_of_isSettled` を 1 本導入（D-10D で `Internal/Collision.lean` から theorem 化）。Gravity 内訳は 3 (`isSettled` / `floatingUnits_eq_nil_of_isSettled` / `rotateCW_comm`)。次は Phase D-10D で BFS 完全性主定理 → `gravity.isSettled` + `floatingUnits_eq_nil_of_isSettled` を同時解消。",
+      "note": "Phase D-10D セッション 1 で Internal/Collision.lean の全補題名と戦略コメントを設置し 9 sorry を配置。axiom 数は未変 (Gravity 3: isSettled / floatingUnits_eq_nil_of_isSettled / rotateCW_comm)。Phase D-10D-5 で floatingUnits_eq_nil_of_isSettled が theorem 化、D-10D-6 で isSettled が theorem 化され axiom 25 → 23 になる見込み。",
       "locations": [
         "S2IL/Operations/Gravity.lean (2: isSettled / rotateCW_comm)",
         "S2IL/Operations/Gravity/Behavior.lean (1: floatingUnits_eq_nil_of_isSettled — D-10D 解消予定のブリッジ)",

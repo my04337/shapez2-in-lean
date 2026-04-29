@@ -3,6 +3,7 @@
 
 import S2IL.Kernel
 import S2IL.Operations.Settled
+import S2IL.Operations.Gravity.Internal.BFS
 
 /-!
 # S2IL.Operations.Gravity.Defs
@@ -41,30 +42,8 @@ namespace S2IL
 namespace Gravity
 
 -- ============================================================
--- BFS 補助（fuel ベース）
--- ============================================================
-
-/-- `xs` の重複を取り除く（先頭優先）。 -/
-private def listDedup [DecidableEq α] (xs : List α) : List α :=
-  xs.foldr (fun x acc => if x ∈ acc then acc else x :: acc) []
-
-/-- `step` を fuel 段適用して fixpoint へ近づける。 -/
-private def reachClosure {α : Type _} [DecidableEq α]
-    (step : List α → List α) (init : List α) : Nat → List α
-  | 0 => init
-  | fuel + 1 =>
-    let next := step init
-    let merged := listDedup (init ++ next)
-    if merged.length ≤ init.length then init
-    else reachClosure step merged fuel
-
--- ============================================================
 -- 隣接列挙
 -- ============================================================
-
-/-- 同レイヤ内左右隣接（Direction 上の `±1`）。 -/
-private def horizontalAdj (p : QuarterPos) : List QuarterPos :=
-  [(p.1, p.2 + 1), (p.1, p.2 - 1)]
 
 /-- `p` から **構造結合** で結ばれる候補位置。
     `falling.md §2.2`: `canFormBond` を両端に持つ隣接（同レイヤ円環 + 上下同方角）。 -/
@@ -82,28 +61,44 @@ def structuralNeighbors (s : Shape) (p : QuarterPos) : List QuarterPos :=
         [(p.1 - 1, p.2)] else []
     same ++ above ++ below
 
-/-- `p` から `IsGroundingEdge` 経由で到達可能な前進方向の隣接位置（接地 BFS 用）。
-    [`Operations.Settled.IsGroundingEdge`](Settled.lean) の computable shadow。 -/
-def groundingNeighbors (s : Shape) (p : QuarterPos) : List QuarterPos :=
+/-! ### `groundingNeighbors` の 3 ブランチ分解
+
+`groundingNeighbors` は次の 3 ブランチの単純結合に分解される
+（Phase D-10D §1 edge correspondence で MECE な case 分析を行うため）:
+
+| ブランチ | 内容 |
+|---|---|
+| `groundingNeighborsUp` | 上方向 vertical contact (`(p.1+1, p.2)`、両非空) |
+| `groundingNeighborsHoriz` | 同層 adjacent contact (`(p.1, p.2±1)`、両非空非ピン) |
+| `groundingNeighborsDown` | 下方向 bond (`(p.1-1, p.2)`、両 crystal) |
+
+[`Operations.Settled.IsGroundingEdge`](Settled.lean) の computable shadow。
+-/
+
+/-- 上方向 vertical contact ブランチ。両非空（ピン許容）。 -/
+def groundingNeighborsUp (s : Shape) (p : QuarterPos) : List QuarterPos :=
+  if (QuarterPos.getQuarter s p).isEmpty then []
+  else if (QuarterPos.getQuarter s (p.1 + 1, p.2)).isEmpty then []
+  else [(p.1 + 1, p.2)]
+
+/-- 同層 adjacent contact ブランチ。両非空・両非ピン。 -/
+def groundingNeighborsHoriz (s : Shape) (p : QuarterPos) : List QuarterPos :=
   let qp := QuarterPos.getQuarter s p
-  if qp.isEmpty then []
+  if qp.isEmpty ∨ qp = .pin then []
   else
-    -- 上方向 vertical contact: 両非空（ピン許容）
-    let up : List QuarterPos :=
-      if !(QuarterPos.getQuarter s (p.1 + 1, p.2)).isEmpty then
-        [(p.1 + 1, p.2)] else []
-    -- 同層 adjacent contact: 両非空・両非ピン
-    let horiz : List QuarterPos :=
-      if qp = .pin then [] else
-        horizontalAdj p |>.filter (fun q =>
-          let qq := QuarterPos.getQuarter s q
-          ¬ qq.isEmpty ∧ qq ≠ Quarter.pin)
-    -- 下方向 bond（IsBonded = 結晶結合）
-    let downBond : List QuarterPos :=
-      if qp.isCrystal ∧ p.1 ≥ 1
-          ∧ (QuarterPos.getQuarter s (p.1 - 1, p.2)).isCrystal then
-        [(p.1 - 1, p.2)] else []
-    up ++ horiz ++ downBond
+    horizontalAdj p |>.filter (fun q =>
+      let qq := QuarterPos.getQuarter s q
+      decide (¬ qq.isEmpty ∧ qq ≠ Quarter.pin))
+
+/-- 下方向 bond ブランチ。両 crystal、`p.1 ≥ 1`。 -/
+def groundingNeighborsDown (s : Shape) (p : QuarterPos) : List QuarterPos :=
+  if (QuarterPos.getQuarter s p).isCrystal ∧ p.1 ≥ 1
+      ∧ (QuarterPos.getQuarter s (p.1 - 1, p.2)).isCrystal then
+    [(p.1 - 1, p.2)] else []
+
+/-- `p` から `IsGroundingEdge` 経由で到達可能な前進方向の隣接位置（接地 BFS 用）。 -/
+def groundingNeighbors (s : Shape) (p : QuarterPos) : List QuarterPos :=
+  groundingNeighborsUp s p ++ groundingNeighborsHoriz s p ++ groundingNeighborsDown s p
 
 -- ============================================================
 -- 非空位置・layer 0 root 列挙
