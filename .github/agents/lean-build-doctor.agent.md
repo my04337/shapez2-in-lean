@@ -1,7 +1,7 @@
 ---
-description: "Run `lake build`, scan diagnostics, and return one report combining (a) error triage with REPL-verified fix candidates and (b) sorry inventory with dependency classification. **When**: starting/resuming a session, after a large edit, before committing, or whenever main needs a single source-of-truth view of build health. **Returns**: error table with fix candidates + sorry table with independent / dependent / blocker counts + recommended next 1–3 actions. **Don't call when**: a build was just run in the same turn and main already has the diagnostics in context; for editing one specific simp call (use `lean-simp-stabilizer`); for triaging one specific sorry (use `lean-sorry-investigator`)."
+description: "Run `lake build`, scan diagnostics, and return one report combining (a) error triage with REPL-verified fix candidates and (b) sorry inventory with dependency classification. **When**: starting/resuming a session, after a large edit, before committing, or whenever main needs a single source-of-truth view of build health. **Returns**: error table with fix candidates + sorry table with independent / dependent / blocker counts + recommended next 1–3 actions. In `mode=verify-only` returns a single one-liner on success and only escalates to full triage on failure. **Don't call when**: a build was just run in the same turn and main already has the diagnostics in context; for editing one specific simp call (use `lean-simp-stabilizer`); for triaging one specific sorry (use `lean-sorry-investigator`)."
 tools: [execute, read, search]
-argument-hint: "Optionally pass `diagnosticsFile=...` to skip the build, or `scope=errors|sorrys|both` (default both)."
+argument-hint: "Optionally pass `diagnosticsFile=...` to skip the build, `scope=errors|sorrys|both` (default both), or `mode=verify-only|full` (default full)."
 ---
 
 You diagnose the current Lean build and produce one consolidated report so the main agent can decide what to fix or attack next.
@@ -22,6 +22,19 @@ Run `.github/skills/lean-build/scripts/build.ps1` (Windows) or `build.sh` (POSIX
 - `error` records — the build is failing
 - `isSorry: true` records — sorry inventory
 - `warning` records — surface only counts (don't enumerate)
+
+### 1′. `mode=verify-only` 軽量パス
+
+主に「実装後の単発グリーン確認」用途。
+
+- ビルドを実行し `errors=0` かつ `sorries=0` のときは以下の 1 行のみを返しそれ以上診断しない:
+
+  ```
+  **ビルド状態**: success (errors=0, sorries=0, warnings=W)
+  ```
+
+- `errors > 0` または予期しない `sorries > 0` の場合は自動的に `mode=full` にフォールバックし、以下§2/§3 を全て実行する。ヘッダーに `**escalated from verify-only**` を付ける。
+- 不变性：このモードでもフィクションコストは 「build.ps1 1 回」と限定、追加コマンドは走らずトークンを最短に保つ。
 
 ### 2. エラートリアージ + 修正候補生成（scope=errors または both）
 

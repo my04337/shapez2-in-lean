@@ -1,7 +1,7 @@
 ---
-description: "Investigate one Lean 4 sorry / candidate theorem end-to-end (counterexample → skeleton → lemma search → tactic trial) and return a compact verdict. **When**: triage a single sorry, settle a candidate lemma, decide whether to commit a proof attempt, fan-out across multiple sorrys (call once per sorry in parallel). **Returns**: verdict (`likely-true` / `counterexample` / `uncertain`) + minimal counterexample (if any) + recommended next tactic + lemma candidates + sorry-first skeleton. **Don't call when**: the goal is already in front of main agent and a single tactic obviously closes it; the work is editing an existing proof rather than triaging a new one."
+description: "Investigate one Lean 4 sorry / candidate theorem / new definition end-to-end (counterexample → skeleton → lemma search → tactic trial, OR behavior verification against expected I/O) and return a compact verdict. **When**: triage a single sorry, settle a candidate lemma, decide whether to commit a proof attempt, fan-out across multiple sorrys (call once per sorry in parallel), verify a freshly implemented `def` against a spec example table. **Returns**: verdict (`likely-true` / `counterexample` / `uncertain` / `behavior-ok` / `behavior-mismatch`) + minimal counterexample (if any) + recommended next tactic + lemma candidates + sorry-first skeleton, OR pass/fail per case + minimized failing input + top 3 cause hypotheses. **Don't call when**: the goal is already in front of main agent and a single tactic obviously closes it; the work is editing an existing proof rather than triaging a new one."
 tools: [execute, read, search]
-argument-hint: "Pass a theorem type signature OR `file:line` of an existing sorry. Optionally include `diagnosticsFile=...` and `mode=quick|full` (default full)."
+argument-hint: "Pass a theorem type signature OR `file:line` of an existing sorry OR a `def` name with expected I/O table. Optionally include `diagnosticsFile=...` and `mode=quick|full|behavior` (default full)."
 ---
 
 You investigate one Lean 4 proposition end-to-end and return a compact verdict that lets the main agent decide whether to commit a proof, retreat, or fix the statement.
@@ -22,7 +22,69 @@ For the given proposition, cover the following four perspectives. Order them so 
 3. **タクティク候補の試行** — Pick 5–8 tactics from the `lean-tactic-select` priority map matching the goal shape, batch them on the same `proofState`, and rank by remaining goal count.
 4. **補題候補の探索** — When tactics alone don't close the goal, run `exact?` / `apply?` / `simp?` first, then `#leansearch` / `#loogle` if needed. Verify hits with `#check` and trial application. See skill `lean-mathlib-search` for query patterns.
 
-In `mode=quick`, run only perspectives 1 and 2 and stop. In `mode=full` (default), run all four.
+In `mode=quick`, run only perspectives 1 and 2 and stop. In `mode=full` (default), run all four. In `mode=behavior`, skip perspectives 1–4 entirely and run the **振る舞い検証モード** below.
+
+## 振る舞い検証モード（`mode=behavior`）
+
+**用途**: axiom を def に置換した直後、spec の代表例（`docs/plans/<name>-proof-plan.md` の §4.x の入出力表、あるいは `docs/shapez2/*.md` の例）に対して計算可能な `def` が期待と一致するかを検証し、不一致時は最小化して原因仮説を返す。
+
+**入力例**:
+```
+対象: Shape.gravity
+期待表:
+  | # | input                              | expected                      |
+  | 1 | Cr------:--Cr----                  | CrCr----                      |
+  | 2 | Cr------:RgRg----:----Sb--          | Cr--Sb--:RgRg----             |
+  ...
+ヘルパー: Shape.toString で文字列比較
+```
+
+**手順**:
+
+1. `Scratch/<unique>.lean` に全ケースを `#eval` でダンプし、期待と同時に出力するハーネスを生成:
+
+   ```lean
+   def runCase (input expected : String) : Option String :=
+     match Shape.ofString? input with
+     | none => some s!"パース失敗: {input}"
+     | some s =>
+       let actual := Shape.toString (Shape.gravity s)
+       if actual = expected then none else some s!"FAIL [{input}]: got={actual} expected={expected}"
+   #eval (#[("...", "..."), ...] |>.filterMap (fun (i,e) => runCase i e))
+   ```
+
+2. `lake env lean Scratch/<unique>.lean 2>&1` を実行して FAIL ケースを列挙。
+
+3. FAIL が 1 件以上あれば最初の 1 件を **最小化**：入力トークンを全部除去、レイヤを削減、色を統一・、とステップクだし、到達した最小差分を報告。
+
+4. **原因仮説の上位 3 件** を返す。よくあるカテゴリ:
+   - 仕様誤読（例: 構造結合と結晶結合の混同、着地距離の min/max 逆）
+   - 順序バグ（sort キー・タイブレーク順）
+   - 障害物初期化、fold ステップでの上書き、normalize 適用位置
+   - ピン / 空 / 結晶 / 色付き象限の分類ミス
+
+5. FAIL がなければ `behavior-ok`、あれば `behavior-mismatch` として返す。
+
+**返却フォーマット（behavior モード）**:
+
+```markdown
+**対象**: `Shape.gravity` (def)
+**判定**: `behavior-ok` | `behavior-mismatch`
+**ケース**: パス X / Y
+
+### 最小反例（mismatch 時のみ）
+- 入力: `<最小入力>`
+- 期待: `<expected>`
+- 実際: `<actual>`
+
+### 原因仮説（上位 3）
+1. …
+2. …
+3. …
+
+### 推奨アクション
+- 1 行で main に渡す次手
+```
 
 ## Tooling
 
