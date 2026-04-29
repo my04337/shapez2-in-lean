@@ -2,7 +2,7 @@
 
 - 作成日: 2026-04-29
 - 最終更新: 2026-04-29
-- ステータス: **計画策定済み（着手前）**
+- ステータス: **Phase D-10A 完了（反例検証 GO 条件達成、D-10B 着手可）**
 - スコープ: `S2IL/Operations/Gravity.lean` の脱 axiom（Phase D 最終 4 axiom）
 - 上位計画: [layer-ab-rewrite-plan.md §4.3](layer-ab-rewrite-plan.md)
 - 構造拘束: [architecture-layer-ab.md §1.4.4](architecture-layer-ab.md)
@@ -339,9 +339,70 @@ Phase D-10A 着手時点では空欄とし、Phase D-10B（`Defs.lean` / `Intern
 
 `lean-counterexample` で `∀ s, IsSettled (gravity s)` を `vanilla4` / `vanilla5` 全 Shape 列挙で検証する（noncomputable のため `decide` を `Classical` で起動）。
 
+> **注意**: `IsSettled` の Decidable インスタンスは `Classical.decPred` 経由で `noncomputable` のため、`plausible` から駆動すると 1 件ごとに classical decide が走り実用速度に至らない。Phase D-10B で executable な `Shape.isSettledFast : Shape → Bool` を導入した後は `plausible` でランダム検証が可能になる（§4.4 参照）。
+
 ### 4.3 `gravity_rotateCW_comm` の反例検索
 
 `∀ s, (gravity s).rotateCW = gravity s.rotateCW` を `vanilla4` 全 Shape で検証する。
+
+---
+
+### 4.4 Plausible 適用方針（Phase D-10B 以降）
+
+`Shape.gravity` は axiom のため Phase D-10A では plausible 検証不可。D-10B で executable な実装が入った時点で以下をプロパティ化する:
+
+```lean
+-- 安定性（isSettledFast は Phase D-10B で導入する executable Bool 版）
+example : ∀ (s : Shape), Shape.isSettledFast (Shape.gravity s) = true := by plausible
+
+-- 不動点性
+example : ∀ (s : Shape), Shape.isSettledFast s = true → Shape.gravity s = s := by plausible
+
+-- CW 等変性
+example : ∀ (s : Shape), (Shape.gravity s).rotateCW = Shape.gravity s.rotateCW := by plausible
+
+-- レイヤ数不増
+example : ∀ (s : Shape), (Shape.gravity s).layers.length ≤ s.layers.length := by plausible
+
+-- 冪等性
+example : ∀ (s : Shape), Shape.gravity (Shape.gravity s) = Shape.gravity s := by plausible
+```
+
+各プロパティは **vanilla4 → vanilla5 → stress8** の順で `SampleableExt Shape` を切り替えて検証する。
+vanilla5 / stress8 用には `Arbitrary.lean` の `shapeGen`（0..4 layers）を局所上書きするジェネレータが必要。
+
+**試行回数指針**（[`/memories/repo/counterexample-layer-benchmark.md`](/memories/repo/counterexample-layer-benchmark.md) 由来）:
+
+| 範囲 | 推奨試行回数 | 理由 |
+|---|---|---|
+| vanilla4 (0..4 layers) | 100（既定） | パターン空間 ~6,500、既定で十分 |
+| vanilla5 (0..5 layers) | 1,000 | 空間 ~60,000、ランダムで要所カバー |
+| stress8 (6..8 layers) | 500–1,000 | 空間爆発のためランダム必須 |
+
+`#guard` ベースの代表値テストは別途 `Test/Operations/Gravity.lean` に置く（plausible はあくまで補助）。
+
+### 4.5 Phase D-10A 設計観点チェックリスト
+
+§4.1 / §4.1.1 の手計算トレースから抽出した、採用モデル (d) が **必ず保たなければならない構造前提** 7 項目。
+Phase D-10B 以降の `#eval` / plausible が反例を返した場合は、**反例最小化後にどれが破綻しているかを特定する**。
+
+1. **落下単位凍結（Bond Freezing）**: `floatingUnits` は入力 `s` から 1 回だけ計算し以降再評価しない。例 5 で Sb が L2:Rg と隣接通過しても結合しないことを保証。
+2. **障害物シェイプの構築**: O = 「全落下単位の**元位置**を除去した残余」+「先行 unit の**新位置**」。元位置を残すと例 9 で C が B の元位置を障害物と誤認する。
+3. **衝突判定の統一**: cluster と pin の `dropOf` 計算を `FallingUnit.positions : Finset QuarterPos` に正規化し **同一の衝突述語** で扱う（I-1 ピン α と I-1' 単一象限クラスタ B が同じ計算経路を踏む根拠）。
+4. **shouldProcessBefore の最小性**: 「方角列共有 ∧ minLayer 厳密小」のみで処理順を一意化。I-2 の A→α→B→β 順序決定に追加 tie-break 不要。
+5. **同列非共有 unit の独立性**: 方角列を共有しない unit は互いの dropOf に影響しない。`floatingUnits` を `Finset` で扱える根拠。
+6. **層 0 到達優先**: 着地条件 ①（`q.layer - d = 0`）は ②（障害物直下非空）より優先。例 1 で空 O 上の落下が layer 0 で停止する。
+7. **正規化は fold 後に 1 回**: 中間 `normalize` 呼出しで `dropOf` の layer インデックスが崩れる。
+
+#### 反例発覚時のモデル再設計チェックリスト（R-A〜R-E）
+
+万一 Phase D-10B 以降で plausible が反例を出し採用モデル (d) が破綻した場合:
+
+- **R-A**: plausible の shrink 出力で **layerCount / 落下単位数 / pin 含有有無** の最小条件を確定し、上記 1〜7 のどれが破綻しているかを特定
+- **R-B**: spec [falling.md §6.5](../shapez2/falling.md) の 9 例 + interlock I-1/I-1'/I-2 が引き続き成立することを再トレース
+- **R-C**: 旧 wave モデルの破綻パス（[`/memories/repo/waveStep-grounding-mono-persistence.md`](/memories/repo/waveStep-grounding-mono-persistence.md)）の再現条件を新モデルでチェック
+- **R-D**: §3.5 (b) 完全宣言的（`Classical.choose` + 一意性証明）への pivot を検討
+- **R-E**: §3 候補 (a)〜(d) を再評価し、破綻した構造前提を回避する新案を策定
 
 ---
 
@@ -430,9 +491,17 @@ S2IL/Operations/Gravity/
 
 各段階は独立にコミット可能、`lake build` green を維持。失敗時は `lean-proof-progress` の撤退判断（3 セッション or 8 アプローチ）で次段階に進まず本書の §3.5 (d) 設計を再評価する。
 
-### Phase D-10A: 反例検証先行（GO 条件確認）— 1 セッション想定
+### Phase D-10A: 反例検証先行（GO 条件確認）— **完了 2026-04-29**
 
-§4 の検証を全て実施。すべてのテストケースが手計算と一致することを確認後、本書の **ステータス** を「着手中」に更新。
+§4 の検証を完了。結果:
+
+- §4.1 の 9 例（例 1〜例 9）: spec [falling.md §6.2](../shapez2/falling.md) のアルゴリズムに対する手計算トレースで **すべて期待出力と完全一致**（反例なし）
+- §4.1.1 interlock パターン I-1（凹+ピン 5 層）/ I-1'（口型+単一象限 8 層）/ I-2（凹×凹 縦二段 8 層）: **すべて整合**（採用モデル (d) が正しく処理可能）
+- I-3: `CanDropBy` 形状確定後（D-10B 完了時点）に持ち越し。これは設計上の意図的な持ち越し
+- Plausible 適用範囲: `gravity` 自体は axiom のため Phase D-10A では適用不可。基本 S2IL 型に対する plausible 動作は確認済み（[`Scratch/PhaseD10A_Plausible_v2.lean`](../../Scratch/PhaseD10A_Plausible_v2.lean) で 3 件パス）
+- 設計観点 7 項目 + 再設計時チェック観点 5 項目を [docs/lean/plausible-guide.md](../lean/plausible-guide.md) に反映済み
+
+**GO 判定**: D-10B 着手可能。
 
 ### Phase D-10B: Layer A 部 — 1〜2 セッション想定
 
