@@ -3,9 +3,24 @@
   "generated": false,
   "description": "Structured snapshot of active sorry / axiom obligations. Used by agents to quickly identify the current proof target and dependencies.",
   "maintenance": "Update when adding/removing sorrys or axioms. Progress milestones belong to sorry-cards/{symbol}.md. Detailed history: git log.",
-  "updated": "2026-04-29 (Phase D-10B 完了。`Shape.gravity` を axiom から def に格上げ。Layer A 計算可能定義群 (`structuralNeighbors` / `structuralCluster` / `floatingUnits` / `landingDistance` / `Shape.gravity`) と well-founded 関係 (`shareDirection.symm` / `precedes_wf`) を実装。§4.1 の 9 例 + §4.1.1 I-1/I-2 = 計 11 件の `#guard` パス、Plausible で `layerCount` 単調減少 + 冪等性のランダム検証もクリア。Operations/Gravity の axiom は 4→3。次は Phase D-10C (`gravity.of_isSettled` / `dropOf_le_minLayer`)。)",
+  "updated": "2026-04-29 (Phase D-10C 完了。`Behavior.lean` 新設で `landingDistance_le_minLayer` を axiom-free 証明、`gravity.of_isSettled` を `IsNormalized` 追加仮定の theorem に格上げ。旧 `IsSettled s → gravity s = s` axiom は反例 `[L_grounded, L_empty]` を持つため取り下げ、`IsNormalized` を追加。ブリッジ axiom `floatingUnits_eq_nil_of_isSettled` 1 本に集約（D-10D で `Internal/Collision.lean` の BFS 完全性から theorem 化予定）。総 axiom 数は 25 で不変、Gravity 配下は 3 (isSettled / floatingUnits_eq_nil_of_isSettled / rotateCW_comm) に組み替え。)",
   "sorrys": [],
   "recently_completed": [
+    {
+      "id": "phase-d-10c-gravity-behavior",
+      "completed": "2026-04-29",
+      "summary": "Phase D-10C 完了。Behavior.lean 新設で landingDistance_le_minLayer + gravity.of_isSettled を整備。",
+      "details": [
+        "S2IL/Operations/Gravity/Behavior.lean 新設",
+        "landingDistance_le_minLayer: List.find? の戻り値が元 list のメンバである性質 + range (m+1) メンバから ≤ m を得る抽象 helper で axiom-free 証明",
+        "gravity.of_isSettled': IsSettled s ∧ IsNormalized s → gravity s = s をブリッジ axiom 1 本経由で theorem 化",
+        "IsNormalized 仮定の追加根拠: 旧 axiom IsSettled s → gravity s = s は反例 [L_grounded, L_empty] を持つ（IsSettled は末尾空レイヤを許容するが gravity 末尾の normalize はそれを除去）",
+        "ブリッジ axiom: floatingUnits_eq_nil_of_isSettled : IsSettled s → floatingUnits s = []。BFS 完全性 + structuralCluster 構造不変から D-10D で theorem 化予定",
+        "Operations/Gravity.lean facade: 旧 axiom of_isSettled を削除、新シグネチャの theorem として再公開",
+        "Scratch/PhaseD10C_BehaviorCheck.lean: ブリッジ axiom の代表入力検証（settled 5 件 + 非 settled 2 件）+ landingDistance 境界値 type check + IsNormalized 境界 decide",
+        "axiom 25 → 25 (Gravity 内訳: of_isSettled axiom 削除 + floatingUnits_eq_nil_of_isSettled axiom 追加で同数。D-10D で 2 本同時解消)"
+      ]
+    },
     {
       "id": "phase-d-10b-gravity-layer-a",
       "completed": "2026-04-29",
@@ -81,11 +96,12 @@
   ],
   "axioms": [
     {
-      "summary": "Phase D-10B 後 axioms（Gravity Layer A 完了。残 Layer B 安定性 / 等変性）",
+      "summary": "Phase D-10C 後 axioms（Gravity 不動点 + 着地境界完了。残 BFS 完全性 / 安定性 / 等変性）",
       "count": 25,
-      "note": "Phase D-10B で Operations/Gravity の `Shape.gravity` 自体を def 化（axiom 26→25）。残 axiom は Operations/Gravity.lean (3: isSettled / of_isSettled / rotateCW_comm), Operations/PinPusher.lean (6), Operations/Shatter.lean (4), Operations/Stacker.lean (7), Wires/Signal.lean (5)。次は Phase D-10C (`gravity.of_isSettled` + `dropOf_le_minLayer`)。",
+      "note": "Phase D-10C で `gravity.of_isSettled` を `IsNormalized` 仮定の theorem に格上げし、`landingDistance_le_minLayer` を axiom-free 証明。代わりに BFS 完全性ブリッジ axiom `floatingUnits_eq_nil_of_isSettled` を 1 本導入（D-10D で `Internal/Collision.lean` から theorem 化）。Gravity 内訳は 3 (`isSettled` / `floatingUnits_eq_nil_of_isSettled` / `rotateCW_comm`)。次は Phase D-10D で BFS 完全性主定理 → `gravity.isSettled` + `floatingUnits_eq_nil_of_isSettled` を同時解消。",
       "locations": [
-        "S2IL/Operations/Gravity.lean (3)",
+        "S2IL/Operations/Gravity.lean (2: isSettled / rotateCW_comm)",
+        "S2IL/Operations/Gravity/Behavior.lean (1: floatingUnits_eq_nil_of_isSettled — D-10D 解消予定のブリッジ)",
         "S2IL/Operations/PinPusher.lean (6)",
         "S2IL/Operations/Shatter.lean (4)",
         "S2IL/Operations/Stacker.lean (7)",
