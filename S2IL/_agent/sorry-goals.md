@@ -1,89 +1,58 @@
 # Sorry Goals Snapshot
 
-> 自動生成: 2026-04-29 19:51:03
+> 自動生成: 2026-04-29 23:05:21
 > ソース: `.lean` ファイル直接スキャン (build diagnostics に非依存)
 > スキャン対象: S2IL
 > 用途: sorry 位置の含む宣言シグネチャを REPL 起動なしで取得する
 
-sorry 件数: **7**
+sorry 件数: **4**
 
-## 1. S2IL/Operations/Gravity/Internal/Collision.lean:336
+## 1. S2IL/Operations/Gravity/Internal/Settled.lean:475
 
-- 宣言: `isGrounded_of_isGroundedFast` (*theorem* at L327)
+- 宣言: `placeUnit_grounding` (*theorem* at L461)
 
 ```lean
-theorem isGrounded_of_isGroundedFast
-    (s : Shape) (p : QuarterPos) :
-    isGroundedFast s p = true → IsGrounded s p := by
+private theorem placeUnit_grounding
+    (origS acc : Shape) (u : FallingUnit) (d : Nat)
+    (_hLand : landingCondition acc u d = true)
+    (_hAcc  : ∀ q : QuarterPos, q ∈ QuarterPos.allValid acc →
+              ¬ (QuarterPos.getQuarter acc q).isEmpty → IsGrounded acc q)
+    {p : QuarterPos} (_hp : p ∈ u.positions) :
+    IsGrounded (placeUnit origS acc u d) (p.1 - d, p.2) := by
 ```
 
 sorry 行: `sorry`
 
-## 2. S2IL/Operations/Gravity/Internal/Collision.lean:347
+## 2. S2IL/Operations/Gravity/Internal/Settled.lean:495
 
-- 宣言: `isGroundedFast_of_isGrounded` (*theorem* at L339)
+- 宣言: `foldl_grounded_invariant` (*theorem* at L478)
 
 ```lean
-theorem isGroundedFast_of_isGrounded
-    (s : Shape) (p : QuarterPos) :
-    IsGrounded s p → isGroundedFast s p = true := by
+private theorem foldl_grounded_invariant
+    (s : Shape) (units : List FallingUnit)
+    (acc : Shape)
+    (_hBase : ∀ q ∈ QuarterPos.allValid acc,
+              ¬ (QuarterPos.getQuarter acc q).isEmpty → IsGrounded acc q) :
+    let result := units.foldl (fun a u => stepUnit s a u) acc
 ```
 
 sorry 行: `sorry`
 
-## 3. S2IL/Operations/Gravity/Internal/Collision.lean:376
+## 3. S2IL/Operations/Gravity/Internal/Settled.lean:521
 
-- 宣言: `structuralCluster_canFormBond` (*theorem* at L365)
+- 宣言: `obs0_isGrounded_of_nonEmpty` (*theorem* at L507)
 
 ```lean
-theorem structuralCluster_canFormBond
-    (s : Shape) (p q : QuarterPos)
-    (hq : q ∈ structuralCluster s p) :
-    (QuarterPos.getQuarter s q).canFormBond = true := by
+private theorem obs0_isGrounded_of_nonEmpty
+    (s : Shape) :
+    let units := floatingUnits s
 ```
 
 sorry 行: `sorry`
 
-## 4. S2IL/Operations/Gravity/Internal/Collision.lean:388
+## 4. S2IL/Operations/Gravity/Internal/Settled.lean:539
 
-- 宣言: `structuralCluster_nonEmpty` (*theorem* at L379)
-
-```lean
-theorem structuralCluster_nonEmpty
-    (s : Shape) (p q : QuarterPos)
-    (hq : q ∈ structuralCluster s p) :
-    ¬ (QuarterPos.getQuarter s q).isEmpty := by
-```
-
-sorry 行: `sorry`
-
-## 5. S2IL/Operations/Gravity/Internal/Collision.lean:404
-
-- 宣言: `floatingClusters_eq_nil_of_isSettled` (*theorem* at L395)
-
-```lean
-theorem floatingClusters_eq_nil_of_isSettled
-    {s : Shape} (hs : IsSettled s) :
-    floatingClusters s = [] := by
-```
-
-sorry 行: `sorry`
-
-## 6. S2IL/Operations/Gravity/Internal/Collision.lean:415
-
-- 宣言: `floatingPins_eq_nil_of_isSettled` (*theorem* at L407)
-
-```lean
-theorem floatingPins_eq_nil_of_isSettled
-    {s : Shape} (hs : IsSettled s) :
-    floatingPins s = [] := by
-```
-
-sorry 行: `sorry`
-
-## 7. S2IL/Operations/Gravity/Internal/Collision.lean:453
-
-- 宣言: `gravity_isSettled_collision` (*theorem* at L433)
+- 宣言: `gravity_isSettled_collision` (*theorem* at L526)
 
 ```lean
 theorem gravity_isSettled_collision (s : Shape) :

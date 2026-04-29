@@ -3,37 +3,29 @@
   "generated": false,
   "description": "Structured snapshot of active sorry / axiom obligations. Used by agents to quickly identify the current proof target and dependencies.",
   "maintenance": "Update when adding/removing sorrys or axioms. Progress milestones belong to sorry-cards/{symbol}.md. Detailed history: git log.",
-  "updated": "2026-04-29 (Phase D-10D セッション 1: 骨格作成。`Internal/Collision.lean` 新設し BFS 主定理・structuralCluster 構造不変・floatingUnits ブリッジ・gravity.isSettled の全補題名と証明戦略コメントをステートし 9 sorry として配置。ビルドグリーン、axiom 25 不変。次セッションで edge correspondence (§1) ・BFS 双向同値 (§2-3) を順に証明し、完了時に axiom 25 -> 24 ＋sorry 0。)",
+  "updated": "2026-04-29 (Phase D-10D-5c + 5d 完了 + R-§6.4 反例検証完了。`landingCondition_landingDistance_pos` と `placeUnit_subsumed_by`（条件付き）を closes、setQuarter 基本性質補題 4 本を §6.4 冉頭に集約。`Scratch/PhaseD10D_PlaceUnit_Disjoint.lean` で 23 ケース P-disjoint OK、Gravity モデル再設計不要と判定。残 sorry 6 → 4、axiom 24 不変。次: D-10D-5e `placeUnit_grounding`。)",
   "sorrys": [
     {
-      "id": "phase-d-10d-collision",
-      "file": "S2IL/Operations/Gravity/Internal/Collision.lean",
-      "count": 9,
-      "summary": "BFS 主定理 + structuralCluster 構造不変 + floatingUnits ブリッジ + gravity.isSettled の骨格。",
+      "id": "phase-d-10d-settled",
+      "file": "S2IL/Operations/Gravity/Internal/Settled.lean",
+      "count": 4,
+      "summary": "§6.4ー§6.6 placeUnit_grounding / foldl_grounded_invariant / obs0_isGrounded_of_nonEmpty / gravity_isSettled_collision。§6.1ー§6.3 + placeUnit_subsumed_by（条件付き）は ✅ 済。",
       "obligations": [
-        "groundingNeighbors_subset_groundingEdge (soundness, edge level)",
-        "groundingNeighbors_supset_groundingEdge (completeness, edge level)",
-        "isAdjacent_iff_succ_or_pred (足場補題)",
-        "isGrounded_of_isGroundedFast (BFS soundness)",
-        "isGroundedFast_of_isGrounded (BFS completeness)",
-        "structuralCluster_canFormBond (構造不変)",
-        "structuralCluster_nonEmpty (canFormBond → ¬ isEmpty)",
-        "floatingClusters_eq_nil_of_isSettled",
-        "floatingPins_eq_nil_of_isSettled",
+        "placeUnit_grounding (着地像 = layer0 root or 直下障害物経由で grounded; unit 内連結性補題要)",
+        "foldl_grounded_invariant (units 帰納で全有効非空位置 grounded; placeUnit_subsumed_by の hDisjoint 確立を含む)",
+        "obs0_isGrounded_of_nonEmpty (基底: clearPositions 後も 非 floating セルは grounded を保つ)",
         "gravity_isSettled_collision (主定理)"
       ],
       "depends_on_private_defs": [
-        "horizontalAdj (Defs.lean)",
-        "reachClosure (Defs.lean)",
-        "quarterAt (Defs.lean)"
+        "Shape.subsumed_by (Settled.lean §6.1、✅)",
+        "length_setQuarter / getQuarter_setQuarter_of_ne / foldl_setQuarter_* (Settled.lean §6.4、✅)",
+        "horizontalAdj / reachClosure (Defs.lean)",
+        "quarterAt (Defs.lean private)"
       ],
       "next_actions": [
-        "Phase D-10D-1: edge correspondence §1 を axiom-free 証明 (Defs.lean の horizontalAdj をパブリック化か Internal/BFS.lean に移管)",
-        "Phase D-10D-2: reachClosure の不変補題 (Defs.lean の private を外すか BFS.lean に集約)",
-        "Phase D-10D-3: BFS 双向同値 §3 主定理",
-        "Phase D-10D-4: structuralCluster 構造不変 §4",
-        "Phase D-10D-5: floatingUnits_eq_nil_of_isSettled を theorem 化し、Behavior.lean の axiom を削除",
-        "Phase D-10D-6: gravity.isSettled を dropOf 構造から構成的に証明し、Operations/Gravity.lean facade の axiom を削除"
+        "Phase D-10D-5e: placeUnit_grounding を closes。landingCondition を List.any_eq_true で展開し layer0 / 直下障害物の 2 ケース、unit 内連結性補題（cluster の structuralCluster bond 接続）を新規。",
+        "Phase D-10D-5f: foldl_grounded_invariant を closes。units 帰納 + R-§6.4 を placeUnit_subsumed_by の hDisjoint として確立（反例検証で 23 ケース OK 確認済）。",
+        "Phase D-10D-5g: obs0_isGrounded_of_nonEmpty と主定理 を closes、ファサード axiom を theorem 化 (axiom 24 → 23)。"
       ]
     }
   ],
@@ -128,12 +120,11 @@
   ],
   "axioms": [
     {
-      "summary": "Phase D-10D セッション 1 骨格作成後（axiom 数は不変、Internal/Collision.lean に 9 sorry を配置）",
-      "count": 25,
-      "note": "Phase D-10D セッション 1 で Internal/Collision.lean の全補題名と戦略コメントを設置し 9 sorry を配置。axiom 数は未変 (Gravity 3: isSettled / floatingUnits_eq_nil_of_isSettled / rotateCW_comm)。Phase D-10D-5 で floatingUnits_eq_nil_of_isSettled が theorem 化、D-10D-6 で isSettled が theorem 化され axiom 25 → 23 になる見込み。",
+      "summary": "Phase D-10D セッション 5 着手後（axiom 数不変、§6 主定理を 5 補題 8 sorry に分解）",
+      "count": 24,
+      "note": "Phase D-10D セッション 5 で §6 `gravity_isSettled_collision` を `Shape.subsumed_by` 関係を中心に MECE 5 補題に分解。各補題の statement と戦略コメントは [Internal/Collision.lean §6] に配置。axiom 数は未変 (Gravity 2: isSettled / rotateCW_comm)。Phase D-10D-5 完了で `gravity.isSettled` が theorem 化され axiom 24 → 23、Phase D-10E で `rotateCW_comm` 解消し Gravity 全消滅 (23 → 22)。",
       "locations": [
         "S2IL/Operations/Gravity.lean (2: isSettled / rotateCW_comm)",
-        "S2IL/Operations/Gravity/Behavior.lean (1: floatingUnits_eq_nil_of_isSettled — D-10D 解消予定のブリッジ)",
         "S2IL/Operations/PinPusher.lean (6)",
         "S2IL/Operations/Shatter.lean (4)",
         "S2IL/Operations/Stacker.lean (7)",

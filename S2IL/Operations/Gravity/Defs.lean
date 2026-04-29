@@ -138,19 +138,23 @@ def structuralCluster (s : Shape) (p : QuarterPos) : List QuarterPos :=
   let step := fun current => current.flatMap (structuralNeighbors s)
   reachClosure step [p] fuel
 
+/-- 構造クラスタの partition 補助再帰: 候補位置 `xs` を順に取り出し、
+    各要素を root とした `structuralCluster` を `acc` に push し、その cluster に
+    含まれる位置を残候補から除外する。`fuel` で停止性を保証。 -/
+def structuralClustersPartition (s : Shape) :
+    List QuarterPos → List (List QuarterPos) → Nat → List (List QuarterPos)
+  | _, acc, 0 => acc
+  | [], acc, _ => acc
+  | p :: rest, acc, fuel + 1 =>
+    let cl := structuralCluster s p
+    let newRest := rest.filter (· ∉ cl)
+    structuralClustersPartition s newRest (cl :: acc) fuel
+
 /-- 全 `canFormBond` 位置を構造結合の同値類で分割。 -/
 def structuralClusters (s : Shape) : List (List QuarterPos) :=
   let bondablePos := nonEmptyPositions s |>.filter
     (fun p => (QuarterPos.getQuarter s p).canFormBond)
-  let rec partition : List QuarterPos → List (List QuarterPos) → Nat →
-      List (List QuarterPos)
-    | _, acc, 0 => acc
-    | [], acc, _ => acc
-    | p :: rest, acc, fuel + 1 =>
-      let cl := structuralCluster s p
-      let newRest := rest.filter (· ∉ cl)
-      partition newRest (cl :: acc) fuel
-  partition bondablePos [] (s.length * 4 + 4)
+  structuralClustersPartition s bondablePos [] (s.length * 4 + 4)
 
 -- ============================================================
 -- FallingUnit

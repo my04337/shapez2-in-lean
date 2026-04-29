@@ -6,6 +6,7 @@ import S2IL.Operations.Settled
 import S2IL.Operations.Gravity.Defs
 import S2IL.Operations.Gravity.Internal.ShareDirection
 import S2IL.Operations.Gravity.Internal.Collision
+import S2IL.Operations.Gravity.Internal.Settled
 import S2IL.Operations.Gravity.Behavior
 
 /-!

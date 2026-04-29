@@ -2,6 +2,7 @@
 -- SPDX-License-Identifier: MIT
 
 import S2IL.Operations.Gravity.Defs
+import S2IL.Operations.Gravity.Internal.Collision
 
 /-!
 # S2IL.Operations.Gravity.Behavior
@@ -77,15 +78,16 @@ theorem landingDistance_le_minLayer (obs : Shape) (u : FallingUnit) :
   exact Nat.lt_succ_iff.mp (List.mem_range.mp hmem)
 
 -- ============================================================
--- §2. ブリッジ axiom（Phase D-10D で theorem 化）
+-- §2. ブリッジ補題（Phase D-10D-4 で `Internal/Collision.lean` の theorem へ転送）
 -- ============================================================
 
 /-- `IsSettled` 入力では落下単位が存在しない。
     `isGroundedFast` (Bool BFS) と `IsGrounded` (Prop) の同値性、および
     `structuralCluster` のメンバが非空・有効である構造不変から導かれる。
-    Phase D-10D で `Internal/Collision.lean` の補題として theorem 化する。 -/
-axiom floatingUnits_eq_nil_of_isSettled {s : Shape} :
-    IsSettled s → floatingUnits s = []
+    本体は `Internal/Collision.lean` の `Gravity.Internal.floatingUnits_eq_nil_of_isSettled`。 -/
+theorem floatingUnits_eq_nil_of_isSettled {s : Shape} :
+    IsSettled s → floatingUnits s = [] :=
+  Internal.floatingUnits_eq_nil_of_isSettled
 
 end Gravity
 
