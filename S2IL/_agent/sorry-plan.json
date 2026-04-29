@@ -3,29 +3,34 @@
   "generated": false,
   "description": "Structured snapshot of active sorry / axiom obligations. Used by agents to quickly identify the current proof target and dependencies.",
   "maintenance": "Update when adding/removing sorrys or axioms. Progress milestones belong to sorry-cards/{symbol}.md. Detailed history: git log.",
-  "updated": "2026-04-29 (Phase D-10D-5c + 5d 完了 + R-§6.4 反例検証完了。`landingCondition_landingDistance_pos` と `placeUnit_subsumed_by`（条件付き）を closes、setQuarter 基本性質補題 4 本を §6.4 冉頭に集約。`Scratch/PhaseD10D_PlaceUnit_Disjoint.lean` で 23 ケース P-disjoint OK、Gravity モデル再設計不要と判定。残 sorry 6 → 4、axiom 24 不変。次: D-10D-5e `placeUnit_grounding`。)",
+  "updated": "2026-04-29 (Phase D-10D-5i 完了。§6.6.F `obs0_isGrounded_of_nonEmpty` を helper `IsGroundingEdge.of_getQuarter_eq` + path 記帰で closes。`push_neg` ×3 を `push Not` に一括置換。残 sorry 6 → 5 (6.4.B/C, 6.5.A/C, 6.6.D)、warnings 4 → 1、axiom 24 不変。次: 5g-D `not_floating_imp_grounded` (§6.6 最後) または 5e-B `placeUnit_witness_grounded`。)",
   "sorrys": [
     {
       "id": "phase-d-10d-settled",
       "file": "S2IL/Operations/Gravity/Internal/Settled.lean",
-      "count": 4,
-      "summary": "§6.4ー§6.6 placeUnit_grounding / foldl_grounded_invariant / obs0_isGrounded_of_nonEmpty / gravity_isSettled_collision。§6.1ー§6.3 + placeUnit_subsumed_by（条件付き）は ✅ 済。",
+      "count": 5,
+      "summary": "§6.4-B/C placeUnit / §6.5-A/C foldl_step / §6.6-D not_floating。§6.1ー§6.3 + 6.4-A + 6.4 主 + 6.5-B + 6.5 主 + 6.6-A/B/C/E/F + 6.6 主は ✅ 済。",
       "obligations": [
-        "placeUnit_grounding (着地像 = layer0 root or 直下障害物経由で grounded; unit 内連結性補題要)",
-        "foldl_grounded_invariant (units 帰納で全有効非空位置 grounded; placeUnit_subsumed_by の hDisjoint 確立を含む)",
-        "obs0_isGrounded_of_nonEmpty (基底: clearPositions 後も 非 floating セルは grounded を保つ)",
-        "gravity_isSettled_collision (主定理)"
+        "placeUnit_witness_grounded (6.4.B; layer 0 root or 直下障害物 + IsUpwardGroundingContact)",
+        "placeUnit_unit_internal_path (6.4.C; structuralCluster 連結性の placeUnit 持ち上げ)",
+        "stepUnit_landing_disjoint (6.5.A; R-§6.4 中核、反例検証済 23 ケース OK)",
+        "stepUnit_grounded_invariant_step (6.5.C; acc 由来 / 着地像 場合分け)",
+        "not_floating_imp_grounded (6.6.D; pin 直 / cluster は連結性 helper 要追加)"
       ],
       "depends_on_private_defs": [
         "Shape.subsumed_by (Settled.lean §6.1、✅)",
-        "length_setQuarter / getQuarter_setQuarter_of_ne / foldl_setQuarter_* (Settled.lean §6.4、✅)",
-        "horizontalAdj / reachClosure (Defs.lean)",
-        "quarterAt (Defs.lean private)"
+        "length_setQuarter / getQuarter_setQuarter_of_ne / getQuarter_setQuarter_self / foldl_setQuarter_* (Settled.lean §6.4 helper、✅)",
+        "foldl_setQuarter_const_empty_at_in_target (Settled.lean §6.4 helper、✅ D-10D-5h)",
+        "isGroundedFast_of_isGrounded (Collision.lean §2、✅)",
+        "floatingClusters / floatingPins / floatingUnits / clusterFloating (Defs.lean)",
+        "horizontalAdj / reachClosure (BFS.lean)"
       ],
       "next_actions": [
-        "Phase D-10D-5e: placeUnit_grounding を closes。landingCondition を List.any_eq_true で展開し layer0 / 直下障害物の 2 ケース、unit 内連結性補題（cluster の structuralCluster bond 接続）を新規。",
-        "Phase D-10D-5f: foldl_grounded_invariant を closes。units 帰納 + R-§6.4 を placeUnit_subsumed_by の hDisjoint として確立（反例検証で 23 ケース OK 確認済）。",
-        "Phase D-10D-5g: obs0_isGrounded_of_nonEmpty と主定理 を closes、ファサード axiom を theorem 化 (axiom 24 → 23)。"
+        "Phase D-10D-5g-D: not_floating_imp_grounded を closes。pin ケースは filter 述語展開で直。bondable ケースは helper 2 本 (mem_structuralClusters_of_canFormBond / structuralCluster_grounded_uniform) を §4 追加して cluster 連結性を利用。REPL で structuralNeighbors の対称性を先に確認。",
+        "Phase D-10D-5e-B: placeUnit_witness_grounded を closes。layer 0 ケース (q.1=d ⇒ 着地像=(0,_) が root) と 直下障害物ケース (acc で IsGrounded ⇒ placeUnit でも mono ⇒ IsUpwardGroundingContact で +1 上) の 2 分け。要 helper: placeUnit_writes_origS_value。",
+        "Phase D-10D-5e-C: placeUnit_unit_internal_path を closes。pin は refl、cluster は structuralCluster 連結性を placeUnit 後の IsBondedInLayer / IsBondedCrossLayer に持ち上げ。要 helper: placeUnit 内部セルの Quarter 値 = quarterAt origS その位置。",
+        "Phase D-10D-5f-A: stepUnit_landing_disjoint (R-§6.4 中核) を closes。landingCondition 最小性 + acc.subsumed_by s で「acc で grounded セルは s でも grounded」の最初期ステップを利用。",
+        "Phase D-10D-5f-C: stepUnit_grounded_invariant_step を closes。5f-A 完成後の wiring。完了で axiom 24 → 23。"
       ]
     }
   ],

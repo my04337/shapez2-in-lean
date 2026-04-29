@@ -167,7 +167,7 @@ private theorem normalize_length_of_nonEmpty
     (t : Shape) {i : Nat} (hi : i < t.length) (hne : (t[i]'hi).isEmpty = false) :
     i < t.normalize.length := by
   by_contra hcontra
-  push_neg at hcontra
+  push Not at hcontra
   set tail := (List.takeWhile Layer.isEmpty t.reverse).reverse with htail_def
   have htail : t.normalize ++ tail = t := by
     show (List.dropWhile Layer.isEmpty t.reverse).reverse ++
@@ -217,7 +217,7 @@ private theorem nonEmpty_imp_layer_lt
     {t : Shape} {p : QuarterPos} (hne : ¬ (QuarterPos.getQuarter t p).isEmpty) :
     p.1 < t.length := by
   by_contra hc
-  push_neg at hc
+  push Not at hc
   apply hne
   unfold QuarterPos.getQuarter
   have hnot : ¬ p.1 < t.length := Nat.not_lt.mpr hc
@@ -428,6 +428,51 @@ private theorem foldl_setQuarter_getQuarter_of_not_target
       rw [ih _ hne']
       exact getQuarter_setQuarter_of_ne _ _ _ _ (Ne.symm (hne x List.mem_cons_self))
 
+/-- `setQuarter` で同位置に書き込んだ後の `getQuarter` は書込値（範囲内）。 -/
+private theorem getQuarter_setQuarter_self
+    (s : Shape) (q : QuarterPos) (v : Quarter) (hq : q.1 < s.length) :
+    QuarterPos.getQuarter (QuarterPos.setQuarter s q v) q = v := by
+  have hset : QuarterPos.setQuarter s q v = s.set q.1 ((s[q.1]'hq).setDir q.2 v) := by
+    unfold QuarterPos.setQuarter; simp [hq]
+  rw [hset]
+  have hq2 : q.1 < (s.set q.1 ((s[q.1]'hq).setDir q.2 v)).length := by
+    simp [List.length_set, hq]
+  unfold QuarterPos.getQuarter
+  simp only [hq2, ↓reduceDIte]
+  rw [List.getElem_set_self]
+  unfold Layer.setDir
+  simp
+
+/-- 書込先 (`g x = q`) のいずれかが xs に存在し、書込値が `Quarter.empty` 定数のとき、
+    foldl 後の値は `Quarter.empty`。範囲外位置でも `getQuarter` は `empty` を返すため
+    範囲内仮定不要。 -/
+private theorem foldl_setQuarter_const_empty_at_in_target
+    {α : Type*} (xs : List α) (s : Shape) (g : α → QuarterPos)
+    {q : QuarterPos} (hin : ∃ x ∈ xs, g x = q) :
+    QuarterPos.getQuarter
+        (xs.foldl (fun a p => QuarterPos.setQuarter a (g p) Quarter.empty) s) q
+      = Quarter.empty := by
+  induction xs generalizing s with
+  | nil =>
+      obtain ⟨_, hmem, _⟩ := hin
+      simp at hmem
+  | cons x xs ih =>
+      simp only [List.foldl_cons]
+      by_cases hxs : ∃ y ∈ xs, g y = q
+      · exact ih _ hxs
+      · push Not at hxs
+        rw [foldl_setQuarter_getQuarter_of_not_target xs _ g _ q hxs]
+        obtain ⟨z, hz, hgz⟩ := hin
+        rcases List.mem_cons.mp hz with rfl | hzxs
+        · -- g x = q ⇒ setQuarter at q with empty
+          rw [hgz]
+          by_cases hq1 : q.1 < s.length
+          · exact getQuarter_setQuarter_self s q Quarter.empty hq1
+          · -- 範囲外: setQuarter は s を変えず、getQuarter は empty
+            unfold QuarterPos.setQuarter QuarterPos.getQuarter
+            simp [hq1]
+        · exact absurd hgz (hxs z hzxs)
+
 /-- §6.4 `placeUnit` は `acc` 由来の非空セルを破壊しない（cross-unit 上書き禁止）。
 
     **条件付き** 補題: `u` の着地像 `{(p.1 - d, p.2) | p ∈ u.positions}` の各位置が
@@ -455,88 +500,451 @@ private theorem placeUnit_subsumed_by
     exact foldl_setQuarter_getQuarter_of_not_target u.positions acc
       (fun p => (p.1 - d, p.2)) (fun p => QuarterPos.getQuarter origS p) q hne_target
 
-/-- §6.4 `placeUnit` 後、`u` の各着地像位置が grounded になる。
-    `landingCondition` で「直下に障害物 or 床到達」が保証されるため、
-    `IsGroundingEdge` の `IsUpwardGroundingContact` 縦分枝で接地経路が伸びる。 -/
-private theorem placeUnit_grounding
+/-! §6.4 補助: `placeUnit_grounding` の MECE 分解。
+
+    `placeUnit_grounding` は次の 3 段階に分解する:
+    - **6.4.A** `landingCondition_witness`: `landingCondition` から「床到達 or 直下障害物」
+      を満たす witness `q* ∈ u.positions` を取り出す（純粋に `List.any` の特徴付け）。
+    - **6.4.B** `placeUnit_witness_grounded`: witness `q*` の着地像が
+      `placeUnit ... acc u d` で grounded であることを示す（layer 0 root 直接 / 障害物経由 +
+      `IsUpwardGroundingContact`）。
+    - **6.4.C** `placeUnit_unit_internal_path`: 任意の `p ∈ u.positions` から witness `q*` の
+      着地像へ `IsGroundingEdge` の `ReflTransGen` で到達できる（unit の構造結合が
+      `placeUnit` 後も保たれる）。
+
+    主補題 `placeUnit_grounding` は B + C の合成。
+    A は今セッションで証明、B / C は次セッション以降。
+-/
+
+/-- §6.4.A `landingCondition` 成立から witness `q ∈ u.positions` を取り出す。
+
+    具体的には: ∃ q ∈ u.positions,
+      `q.1 = d` ∨ (`q.1 > d` ∧ `(q.1 - d - 1, q.2)` が acc で非空)。 -/
+private theorem landingCondition_witness
+    {acc : Shape} {u : FallingUnit} {d : Nat}
+    (h : landingCondition acc u d = true) :
+    ∃ q ∈ u.positions,
+      q.1 = d ∨ (q.1 > d ∧ ¬ (QuarterPos.getQuarter acc (q.1 - d - 1, q.2)).isEmpty) := by
+  unfold landingCondition at h
+  rw [List.any_eq_true] at h
+  obtain ⟨q, hq_in, hq_pred⟩ := h
+  refine ⟨q, hq_in, ?_⟩
+  rw [Bool.or_eq_true] at hq_pred
+  rcases hq_pred with hfloor | hbelow
+  · exact Or.inl (by simpa using hfloor)
+  · rw [Bool.and_eq_true] at hbelow
+    obtain ⟨hgt, hne⟩ := hbelow
+    have hgt' : q.1 > d := by simpa using hgt
+    have hne' : ¬ (QuarterPos.getQuarter acc (q.1 - d - 1, q.2)).isEmpty := by
+      simpa [Bool.not_eq_true'] using hne
+    exact Or.inr ⟨hgt', hne'⟩
+
+/-- §6.4.B witness `q* ∈ u.positions` の着地像が `placeUnit ... acc u d` で grounded。
+
+    ケース分解:
+    - **q*.1 = d (床到達)**: `(0, q*.2)` 自身が layer 0 root。`placeUnit` が `(0, q*.2)`
+      へ `quarterAt origS q*` を書き込み、これは origS で非空（u は origS の non-empty 集合
+      由来）⇒ root として有効。
+    - **q*.1 > d ∧ 直下障害物**: 障害物位置 `obstacle = (q*.1 - d - 1, q*.2)` は acc で
+      非空 ⇒ hAcc から `IsGrounded acc obstacle`。`hDisjoint` で `placeUnit` が obstacle を
+      上書きしないため `IsGrounded.mono` で `IsGrounded (placeUnit ...) obstacle`。さらに
+      `obstacle` から `(q*.1 - d, q*.2)` へ垂直 `IsUpwardGroundingContact` を貼る
+      （両端 origS 由来非空 + `+1` 隣接 + 同方角）。
+
+    **要補助**: `placeUnit_writes_origS_value`（書込先で origS 値が確定）+
+    `quarterAt_nonEmpty_of_origS`（落下単位の position は origS で非空）。 -/
+private theorem placeUnit_witness_grounded
     (origS acc : Shape) (u : FallingUnit) (d : Nat)
-    (_hLand : landingCondition acc u d = true)
-    (_hAcc  : ∀ q : QuarterPos, q ∈ QuarterPos.allValid acc →
-              ¬ (QuarterPos.getQuarter acc q).isEmpty → IsGrounded acc q)
-    {p : QuarterPos} (_hp : p ∈ u.positions) :
-    IsGrounded (placeUnit origS acc u d) (p.1 - d, p.2) := by
-  -- 戦略:
-  -- 1. landingCondition 成立 ⇒ 「u 内の少なくとも 1 セル q は q.1 = d または直下障害物」
-  -- 2. その q に対して着地像 q' = (q.1 - d, q.2) は layer 0 か、(q.1 - d - 1, q.2) が acc で非空
-  -- 3. layer 0 ケース: q' 自身が root
-  -- 4. 直下障害物ケース: その障害物セル `obstacle` は acc で grounded（hAcc 帰納仮定）⇒ obstacle から q' へ IsGroundingEdge.IsUpwardGroundingContact (vertical, +1) ⇒ ReflTransGen 拡張
-  -- 5. p ≠ q の場合: u 内構造結合（`canFormBond`）または同 minLayer 列での `IsBondedCrossLayer`
-  --    で q から (p.1-d, p.2) まで到達できることを示す ← **要 unit 内連結性補題**
+    (_hAcc : ∀ q : QuarterPos, q ∈ QuarterPos.allValid acc →
+             ¬ (QuarterPos.getQuarter acc q).isEmpty → IsGrounded acc q)
+    (_hDisjoint : ∀ p ∈ u.positions, ∀ q : QuarterPos,
+        q = (p.1 - d, p.2) → (QuarterPos.getQuarter acc q).isEmpty)
+    (_hOrigS : ∀ p ∈ u.positions, ¬ (QuarterPos.getQuarter origS p).isEmpty)
+    {q : QuarterPos} (_hq_in : q ∈ u.positions)
+    (_hq_pred : q.1 = d ∨ (q.1 > d ∧
+      ¬ (QuarterPos.getQuarter acc (q.1 - d - 1, q.2)).isEmpty)) :
+    IsGrounded (placeUnit origS acc u d) (q.1 - d, q.2) := by
   sorry
 
-/-- §6.5 foldl の不変量: 任意のステップ後で「全有効非空位置が IsGrounded」。 -/
+/-- §6.4.C unit 内連結: 任意の `p, q ∈ u.positions` の着地像同士は `placeUnit` 後の
+    `IsGroundingEdge` で `ReflTransGen` 関係にある。
+
+    根拠（cluster の場合）: `u.positions` は `structuralCluster s p₀` の元（`canFormBond`
+    BFS 連結）。各セルは `placeUnit` で origS の Quarter 値が書かれるため `canFormBond`
+    判定が保たれ、`IsBondedInLayer` / `IsBondedCrossLayer` が `placeUnit` 後に成立する。
+    着地像 `(p.1 - d, p.2)` 間の隣接性は元 `(p.1, p.2)` の隣接性から `Direction.isAdjacent`
+    と `Nat.sub` の単調性で保たれる（同 layer 平行移動 / cross-layer は両 layer から d を
+    引くため差分保存）。
+
+    `pin` の場合は単一 position なので refl で自明。 -/
+private theorem placeUnit_unit_internal_path
+    (origS acc : Shape) (u : FallingUnit) (d : Nat)
+    {p q : QuarterPos} (_hp : p ∈ u.positions) (_hq : q ∈ u.positions) :
+    Relation.ReflTransGen (IsGroundingEdge (placeUnit origS acc u d))
+      (q.1 - d, q.2) (p.1 - d, p.2) := by
+  sorry
+
+/-- §6.4 主補題: `placeUnit` 後、`u` の各着地像位置が grounded。
+
+    `landingCondition_witness` (6.4.A) で witness `q*` を取り出し、
+    `placeUnit_witness_grounded` (6.4.B) で `q*` の着地像が grounded、
+    `placeUnit_unit_internal_path` (6.4.C) で任意の `p` の着地像へ path を伸ばす。 -/
+private theorem placeUnit_grounding
+    (origS acc : Shape) (u : FallingUnit) (d : Nat)
+    (hLand : landingCondition acc u d = true)
+    (hAcc  : ∀ q : QuarterPos, q ∈ QuarterPos.allValid acc →
+             ¬ (QuarterPos.getQuarter acc q).isEmpty → IsGrounded acc q)
+    (hDisjoint : ∀ p ∈ u.positions, ∀ q : QuarterPos,
+        q = (p.1 - d, p.2) → (QuarterPos.getQuarter acc q).isEmpty)
+    (hOrigS : ∀ p ∈ u.positions, ¬ (QuarterPos.getQuarter origS p).isEmpty)
+    {p : QuarterPos} (hp : p ∈ u.positions) :
+    IsGrounded (placeUnit origS acc u d) (p.1 - d, p.2) := by
+  obtain ⟨q, hq_in, hq_pred⟩ := landingCondition_witness hLand
+  have hq_grounded :=
+    placeUnit_witness_grounded origS acc u d hAcc hDisjoint hOrigS hq_in hq_pred
+  obtain ⟨p₀, hLayer, hNe, hPath⟩ := hq_grounded
+  refine ⟨p₀, hLayer, hNe, ?_⟩
+  exact hPath.trans (placeUnit_unit_internal_path origS acc u d hp hq_in)
+
+/-! §6.5 補助: `foldl_grounded_invariant` の MECE 分解。
+
+    `foldl` の 1 ステップ `acc → stepUnit s acc u` を以下の補題で支える:
+    - **6.5.A** `stepUnit_landing_disjoint` (R-§6.4 の本体): `acc` の非空位置すべてが
+      grounded であり、かつ `u ∈ floatingUnits s` のとき、u の着地像 `(p.1 - d, p.2)` は
+      acc で空（cross-unit 上書き禁止）。
+    - **6.5.B** `stepUnit_subsumed_by`: 上記 disjoint 性から `placeUnit_subsumed_by` を起動、
+      `Shape.subsumed_by acc (stepUnit s acc u)`。
+    - **6.5.C** `stepUnit_grounded_invariant_step`: 1 ステップで grounded 不変量が保たれる
+      （A の場合分けで「acc 由来非空セル」と「u の着地像」に分け、前者は B + IsGrounded.mono、
+       後者は `placeUnit_grounding`）。
+
+    A は **R-§6.4** の主要不確定要素。`landingDistance` の最小性 + `floatingUnits s` の
+    定義（u の cells は s で互いに非干渉）+ sortedUnits 順序から得る予定。 -/
+
+/-- §6.5.A R-§6.4 中核: grounded 不変量下で u の着地像は acc で空。
+
+    **要件** (要追加引数):
+    - `u ∈ floatingUnits s`（u は s の浮遊単位）
+    - `acc` 自体が「s 由来の非空セル + 既処理単位の着地像のみ」で構成されることを保証する
+      補助構造（typically: `acc.subsumed_by (initialObstacle s units) ∨ acc = stepUnit ...` の
+      帰納構造）
+
+    **戦略**: `landingCondition acc u d = true` の最小性により、`d` より小さい `d'` では
+    landingCondition が偽 ⇒ u 全体が宙吊り。仮に `(p.1 - d, p.2)` が acc で非空ならば、
+    grounded 不変量から acc で grounded ⇒ s でも grounded （subsumed の逆向き保存性、
+    要証明）⇒ u が「s で `d` 段下げ可能な単位」という前提と矛盾。
+
+    本補題は **R-§6.4** の正面突破; pivot の場合は `landingCondition'` への強化が代替案。 -/
+private theorem stepUnit_landing_disjoint
+    (s acc : Shape) (u : FallingUnit)
+    (_hAcc : ∀ q ∈ QuarterPos.allValid acc,
+             ¬ (QuarterPos.getQuarter acc q).isEmpty → IsGrounded acc q)
+    (_hUnit : u ∈ floatingUnits s)
+    (_hAccBound : Shape.subsumed_by acc s ∨ acc.length = s.length) :
+    let d := landingDistance acc u
+    ∀ p ∈ u.positions, ∀ q : QuarterPos,
+      q = (p.1 - d, p.2) → (QuarterPos.getQuarter acc q).isEmpty := by
+  sorry
+
+/-- §6.5.B disjoint 性から `Shape.subsumed_by acc (stepUnit s acc u)`。 -/
+private theorem stepUnit_subsumed_by
+    (s acc : Shape) (u : FallingUnit)
+    (hAcc : ∀ q ∈ QuarterPos.allValid acc,
+            ¬ (QuarterPos.getQuarter acc q).isEmpty → IsGrounded acc q)
+    (hUnit : u ∈ floatingUnits s)
+    (hAccBound : Shape.subsumed_by acc s ∨ acc.length = s.length) :
+    Shape.subsumed_by acc (stepUnit s acc u) := by
+  unfold stepUnit
+  exact placeUnit_subsumed_by s acc u (landingDistance acc u)
+    (stepUnit_landing_disjoint s acc u hAcc hUnit hAccBound)
+
+/-- §6.5.C 1 ステップで grounded 不変量が保たれる。
+
+    `acc'` の任意の非空セル `q` は:
+    - **(i)** `q` が acc で非空（`acc.subsumed_by acc'` で値同一）⇒ acc で grounded ⇒
+      mono で acc' でも grounded
+    - **(ii)** `q` が acc で空、`q = (p.1 - d, p.2)` for some p ∈ u.positions
+      ⇒ `placeUnit_grounding` 直接適用
+-/
+private theorem stepUnit_grounded_invariant_step
+    (s acc : Shape) (u : FallingUnit)
+    (_hAcc : ∀ q ∈ QuarterPos.allValid acc,
+             ¬ (QuarterPos.getQuarter acc q).isEmpty → IsGrounded acc q)
+    (_hUnit : u ∈ floatingUnits s)
+    (_hAccBound : Shape.subsumed_by acc s ∨ acc.length = s.length) :
+    let acc' := stepUnit s acc u
+    (∀ q ∈ QuarterPos.allValid acc',
+      ¬ (QuarterPos.getQuarter acc' q).isEmpty → IsGrounded acc' q)
+    ∧ (Shape.subsumed_by acc' s ∨ acc'.length = s.length) := by
+  sorry
+
+/-- §6.5 主補題: foldl の不変量。
+
+    units 帰納: `nil` で hBase、`cons u rest` で `stepUnit_grounded_invariant_step`
+    を適用して帰納仮定を `acc' = stepUnit s acc u` に持ち上げる。 -/
 private theorem foldl_grounded_invariant
     (s : Shape) (units : List FallingUnit)
     (acc : Shape)
-    (_hBase : ∀ q ∈ QuarterPos.allValid acc,
-              ¬ (QuarterPos.getQuarter acc q).isEmpty → IsGrounded acc q) :
+    (hBase : ∀ q ∈ QuarterPos.allValid acc,
+             ¬ (QuarterPos.getQuarter acc q).isEmpty → IsGrounded acc q)
+    (hUnits : ∀ u ∈ units, u ∈ floatingUnits s)
+    (hAccBound : Shape.subsumed_by acc s ∨ acc.length = s.length) :
     let result := units.foldl (fun a u => stepUnit s a u) acc
     ∀ q ∈ QuarterPos.allValid result,
       ¬ (QuarterPos.getQuarter result q).isEmpty → IsGrounded result q := by
-  -- units 帰納:
-  -- - nil: acc そのまま、hBase
-  -- - cons u rest:
-  --   acc' = stepUnit s acc u = placeUnit s acc u (landingDistance acc u)
-  --   1. acc' の各非空位置 q' は次のいずれか:
-  --      (a) q' は acc 由来 (subsumed_by) → IsGrounded acc q' → IsGrounded.mono で IsGrounded acc' q'
-  --      (b) q' は u の着地像 → placeUnit_grounding
-  --   2. 帰納仮定を acc' に適用
-  -- 必要な未確定補題: subsumed_by の disjoint 仮定確立（R-§6.4）。
+  induction units generalizing acc with
+  | nil => exact hBase
+  | cons u rest ih =>
+      simp only [List.foldl_cons]
+      have hu : u ∈ floatingUnits s := hUnits u List.mem_cons_self
+      have hRest : ∀ v ∈ rest, v ∈ floatingUnits s :=
+        fun v hv => hUnits v (List.mem_cons_of_mem _ hv)
+      have hStep := stepUnit_grounded_invariant_step s acc u hBase hu hAccBound
+      exact ih (stepUnit s acc u) hStep.1 hRest hStep.2
+
+/-! §6.6 補助: `obs0_isGrounded_of_nonEmpty` の MECE 分解。
+
+    `obs0 = clearPositions s (units.flatMap positions)` の構造解析:
+    - **6.6.A** `clearPositions_getQuarter_of_not_in`: `q ∉ positions` ⇒
+      `getQuarter (clearPositions s positions) q = getQuarter s q`（`foldl_setQuarter_get
+      Quarter_of_not_target` の specialize）。
+    - **6.6.B** `obs0_nonEmpty_imp_origS_nonEmpty`: obs0 で非空 ⇒ s で同値非空。
+    - **6.6.C** `obs0_nonEmpty_imp_not_floating`: obs0 で非空 ⇒ q ∉ 任意 floating unit。
+    - **6.6.D** `not_floating_imp_grounded`: 非空 ∧ ∀ floating unit に含まれない ⇒
+      `IsGrounded s q`（`floatingUnits_eq_nil_of_isSettled` の局所版で対偶利用）。
+    - **6.6.E** `grounded_path_avoids_floating`: `IsGrounded s q` の path 上のセルは
+      すべて非 floating（path は構造クラスタ内 + cross-cluster contact のみで構成され、
+      floating cluster はそもそも layer 0 root へ到達不可能）。
+    - **6.6.F** `obs0_isGrounded_of_nonEmpty`: 上記合成。
+-/
+
+/-- §6.6 補助: `IsGroundingEdge` は両端 `getQuarter` 値のみに依存するため、
+    両端で値が一致する別シェイプへ lift できる（`subsumed_by` のサブケース）。
+
+    `obs0` への lift（path 上のセルが clear されない ⇒ `s` と `obs0` で値同一）に用いる。 -/
+private theorem IsGroundingEdge.of_getQuarter_eq
+    {s s' : Shape} {a b : QuarterPos}
+    (ha : QuarterPos.getQuarter s a = QuarterPos.getQuarter s' a)
+    (hb : QuarterPos.getQuarter s b = QuarterPos.getQuarter s' b)
+    (he : IsGroundingEdge s a b) :
+    IsGroundingEdge s' a b := by
+  rcases he with hUp | hBond
+  · refine Or.inl ⟨?_, hUp.2⟩
+    rcases hUp.1 with ⟨hcol, hadj, hneA, hneB⟩ | ⟨hrow, hadj, hneA, hneB, hnpA, hnpB⟩
+    · exact Or.inl ⟨hcol, hadj, ha ▸ hneA, hb ▸ hneB⟩
+    · exact Or.inr ⟨hrow, hadj, ha ▸ hneA, hb ▸ hneB, ha ▸ hnpA, hb ▸ hnpB⟩
+  · refine Or.inr ?_
+    rcases hBond with ⟨hrow, hadj, hcA, hcB⟩ | ⟨hlayer, hcol, hcA, hcB⟩
+    · exact Or.inl ⟨hrow, hadj,
+        show (QuarterPos.getQuarter s' a).IsCrystal from ha ▸ hcA,
+        show (QuarterPos.getQuarter s' b).IsCrystal from hb ▸ hcB⟩
+    · exact Or.inr ⟨hlayer, hcol,
+        show (QuarterPos.getQuarter s' a).IsCrystal from ha ▸ hcA,
+        show (QuarterPos.getQuarter s' b).IsCrystal from hb ▸ hcB⟩
+
+/-- §6.6.A `clearPositions` で書き込み対象外の位置は値が変わらない。 -/
+private theorem clearPositions_getQuarter_of_not_in
+    (s : Shape) (positions : List QuarterPos)
+    {q : QuarterPos} (hq : q ∉ positions) :
+    QuarterPos.getQuarter (Shape.clearPositions s positions) q = QuarterPos.getQuarter s q := by
+  unfold Shape.clearPositions
+  exact foldl_setQuarter_getQuarter_of_not_target positions s
+    (fun p => p) (fun _ => Quarter.empty) q (fun x hx hxq => hq (hxq ▸ hx))
+
+/-- §6.6.B obs0 で非空 ⇒ s で同値非空。 -/
+private theorem obs0_nonEmpty_imp_origS_nonEmpty
+    (s : Shape) (units : List FallingUnit)
+    {q : QuarterPos}
+    (hne : ¬ (QuarterPos.getQuarter (initialObstacle s units) q).isEmpty) :
+    QuarterPos.getQuarter (initialObstacle s units) q = QuarterPos.getQuarter s q := by
+  -- q が clear 対象に含まれていれば clear 後は empty (矛盾) ⇒ 含まれていない
+  by_cases hin : q ∈ units.flatMap FallingUnit.positions
+  · -- q が clear 対象 ⇒ obs0 で empty ⇒ hne と矛盾
+    exfalso; apply hne
+    unfold initialObstacle Shape.clearPositions
+    rw [foldl_setQuarter_const_empty_at_in_target
+          (units.flatMap FallingUnit.positions) s (fun p => p) ⟨q, hin, rfl⟩]
+    rfl
+  · unfold initialObstacle
+    exact clearPositions_getQuarter_of_not_in s _ hin
+
+/-- §6.6.C obs0 で非空 ⇒ q は任意 floating unit に含まれない。
+
+    対偶: 任意 floating unit に q が含まれる ⇒ q は clear 対象 ⇒ obs0 で empty。
+    `foldl_setQuarter_const_empty_at_in_target` で帰結。 -/
+private theorem obs0_nonEmpty_imp_not_floating
+    (s : Shape) {q : QuarterPos}
+    (hne : ¬ (QuarterPos.getQuarter (initialObstacle s (floatingUnits s)) q).isEmpty) :
+    ∀ u ∈ floatingUnits s, q ∉ u.positions := by
+  intro u hu hqu
+  apply hne
+  unfold initialObstacle Shape.clearPositions
+  rw [foldl_setQuarter_const_empty_at_in_target
+        ((floatingUnits s).flatMap FallingUnit.positions) s (fun p => p)
+        ⟨q, List.mem_flatMap.mpr ⟨u, hu, hqu⟩, rfl⟩]
+  rfl
+
+/-- §6.6.D 非空 ∧ 非 floating ⇒ s で IsGrounded。
+
+    `floatingUnits` の補集合は s で grounded（非空セルは `floatingClusters`/`floatingPins`
+    のいずれにも入らないので、構造的に layer 0 へ繋がっている）。 -/
+private theorem not_floating_imp_grounded
+    (s : Shape) {q : QuarterPos}
+    (_hValid : q ∈ QuarterPos.allValid s)
+    (_hne : ¬ (QuarterPos.getQuarter s q).isEmpty)
+    (_hnf : ∀ u ∈ floatingUnits s, q ∉ u.positions) :
+    IsGrounded s q := by
   sorry
 
-/-- §6.6 基底補題: `obs0 = clearPositions s (floatingUnits.flatMap positions)` の
-    各非空位置は `obs0` で IsGrounded である。
+/-- §6.6.E `IsGrounded s q` の path 上の任意のセルは非 floating。
 
-    根拠: `obs0` の非空位置 = `s` の非空かつ非 floating 位置 ⇒ `s` で IsGrounded
-    （非 floating ⇔ grounded、§3.3 §5 の対偶）⇒ `s.subsumed_by obs0` ではなく
-    **逆向き** `obs0.subsumed_by s`（floating セルが空化されただけ）から、
-    grounded path 上のセルが floating セルを含まないことを示し再構成する。
+    `IsGrounded s q` は ∃ root `p₀` (layer 0, 非空) で `ReflTransGen (IsGroundingEdge s) p₀ q`。
+    path 上のセル `v` (i.e. `ReflTransGen (IsGroundingEdge s) p₀ v` を満たす) は
+    `IsGroundingEdge` 連鎖で root と繋がる ⇒ `IsGrounded s v` ⇒ 非空かつ floating でない。
 
-    **注**: 本補題は `IsGrounded.mono` の単純 lift では閉じない（mono は拡張のみ）。
-    grounded path の各中間頂点が non-floating であることの専用引数が要る。 -/
+    `IsGroundingEdge` 連鎖は `IsUpwardGroundingContact` / `IsBonded` で構成され、両端非空 ⇒
+    v は s で非空。さらに root から v へ path 存在 ⇒ `IsGrounded s v` ⇒
+    `clusterFloating`/`floatingPins` の定義（`isGroundedFast` 偽でフィルタ）から非 floating。 -/
+private theorem grounded_path_avoids_floating
+    (s : Shape) {p₀ v : QuarterPos}
+    (hRoot : p₀.1 = 0 ∧ ¬ (QuarterPos.getQuarter s p₀).isEmpty)
+    (hPath : Relation.ReflTransGen (IsGroundingEdge s) p₀ v) :
+    ∀ u ∈ floatingUnits s, v ∉ u.positions := by
+  -- v は IsGrounded（path のあるセルは root をそのまま流用すれば grounded）
+  have hgrV : IsGrounded s v := ⟨p₀, hRoot.1, hRoot.2, hPath⟩
+  have hfastV : isGroundedFast s v = true := isGroundedFast_of_isGrounded s v hgrV
+  intro u hu hv
+  unfold floatingUnits at hu
+  rcases List.mem_append.mp hu with hCl | hPin
+  · -- cluster ケース: cl ∈ floatingClusters s, v ∈ cl
+    obtain ⟨cl, hcl, rfl⟩ := List.mem_map.mp hCl
+    have hvcl : v ∈ cl := by simpa [FallingUnit.positions] using hv
+    unfold floatingClusters at hcl
+    rw [List.mem_filter] at hcl
+    obtain ⟨_, hflt⟩ := hcl
+    unfold clusterFloating at hflt
+    rw [List.all_eq_true] at hflt
+    have hng : ¬ isGroundedFast s v = true := by
+      have := hflt v hvcl
+      simpa [Bool.not_eq_true'] using this
+    exact hng hfastV
+  · -- pin ケース: p ∈ floatingPins s, v = p
+    obtain ⟨p, hp, rfl⟩ := List.mem_map.mp hPin
+    have hvp : v = p := by simpa [FallingUnit.positions] using hv
+    unfold floatingPins at hp
+    rw [List.mem_filter] at hp
+    obtain ⟨_, hflt⟩ := hp
+    rw [Bool.and_eq_true] at hflt
+    obtain ⟨_, hng⟩ := hflt
+    have : ¬ isGroundedFast s p = true := by
+      simpa [Bool.not_eq_true'] using hng
+    exact this (hvp ▸ hfastV)
+
+/-- §6.6.F obs0 の各非空位置は obs0 で IsGrounded。
+
+    合成: B (obs0 非空 ⇒ s 非空 + 値一致) + C (q ∉ floating unit) + D (s で IsGrounded) +
+    E (path 上の各セルも非 floating ⇒ obs0 で値一致) + helper
+    `IsGroundingEdge.of_getQuarter_eq` で edge を obs0 へ lift。 -/
 private theorem obs0_isGrounded_of_nonEmpty
     (s : Shape) :
-    let units := floatingUnits s
-    let obs0 := initialObstacle s units
-    ∀ q ∈ QuarterPos.allValid obs0,
-      ¬ (QuarterPos.getQuarter obs0 q).isEmpty → IsGrounded obs0 q := by
-  -- 戦略:
-  -- 1. q が obs0 で非空 ⇒ q は s で非空（clearPositions は空化のみ）
-  -- 2. q は s で floating でない（floating なら clearPositions で空化されているはず）
-  -- 3. ∴ s で IsGrounded q（floating の対偶）
-  -- 4. s で IsGrounded q の path 上のセル v はすべて非 floating（連結 ⇒ 全 grounded）
-  --    ※ ここが non-trivial: structural cluster 連結性 + grounded 1 点で全 grounded
-  -- 5. ∴ path は obs0 でも保たれる（floating でないセルは空化されない）
-  -- 6. ∴ obs0 で IsGrounded q
-  sorry
+    ∀ q ∈ QuarterPos.allValid (initialObstacle s (floatingUnits s)),
+      ¬ (QuarterPos.getQuarter (initialObstacle s (floatingUnits s)) q).isEmpty →
+      IsGrounded (initialObstacle s (floatingUnits s)) q := by
+  intro q hValid hNe
+  set obs0 := initialObstacle s (floatingUnits s) with hobs0_def
+  -- B + C + D で IsGrounded s q を得る
+  have hEq := obs0_nonEmpty_imp_origS_nonEmpty s (floatingUnits s) hNe
+  have hne_s : ¬ (QuarterPos.getQuarter s q).isEmpty := by rw [← hEq]; exact hNe
+  have hLenEq : obs0.length = s.length := by
+    show ((floatingUnits s).flatMap FallingUnit.positions |>.foldl
+        (fun acc p => QuarterPos.setQuarter acc p Quarter.empty) s).length = s.length
+    exact foldl_setQuarter_length _ s (fun p => p) (fun _ => Quarter.empty)
+  have hValid_s : q ∈ QuarterPos.allValid s := by
+    rw [QuarterPos.mem_allValid] at hValid ⊢
+    rw [hLenEq] at hValid
+    exact hValid
+  have hnf := obs0_nonEmpty_imp_not_floating s hNe
+  have hgrounded_s : IsGrounded s q := not_floating_imp_grounded s hValid_s hne_s hnf
+  -- E: path 上のセルは非 floating ⇒ clear 対象外 ⇒ obs0 で値一致 ⇒ edge lift
+  obtain ⟨p₀, hp0Layer, hp0Ne, hPath⟩ := hgrounded_s
+  -- root の obs0 値も s と一致
+  have hp0Notfl : ∀ u ∈ floatingUnits s, p₀ ∉ u.positions :=
+    grounded_path_avoids_floating s ⟨hp0Layer, hp0Ne⟩ Relation.ReflTransGen.refl
+  have hp0NotIn : p₀ ∉ (floatingUnits s).flatMap FallingUnit.positions := by
+    intro hin
+    rcases List.mem_flatMap.mp hin with ⟨u, hu, hpu⟩
+    exact hp0Notfl u hu hpu
+  have hp0_eq_obs : QuarterPos.getQuarter obs0 p₀ = QuarterPos.getQuarter s p₀ := by
+    show QuarterPos.getQuarter (Shape.clearPositions s _) p₀ = _
+    exact clearPositions_getQuarter_of_not_in s _ hp0NotIn
+  have hp0NeObs : ¬ (QuarterPos.getQuarter obs0 p₀).isEmpty := by
+    rw [hp0_eq_obs]; exact hp0Ne
+  -- path を obs0 へ lift（induction、edge ごとに getQuarter 一致 ⇒ helper 適用）
+  refine ⟨p₀, hp0Layer, hp0NeObs, ?_⟩
+  clear hValid hValid_s hNe hEq hne_s hLenEq hnf hp0NeObs
+  induction hPath with
+  | refl => exact Relation.ReflTransGen.refl
+  | @tail b c hPath_ab hedge ih =>
+      -- ih : ReflTransGen (IsGroundingEdge obs0) p₀ b
+      -- hedge : IsGroundingEdge s b c
+      -- b は path 上 (p₀ → b) ⇒ 非 floating, c も path 上 (p₀ → c) ⇒ 非 floating
+      have hb_notfl : ∀ u ∈ floatingUnits s, b ∉ u.positions :=
+        grounded_path_avoids_floating s ⟨hp0Layer, hp0Ne⟩ hPath_ab
+      have hc_notfl : ∀ u ∈ floatingUnits s, c ∉ u.positions :=
+        grounded_path_avoids_floating s ⟨hp0Layer, hp0Ne⟩ (hPath_ab.tail hedge)
+      have hbNotIn : b ∉ (floatingUnits s).flatMap FallingUnit.positions := by
+        intro hin
+        rcases List.mem_flatMap.mp hin with ⟨u, hu, hpu⟩
+        exact hb_notfl u hu hpu
+      have hcNotIn : c ∉ (floatingUnits s).flatMap FallingUnit.positions := by
+        intro hin
+        rcases List.mem_flatMap.mp hin with ⟨u, hu, hpu⟩
+        exact hc_notfl u hu hpu
+      have hb_eq : QuarterPos.getQuarter s b = QuarterPos.getQuarter obs0 b := by
+        show _ = QuarterPos.getQuarter (Shape.clearPositions s _) b
+        rw [clearPositions_getQuarter_of_not_in s _ hbNotIn]
+      have hc_eq : QuarterPos.getQuarter s c = QuarterPos.getQuarter obs0 c := by
+        show _ = QuarterPos.getQuarter (Shape.clearPositions s _) c
+        rw [clearPositions_getQuarter_of_not_in s _ hcNotIn]
+      exact ih.tail (IsGroundingEdge.of_getQuarter_eq hb_eq hc_eq hedge)
 
 /-- §6.6 主定理: `gravity` の出力は IsSettled。
-    `(sortedUnits (floatingUnits s)).foldl (stepUnit s) (initialObstacle s _)` の
-    全有効非空位置が grounded であることを §6.5 で示し、§6.2 で `normalize` を通す。 -/
+
+    合成順序:
+    1. `Shape.gravity s = (sortedUnits ...).foldl (stepUnit s) (initialObstacle ...)`
+       `.normalize`
+    2. `IsSettled.normalize` (§6.2) で normalize を剥がす
+    3. `foldl_grounded_invariant` (§6.5) で foldl 後の grounded 不変量を取得
+    4. 基底 `obs0_isGrounded_of_nonEmpty` (§6.6) で `hBase` を提供
+    5. `hUnits`: sortedUnits の元は floatingUnits の置換 ⇒ membership 保存
+    6. `hAccBound`: obs0 = clearPositions s _ で length 不変 -/
 theorem gravity_isSettled_collision (s : Shape) :
     IsSettled (Shape.gravity s) := by
-  -- Step 1: 定義展開
   unfold Shape.gravity
-  -- Step 2: normalize 越し（§6.2）
   apply IsSettled.normalize
-  -- Step 3: 基底 `obs0 = initialObstacle s units` で「非空位置は grounded」を確立
-  --        → `obs0` の非空セルは「s で非 floating な非空セル」⇒ s で grounded
-  --        ⇒ `clearPositions` で edge を破壊しない範囲で IsGrounded.mono
-  --        （要: `IsGrounded.mono` の逆向き分枝、もしくは別補題）
-  -- Step 4: §6.5 を適用
-  intro q hValid hNonEmpty
-  -- 残りの組立は §6.5 完成後に詰める
-  sorry
+  set units := floatingUnits s with hunits_def
+  set order := sortedUnits units with horder_def
+  set obs0 := initialObstacle s units with hobs0_def
+  -- hBase: obs0 で grounded 不変量
+  have hBase :
+      ∀ q ∈ QuarterPos.allValid obs0,
+        ¬ (QuarterPos.getQuarter obs0 q).isEmpty → IsGrounded obs0 q :=
+    obs0_isGrounded_of_nonEmpty s
+  -- hUnits: order の元は floatingUnits の元
+  have hUnits : ∀ u ∈ order, u ∈ floatingUnits s := by
+    intro u hu
+    have : u ∈ units := by
+      have hperm : order.Perm units :=
+        List.mergeSort_perm units (fun a b => decide (a.minLayer ≤ b.minLayer))
+      exact hperm.mem_iff.mp hu
+    exact this
+  -- hAccBound: obs0.length = s.length
+  have hAccBound : Shape.subsumed_by obs0 s ∨ obs0.length = s.length := by
+    right
+    show ((floatingUnits s).flatMap FallingUnit.positions |>.foldl
+        (fun acc p => QuarterPos.setQuarter acc p Quarter.empty) s).length = s.length
+    exact foldl_setQuarter_length _ s (fun p => p) (fun _ => Quarter.empty)
+  exact foldl_grounded_invariant s order obs0 hBase hUnits hAccBound
 
 end Internal
 end Gravity
