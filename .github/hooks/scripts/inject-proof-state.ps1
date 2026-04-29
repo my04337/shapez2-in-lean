@@ -46,6 +46,9 @@ try {
     # --- 出力 ---
     # セッション ID を systemMessage に含める（エージェントが REPL JSONL ファイル名に使用）
     $sidMsg = "Session ID: $sessionId (REPL JSONL template: Scratch/commands-${sessionId}-<topic>-<runId>.jsonl; use unique runId for parallel runs)"
+    # Build-state preflight hint (single-line, English to minimize token cost).
+    $buildHint = 'Preflight: if no fresh build state is in context, run subagent `lean-build-doctor` with `mode=verify-only` once before editing code.'
+    $null = $messages.Insert(0, $buildHint)
     if ($messages.Count -gt 0) {
         $msg = $messages -join "`n"
         $result = @{

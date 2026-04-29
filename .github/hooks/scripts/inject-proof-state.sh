@@ -38,12 +38,16 @@ fi
 
 MESSAGES=""
 
+# Build-state preflight hint (single-line, English to minimize token cost).
+BUILD_HINT="Preflight: if no fresh build state is in context, run subagent \\\`lean-build-doctor\\\` with \\\`mode=verify-only\\\` once before editing code."
+MESSAGES="$BUILD_HINT"
+
 # --- 0. .gitignore の除外パス件数のみ通知（Opus 4.7 は長い列挙をスキップしがち） ---
 GITIGNORE_FILE="$CWD/.gitignore"
 if [ -f "$GITIGNORE_FILE" ]; then
     IGNORED_COUNT=$(grep -E '^\s*[^#].*/' "$GITIGNORE_FILE" | wc -l | tr -d '[:space:]')
     if [ "$IGNORED_COUNT" -gt 0 ]; then
-        MESSAGES="Gitignore: ${IGNORED_COUNT} excluded paths. Place persistent files outside ignored dirs."
+        MESSAGES="${MESSAGES}\nGitignore: ${IGNORED_COUNT} excluded paths. Place persistent files outside ignored dirs."
     fi
 fi
 

@@ -15,11 +15,23 @@
 4. `Internal/` は facade / 同 namespace からのみ参照する
 5. それでも未到達なら対象 namespace に絞って `grep_search`
 
-### Explore 委譲の閾値
+### Explore 委譲の判断軸
 
-- 同一ファイルへの `grep_search` は 2 回までに留め、3 回目は Explore に委譲する
-- 3 シンボル以上の位置特定は Explore に委譲する
-- 200 行超のファイルへの `read_file` が 3 回連続したら Explore に委譲する
+機械的な数値閾値（「ファイル N 本」「シンボル M 個」）は撤廃した。Greenfield 後の Lean ソースは facade + MECE 分割で 1 ファイルあたりの責務が小さく、数で測ると過剰委譲または過小委譲のいずれかに振れる。
+
+委譲が **有効** な状況:
+
+- 横断的な合成要約が要る（spec + 実装 + テストの三点照合、未知 namespace の構造把握）
+- 同一キーワードでの `grep_search` が空ヒット 2 回続いたとき（Explore に語彙的揺らぎを委ねる）
+- session memory / context に類似の探索結果が無く、結果を要約のみ受け取れば十分なとき
+
+委譲が **不要** な状況:
+
+- 既知シンボルの 1〜2 行確認（`grep_search` + 短い `read_file` で済む）
+- 直近のターンで context に既に取り込まれているファイルの再参照
+- facade 冒頭目次だけで答えが出るとき
+
+> 重要サブエージェント（`lean-sorry-investigator` / `lean-build-doctor`）の呼び出しは数値閾値で抑制しない。閾値は guard rail ではなく **目安** として扱う。
 
 ### 委譲テンプレート
 
@@ -95,3 +107,25 @@ git status   # sorry-goals.md の差分が想定通りか確認
 - 5000 トークン超のドキュメントを扱うときは要約メモを先に作り、全文の再読を避ける
 
 詳細テンプレート: [session-memory-guide.md](session-memory-guide.md)
+
+---
+
+## sorry-plan.json の `axiom_delta` 規約
+
+`recently_completed[]` の各エントリで axiom を増減させた場合は次フィールドを必ず付ける。
+総数が変わらない（`net = 0`）場合でも記録する — 引き継ぎ時に「なぜ総数が変わっていないか」を再確認するコストを排除するため。
+
+```json
+"axiom_delta": {
+  "removed": ["<symbol>"],
+  "added": ["<bridge-axiom-symbol>"],
+  "net": 0,
+  "rationale": "D-10D で `Internal/Collision.lean` から theorem 化予定のブリッジ"
+}
+```
+
+適用契機:
+
+- 旧 axiom を取り下げ（反例発覚 / シグネチャ強化）
+- 中間結果を意図的にブリッジ axiom として導入（後続 phase で同時解消の見込みあり）
+- axiom を theorem 化（`removed` のみ、`net < 0`）
