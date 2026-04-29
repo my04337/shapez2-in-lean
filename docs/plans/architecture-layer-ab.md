@@ -2,7 +2,7 @@
 
 - 作成日: 2026-04-24
 - 最終更新: 2026-04-29
-- ステータス: **Phase C 完了 + Phase D 進行中 (Settled / Painter / CrystalGenerator / ColorMixer / Cutter / Swapper / Stacker / PinPusher 脱 axiom 完了、axiom 15)**
+- ステータス: **Phase C 完了 + Phase D 進行中 (Settled / Painter / CrystalGenerator / ColorMixer / Cutter / Swapper / Stacker / PinPusher / Shatter 脱 axiom 完了、axiom 9 [Gravity 4 + Wires.Signal 5]、§1.4.4 落下機構の構造を追記)**
 - スコープ: S2IL Layer A（データ型・Kernel・純粋関数な加工操作）および Layer B（振る舞い系）のコード構造
 - 位置付け: 本ドキュメントは **新構造の正本** である。具体的な実施手順は [layer-ab-rewrite-plan.md](layer-ab-rewrite-plan.md) を参照する
 
@@ -175,6 +175,69 @@ $$s.\mathrm{rotate180}.\mathrm{cut} = (s.\mathrm{cut.2}.\mathrm{rotate180},\ s.\
 
 実装は `S2IL/Operations/Shatter.lean`（axiom 0、`sorry` 0、264 行）。`Stacker` / `PinPusher` の `shatterTopCrystals` 利用は Shatter facade からの import に切り替え済み。
 残存 axiom は `Operations.Gravity`（Phase D-10）のみ。
+
+### 1.4.4 落下機構（Gravity）
+
+落下処理は Layer B で唯一の重実装ノード（[layer-ab-rewrite-plan.md §4.3](layer-ab-rewrite-plan.md)）。
+過去に複数回の証明破綻を起こしているため、**結合凍結を構造的に保証するモデル** を必須拘束とする。
+
+実施計画と補題チェーンの詳細は [gravity-proof-plan.md](gravity-proof-plan.md) を参照。
+本節では構造的拘束のみを定める。
+
+#### 採用モデル (d): 落下単位ごとの最大降下距離 `dropOf`
+
+```
+落下単位 U （= floating cluster ⊕ floating pin、`s` から 1 回のみ算出、結合凍結）
+  ↓
+dropOf s U : Nat   （well-founded 再帰、measure: shareDirection ∧ minLayer 厳密小）
+  ↓
+gravity s := s に各 U の位置を (layer - dropOf s U, dir) へ写して normalize
+```
+
+**禁止する設計**:
+
+| 禁止項目 | 理由 |
+|---|---|
+| 1 段ずつ落下する反復モデル（gravityStep 累積） | 各ステップで `IsGrounded` を再計算すると結合凍結を破る（[gravity-proof-plan.md §1.1](gravity-proof-plan.md) 反例） |
+| 障害物シェイプ `obs_k` の逐次更新を伴う fold | 旧 wave モデルの `placeLDGroups_landing_groundingEdge_mono` 破綻パスを再演する |
+| 落下単位を `List FallingUnit` で扱い `mergeSort` で順序付ける | List 順序依存補題が爆発する（旧モデルでは数十本） |
+
+**必須の構造**:
+
+| 要件 | 実装位置 |
+|---|---|
+| 落下単位は `Finset FallingUnit`（`inductive FallingUnit \| cluster (Finset QuarterPos) \| pin QuarterPos`） | `Operations/Gravity/Defs.lean` |
+| 浮遊判定は `Operations.Settled` の `IsGrounded` を **1 回だけ** 呼ぶ | `Operations/Gravity/Defs.lean` |
+| 落下単位間の処理順序は半順序関係 `shareDirection ∧ minLayer 厳密小` で表現（List ソートを使わない） | `Operations/Gravity/Internal/ShareDirection.lean` |
+| 衝突判定は位置単位（`QuarterPos`）に正規化、unit 種別は positions 集合のみで扱う | `Operations/Gravity/Internal/Collision.lean` |
+| CW 等変性は `floatingUnits.rotateCW_comm` → `dropOf.rotateCW` → `gravity.rotateCW_comm` の 3 段で完結 | `Operations/Gravity/Equivariance.lean` |
+
+**公開 API**（[gravity-proof-plan.md §6.2](gravity-proof-plan.md)）:
+
+```lean
+def Shape.gravity : Shape → Shape
+theorem Shape.gravity.isSettled (s : Shape) : IsSettled (Shape.gravity s)
+theorem Shape.gravity.of_isSettled {s : Shape} : IsSettled s → Shape.gravity s = s
+theorem Shape.gravity.idempotent (s : Shape) : Shape.gravity (Shape.gravity s) = Shape.gravity s
+theorem Shape.gravity.layerCount_le (s : Shape) : (Shape.gravity s).length ≤ s.length
+theorem Shape.gravity.rotateCW_comm (s : Shape) :
+    (Shape.gravity s).rotateCW = Shape.gravity s.rotateCW
+-- 180° / CCW は §1.4 単一チェーン原則の 1 行系
+```
+
+実装ファイル構成（[architecture §2 / §1.3](#) 準拠）:
+
+```
+S2IL/Operations/Gravity.lean              # facade ≤ 150 行
+S2IL/Operations/Gravity/
+├── Defs.lean                             # FallingUnit / floatingUnits / dropOf / gravity
+├── Behavior.lean                         # isSettled / 不動点 / 冪等 / layerCount_le
+├── Equivariance.lean                     # CW 等変性主証明
+└── Internal/
+    ├── Drop.lean                         # CanDropBy 述語と Nat.find
+    ├── ShareDirection.lean               # 落下単位の半順序と well-founded
+    └── Collision.lean                    # 位置単位衝突判定とその CW 等変性
+```
 
 ### 1.5 真偽検証先行原則
 
