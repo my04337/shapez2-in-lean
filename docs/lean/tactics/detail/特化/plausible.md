@@ -26,7 +26,7 @@ plausible (config := { numInst := 1000 })  -- テスト数を指定
 
 ## 必須 import
 
-> **S2IL REPL では import 不要**: REPL デフォルトに `import Plausible` が含まれるため、追加 import なしで `plausible` タクティクが使える。  
+> **S2IL REPL では import 不要**: REPL デフォルトに `import Plausible` が含まれるため、追加 import なしで `plausible` タクティクが使える。
 > スタンドアロン Lean ファイルや `-NoPickle` モードでは以下が必要:
 
 ```lean
@@ -39,6 +39,8 @@ import Mathlib.Tactic.Plausible   -- または import Plausible
 | `plausible` | デフォルト（100回テスト） |
 | `(config := { numInst := n })` | テスト回数を n に設定 |
 | `(config := { randomSeed := s })` | 乱数シードを指定（再現性） |
+
+S2IL 型を含む反例探索では、`vanilla4` 相当は使わず vanilla5 相当を既定にする。目安は試行錯誤 `numInst := 500`、証明昇格前 `1000`、stress8 は全数検査せず `1000` を基本上限、重い `Shape.gravity` / `waveStep` 系はまず `500`、最大 `2000〜5000` を 90〜120 秒以内で分割する。
 
 ## Pros
 - 偽命題の早期発見に非常に有効

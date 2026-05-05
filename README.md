@@ -14,8 +14,21 @@ The author is still learning Lean, so this project is being developed as a learn
 なお、本プロジェクトの開発の一部には生成AI (GitHub Copilot) を利用しています。  
 Note: Part of the development of this project uses generative AI (GitHub Copilot).
 
-> **現状 / Status:** フェーズ 1（Shape/加工装置の形式的定義・証明）完了。Shape Code の型定義・シリアライズ、切断・回転・積層・着色・ピン押し・結晶化・重力処理・散砕 など全加工操作の実装と正当性証明（sorry 0 件）が完了しています。  
-> **Status:** Phase 1 complete — All shape types, serialization, and shape-processing operations (cut, rotate, stack, paint, pin-push, crystallize, gravity, shatter) are formally defined and proved (0 sorries).
+> **現状 / Status:** Layer A/B が主な到達点です。Shape / Kernel / Operations の主要な純粋関数は実装済みで、Wave Gravity を中心に終端性・安定性・CW/180°/CCW 等変性の theorem 化が進み、Shatter や Stacker / PinPusher などの複合操作へ接続されています。現在の自動スナップショットでは `sorry` は 0 件です。Layer C（Flow）と Layer D（MAM 完全性）はこれから着手します。  
+> **Status:** Layers A/B are the current milestone. The core Shape / Kernel / Operations functions are implemented, Wave Gravity now has theoremized termination, settledness, and CW/180°/CCW equivariance properties, and those behavior proofs are connected to Shatter and composite operations such as Stacker / PinPusher. The generated snapshot currently reports 0 sorries. Layers C (Flow) and D (MAM completeness) are not started yet.
+
+## 現在の到達点 / Current Progress
+
+最終目標は **MAM (Make Anything Machine) の形式化と完全性証明** です。そこへ向けて、現在は Layer A/B の基盤が固まり、Flow と MAM へ進むための前提が揃ってきています。詳細なロードマップは [docs/plans/MILESTONES.md](docs/plans/MILESTONES.md)、Layer A/B の設計正本は [docs/s2il/architecture-layer-ab.md](docs/s2il/architecture-layer-ab.md) を参照してください。
+
+| 層 | 状況 |
+|---|---|
+| Layer A: Data & Operations | Shape / Kernel / Operations の主要基盤は実装済み・運用中。Wires は Flow / MAM 統合へ向けたスケルトン段階です。 |
+| Layer B: Behavior | Wave Gravity の終端性・安定性・等変性は theorem 化済み。Gravity 出力の安定化、安定入力の不動点性、Shatter / 複合操作への接続も進んでいます。 |
+| Layer C: Flow | 未着手。Gravity の安定性・等変性が揃ったため、加工フロー形式化へ進める状態です。 |
+| Layer D: MAM | 未着手。Layer C のフロー形式化後、MAM 完全性定理を扱います。 |
+
+ビルド状態と `sorry` 件数の最新スナップショットは [S2IL/_agent/sorry-goals.md](S2IL/_agent/sorry-goals.md) に自動生成されます。
 
 ## 前提条件
 
@@ -68,11 +81,6 @@ VS Code でこのリポジトリを開き、**Ctrl+Shift+B** を押すとビル�
 ```powershell
 # ビルド
 lake build
-
-# 開発ツール（S2IL 依存 — 依存グラフ・シンボルマップ・証明統計）
-lake exe s2il-toolkit --help
-lake exe s2il-toolkit depgraph --json --output .lake/depgraph.json
-lake exe s2il-toolkit proof-stats
 
 # 診断ツール（S2IL 非依存 — S2IL ビルドエラー時も動作）
 lake exe s2il-diag sorry-list

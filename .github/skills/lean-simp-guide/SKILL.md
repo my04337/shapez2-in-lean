@@ -1,12 +1,16 @@
 ---
 name: lean-simp-guide
 description: >
-  Guide simp tactic selection and simp -> simp only stabilization in Lean 4.
+  Reference for simp family selection (`simp` / `simp_all` / `simpa` / `dsimp`),
+  the bulk simp-stabilization pipeline, and known caveats (nested parens, chain lines).
   Use when: simp usage, simp only, simp stabilization, simp lemma, simp vs dsimp,
   simp_all, simpa, simp attribute, simp not working, simp too slow, simp loop,
-  stabilize simp, replace simp with simp only.
+  bulk simp stabilization, simp 安定化, 裸 simp, simp 一括変換.
+  Returns: tactic comparison table + bulk pipeline command + caveats.
+  Don't call when: stabilizing one specific line (use agent `lean-simp-stabilizer`).
+context: fork
 metadata:
-  argument-hint: 'Describe simp issue or pass file:line'
+  argument-hint: 'Reference: simp family + bulk stabilization'
 ---
 
 # simp ガイドスキル
@@ -68,7 +72,7 @@ simp 系タクティクの選択判断と `simp only` への安定化移行を�
 
 ### REPL による自動化
 
-REPL スクリプトが `import S2IL + Mathlib.Tactic + Plausible + Duper` を先頭に自動挿入するため、JSONL 内では `"env": 0` を直接使える。
+REPL スクリプトが `import S2IL.Shape + S2IL.Kernel + Plausible` を先頭に自動挿入するため、JSONL 内では `"env": 0` を直接使える。対象補題が操作別 module にある場合は、`env` フィールドなしのコマンド本文に `import S2IL.Operations.<Name>` を明示する。
 
 ```jsonl
 {"cmd": "theorem foo (l : List Nat) : (l ++ []).length = l.length := by simp?", "env": 0}
@@ -152,7 +156,7 @@ REPL スクリプトが `import S2IL + Mathlib.Tactic + Plausible + Duper` を�
 - `dsimp` は証明項を生成しないため term-mode のゴール変更に便利（`change` の代替）
 - `simpa using h` は `h` の型も simp するため、`h` の型が simp で変わることに注意
 - `simp` で閉じないが構造的に自明なゴールは `aesop` を試す。`aesop` は正規化フェーズで `simp_all` を内蔵しており、その上でルールベースの探索を行う。詳細: [`docs/lean/aesop-guide.md`](../../../docs/lean/aesop-guide.md)
-- **Batteries の `@[simp]` 補題**: Batteries / Mathlib が提供する `List.map_eq_nil_iff`, `List.set_eq_nil_iff`, `List.any_filter` 等は `@[simp]` 属性を持つ場合がある。`simp only [...]` リストに含めなくても裸 `simp` では効くことがあるため、`simp?` で確認時に Batteries 補題が出現したら積極的にリストに含める。Batteries 補題カタログ: [`batteries-catalog.md`](../../lean-mathlib-search/references/batteries-catalog.md)
+- **Batteries の `@[simp]` 補題**: Batteries / Mathlib が提供する `List.map_eq_nil_iff`, `List.set_eq_nil_iff`, `List.any_filter` 等は `@[simp]` 属性を持つ場合がある。`simp only [...]` リストに含めなくても裸 `simp` では効くことがあるため、`simp?` で確認時に Batteries 補題が出現したら積極的にリストに含める。Batteries 補題カタログ: [`batteries-catalog.md`](../lean-proof-methods/references/batteries-catalog.md)
 
 ---
 
@@ -251,7 +255,7 @@ $p.WaitForExit()
 ### Step 4: ビルド検証
 
 ```powershell
-.github/skills/lean-build/scripts/build.ps1
+.github/skills/lean-tooling/scripts/build.ps1
 ```
 
 ### Step 5: unused argument 警告の除去
@@ -273,20 +277,21 @@ $p.WaitForExit()
 使い方:
 ```powershell
 # Windows
-.github/skills/lean-simp-guide/scripts/simp-stabilize.ps1 -File S2IL/Behavior/Gravity.lean
-.github/skills/lean-simp-guide/scripts/simp-stabilize.ps1 -File S2IL/Behavior/Gravity.lean -DryRun
-.github/skills/lean-simp-guide/scripts/simp-stabilize.ps1 -File S2IL/Behavior/Gravity.lean -KeepBackup
+.github/skills/lean-simp-guide/scripts/simp-stabilize.ps1 -File S2IL/Operations/Gravity/Equivariance.lean
+.github/skills/lean-simp-guide/scripts/simp-stabilize.ps1 -File S2IL/Operations/Gravity/Equivariance.lean -DryRun
+.github/skills/lean-simp-guide/scripts/simp-stabilize.ps1 -File S2IL/Operations/Gravity/Equivariance.lean -KeepBackup
 ```
 ```bash
 # macOS / Linux
-.github/skills/lean-simp-guide/scripts/simp-stabilize.sh --file S2IL/Behavior/Gravity.lean
-.github/skills/lean-simp-guide/scripts/simp-stabilize.sh --file S2IL/Behavior/Gravity.lean --dry-run
-.github/skills/lean-simp-guide/scripts/simp-stabilize.sh --file S2IL/Behavior/Gravity.lean --keep-backup
+.github/skills/lean-simp-guide/scripts/simp-stabilize.sh --file S2IL/Operations/Gravity/Equivariance.lean
+.github/skills/lean-simp-guide/scripts/simp-stabilize.sh --file S2IL/Operations/Gravity/Equivariance.lean --dry-run
+.github/skills/lean-simp-guide/scripts/simp-stabilize.sh --file S2IL/Operations/Gravity/Equivariance.lean --keep-backup
 ```
 
 ---
 
 ## 関連
 
-- **lean-tactic-select** — ゴール形状からタクティクを選択
-- **lean-simp-stabilizer** エージェント — simp → simp only の自動安定化（単一行・バルク両対応）
+- **lean-proof-methods** — ゴール形状からタクティクを選択
+- **lean-simp-stabilizer** エージェント — 1 行の simp → simp only 自動安定化
+- **lean-tooling** — REPL JSONL と build script の実行入口

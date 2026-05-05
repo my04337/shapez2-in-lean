@@ -71,7 +71,7 @@ structure OneHom (M : Type) (N : Type) [One M] [One N] where
 
 - 名詞の場合: `Is` 接頭辞を付ける（例: `IsTopologicalRing`, `IsEmpty`）
 - 形容詞の場合: `Is` 接頭辞は不要（例: `Normal`, `Finite`）
-- 述語関数: `is` / `has` 接頭辞を使用（例: `isEven`, `hasDecEq`）
+- 述語関数: `is` / `has` / `can` 接頭辞を使用（例: `isEven`, `hasDecEq`, `isBondable`）
 
 ## 定理名の説明的命名パターン
 
@@ -82,12 +82,35 @@ structure OneHom (M : Type) (N : Type) [One M] [One N] where
 | 結論をそのまま | `mul_zero`, `succ_ne_zero` | `a * 0 = 0`, `succ n ≠ 0` |
 | `_of_` で仮定記述 | `lt_of_succ_le`, `lt_of_le_of_ne` | 仮定の順に列挙 |
 
+## サブ名前空間ドット規約（S2IL 固有）
+
+操作 `f` に関する定理は **`f.property` のドット区切り** で `f` のサブ名前空間に配置する。Lean 4 では `def Shape.gravity` と `theorem Shape.gravity.rotateCW_comm` が共存できる。
+
+```lean
+-- 操作の定義
+axiom Shape.gravity : Shape → Shape
+
+-- 操作に関する定理はサブ名前空間に配置
+axiom Shape.gravity.rotateCW_comm (s : Shape) : ...
+axiom Shape.gravity.isSettled (s : Shape) : ...
+theorem Shape.gravity.rotate180_comm (s : Shape) : ... := by ...
+```
+
+| カテゴリ | パターン | 例 |
+|---|---|---|
+| 等変性 | `<op>.rotate<CW\|180\|CCW>_comm` | `Shape.gravity.rotateCW_comm` |
+| 保存則 | `<Predicate>.<op>` | `IsSettled.rotateCW` |
+| 構造的性質 | `<op>.<property>` | `Shape.placeAbove.layerCount` |
+| Bool/Prop 橋渡し | `<boolFn>.iff` | `isSettled.iff` |
+
+**例外**: `@[simp]` 定義展開 lemma (`:= rfl`) は従来のアンダースコアを維持: `Shape.rotate180_eq_rotateCW_rotateCW`
+
 ---
 
 ## 新規補題の命名フロー（エージェント運用ルール）
 
 新規補題を導入するときは、以下の 3 段階で名前を確定し、**仮称をドキュメントに残さない**。
-これは sorry-plan.json / sorry-card / symbol-map.jsonl の整合性を保ち、補題検索のヒット率を高めるための必須ルール。
+これは sorry-plan.json / sorry-card / Lean ソースの整合性を保ち、補題検索のヒット率を高めるための必須ルール。
 
 ### ステップ 1: REPL で仮称シグネチャをスケッチ
 
@@ -103,7 +126,7 @@ example (s : Shape) ... : ... := by sorry
 確定名は以下を満たすまで確定しない:
 
 1. 本ファイルの基本ルール（返り値の型別 case、`_of_` 区切り）に従っている
-2. 既存の類似補題（symbol-map.jsonl で `grep` して確認）と命名パターンが揃っている
+2. 既存の類似補題（`S2IL/**/*.lean` を `grep_search` して確認）と命名パターンが揃っている
 3. 対象となる操作の層（Shape / Layer / Gravity / …）を接頭辞に含める
 
 ### ステップ 3: 確定名をまず `sorry-plan.json` に記録
@@ -114,7 +137,6 @@ example (s : Shape) ... : ... := by sorry
 - 確定名を途中で変更した場合は、以下を同時に grep して全箇所を更新:
   - `S2IL/**/*.lean`
   - `S2IL/_agent/sorry-plan.json`
-  - `S2IL/_agent/sorry-cards/*.md`
   - `docs/plans/*.md`
 
 ### 違反例（過去の実績）
@@ -126,7 +148,7 @@ example (s : Shape) ... : ... := by sorry
 ### 関連
 
 - 詳細な運用は [`docs/agent/proof-plan-current-focus-guide.md`](../agent/proof-plan-current-focus-guide.md) の「役割分担」セクションを参照
-- 確定名の検索: [`S2IL/_agent/symbol-map.jsonl`](../../S2IL/_agent/symbol-map.jsonl) を `grep_search` で検索
+- 確定名の検索: `S2IL/**/*.lean` を `grep_search` で検索
 | `_left` / `_right` | `add_le_add_left` | 左右の変形 |
 | 省略形 | `pos`, `neg`, `nonpos`, `nonneg` | `0 < x`, `x < 0`, `x ≤ 0`, `0 ≤ x` |
 | 公理的性質 | `refl`, `symm`, `trans`, `comm`, `assoc` | 反射・対称・推移・交換・結合 |

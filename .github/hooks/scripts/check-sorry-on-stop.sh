@@ -33,7 +33,7 @@ if [ -z "$CWD" ]; then
 fi
 
 # proof-suppressed.flag が存在する場合は全証明フック出力を抑止する
-# (session-efficiency スキル発動時やユーザが明示的に証明停止を指示した場合に作成される)
+# (セッション停止の明示指示や一時的な proof freeze 時に作成される)
 if [ -f "$CWD/.lake/proof-suppressed.flag" ]; then
     echo '{"continue":true}'
     exit 0

@@ -19,6 +19,13 @@ lake env lean Scratch/MyFile.lean
 lake env lean --run Scratch/MyFile.lean
 ```
 
+## ベンチ / Plausible / `#eval` の安全運用
+
+- Scratch の探索的 Lean 実行は必ず有限 timeout 付きで走らせる。`run_in_terminal` の `timeout: 0` や timeout 省略は禁止
+- 大きな `#eval` / ベンチ / Plausible は、まず 30 秒以内の smoke run（例: 64 ケース以下）で確認してから、Plausible は 50 → 300 → 1000 samples の段階で増やす
+- 1 回の探索的実行は原則 180 秒以内に分割する。長時間検証が必要な場合は seed / case 範囲で分割し、各チャンクの結果を記録する
+- timeout / cancel 後は、再実行前に該当 `lean.exe` worker を停止し、開いている Scratch ファイルの重い `#eval` を縮小またはコメントアウトする
+
 ## JSONL 作成ルール
 
 - JSONL は `run_in_terminal` + `Set-Content` で作成

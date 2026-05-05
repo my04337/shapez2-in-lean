@@ -16,7 +16,7 @@ Shapez2 における **落下 (Falling)** 操作に関する厳密な仕様書�
 | **ピン押し (Pin Pushing)** | ピン押しがレイヤ上限超過を引き起こし、廃棄後に支えを失った象限が落下する |
 
 落下処理には結晶の **砕け散り (Shatter)** が連動する。
-脆弱な結晶が落下対象に含まれる場合、結合クラスタ全体が砕け散った後に落下処理が実行される
+脆弱な結晶が落下対象に含まれる場合、結晶結合クラスタ全体が砕け散った後に落下処理が実行される
 （[結晶砕け散りとの連携](#8-結晶砕け散り-shatter-との連携) を参照）。
 
 ---
@@ -37,7 +37,7 @@ Shapez2 における **落下 (Falling)** 操作に関する厳密な仕様書�
 
 > **結晶結合 (Crystal Bond) との違い**: 結晶結合（[`crystal-shatter.md`](crystal-shatter.md) 参照）は砕け散りの伝播範囲を決定するための結合であり、**結晶同士** のみが対象で色や位置に追加の制約がある。一方、構造結合はシェイプ種別・色を **問わず**、結合能力を持つ全ての非空象限が対象であり、落下時の塊（構造クラスタ）を決定する。
 
-#### Lean での実装（予定）
+#### Lean での実装
 
 ```lean
 def Quarter.canFormBond : Quarter → Bool
@@ -83,8 +83,8 @@ def Quarter.canFormBond : Quarter → Bool
 
 ### 3.3 アルゴリズム
 
-シェイプは最大 `config.maxLayers` レイヤ × 4 象限（vanilla4 で 16、vanilla5 で 20）であるため、BFS / DFS の素朴な探索で十分である。
-既存の [`CrystalBond.lean`](../../S2IL/Processing/CrystalBond.lean) と同じ BFS パターンを流用する。
+シェイプは最大 `config.maxLayers` レイヤ × 4 象限（vanilla4 で 16、vanilla5 で 20）であるため、
+結合関係の反射推移閉包を有限回反復で求める素朴な算法で十分である（証明側は Mathlib `Relation.ReflTransGen` を利用し、実装側は有限集合の反復で計算する）。
 
 ---
 
@@ -188,295 +188,142 @@ def groundingEdge (s : Shape) (a b : QuarterPos) : Bool :=
 
 ## 6. 落下処理 (Gravity Process)
 
-### 6.1 結合凍結の原則
+### 6.1 Wave Gravity の原則
 
-> **結合凍結 (Bond Freezing)**: 落下処理中、落下単位は他のいかなる要素（静止要素・他の落下単位）とも新たな **構造結合** を形成しない。すなわち、構造クラスタの構成は落下処理の開始時に確定し、落下途中や着地後に変化しない。
+落下処理は **Wave Gravity**（波面型同時落下モデル）として定義する。
+Wave Gravity は、現在のシェイプにおける非接地な非空象限をすべて同時に 1 レイヤ下げ、この 1 tick の処理を安定するまで反復するモデルである。
 
-この原則により、落下中に他の象限と隣接する位置を通過しても、構造クラスタへの合流や分裂は発生しない（例 5 参照）。
+このモデルでは、落下対象を順序付けない。各 tick の開始時点で `IsGrounded` を再評価し、その時点で接地していない象限だけを動かす。
+長距離の着地距離計算、落下単位のソート、逐次 accumulator による上書き規則は仕様に含めない。
 
-> **注意**: 結合凍結は **構造結合**（クラスタ構成）に関する原則であり、**物理的な衝突**（着地）には適用されない。落下単位は他の落下単位の着地先に着地することができる（例 9 参照）。
+### 6.2 浮遊位置
 
-### 6.2 アルゴリズム
+1 tick で移動する位置を **浮遊位置 (Floating Position)** と呼ぶ。
 
-落下処理は以下の手順で実行する:
-
-```
-入力: シェイプ S（砕け散り処理は完了済み）
-出力: 落下後のシェイプ S'
-
-1. 初期化
-   a. S 内の全構造クラスタを算出する
-   b. S 内の全孤立ピンを列挙する
-   c. 各構造クラスタ・各孤立ピンについて接地判定を行い、
-      落下単位（浮遊クラスタ + 浮遊ピン）を列挙する
-   d. 落下単位が存在しない場合、S をそのまま返して終了
-
-2. 落下単位をソートする
-   以下の関係を満たす挿入ソートを行う:
-     「落下単位 A が方角列 D のレイヤ a に、
-      落下単位 B が同じ方角列 D のレイヤ b に象限を持ち、
-      a < b ならば A を B より先に処理する」
-   ソートキーは `shouldProcessBefore` 述語（全方角について
-   共有列での最小レイヤの上下関係を判定）のみである
-
-3. 障害物シェイプを初期化する
-   全落下単位の象限を S から除去したものを「障害物シェイプ」O とする
-   （初期状態では静止要素のみを含む）
-
-4. 各落下単位の目標位置を下位から順に算出・適用する
-   ソート順に各落下単位 U について:
-   a. U を 1 レイヤずつ下方に移動し、以下の「着地条件」を
-      初めて満たすレイヤ数 d(U) を求める:
-      - U 内のいずれかの象限がレイヤ 0 に到達する
-      - U 内のいずれかの象限の直下（同方角・1 レイヤ下）に
-        障害物シェイプ O の非空象限が存在する
-   b. d(U) は U が落下するレイヤ数（移動距離）
-   c. U の象限を d(U) レイヤ下の位置に O へ配置する
-      （O を更新し、以降の落下単位はこの着地結果を障害物として参照する）
-
-5. 正規化
-   末尾（最上位）の空レイヤを除去し、全て空なら none を返す
+```lean
+def FloatingPos (s : Shape) (p : QuarterPos) : Prop :=
+  p ∈ QuarterPos.allValid s ∧
+  ¬ (QuarterPos.getQuarter s p).isEmpty ∧
+  ¬ IsGrounded s p
 ```
 
-> **下位優先の理由**: 下位の落下単位が先に着地し障害物シェイプに加わることで、上位の落下単位が正しい位置（先に着地した単位の上）に着地できる。これにより、同列の落下単位が元の相対的な上下関係を維持しながら自然に積み重なる。
+`FloatingPos s p` なら `p` は layer 0 にはない。layer 0 の非空象限は直接接地するためである。したがって、`p = (l, d)` の 1 レイヤ下の位置 `p.down = (l - 1, d)` が定義できる。
 
-### 6.3 着地条件の詳細
+§5 の浮遊クラスタ / 浮遊ピンは、どの象限が `FloatingPos` になるかを説明するための判定概念として残る。アルゴリズム自体は、cluster と pin を別処理せず、`FloatingPos` を満たす象限を同じ規則で動かす。
 
-落下単位 U が d レイヤ下方に移動した場合に着地するかの判定:
+### 6.3 1 tick のアルゴリズム
+
+`waveStep` は以下の atomic 操作である。
 
 ```
-着地条件 (U, d, O):
-  U 内の象限 q について、移動後の位置 (q.layer − d, q.dir) が以下を満たす:
-    ① q.layer − d = 0（最下層に到達）
-    OR
-    ② 位置 (q.layer − d − 1, q.dir) に障害物シェイプ O の非空象限が存在
+入力: シェイプ S
+出力: 1 tick 後のシェイプ S'
+
+1. F = { p | FloatingPos S p } を現在の S から計算する
+2. F に属する全位置を空にする
+3. 各 p ∈ F について、S[p] の値を p.down に同時に書き込む
+4. F に属さず、どの p.down にもならない位置は元の値を保つ
 ```
 
-`d(U)` は `着地条件(U, d, O)` を満たす最小の `d ≥ 1` である。
-ただし、落下単位が浮遊していると判定された時点で `d ≥ 1` は保証される。
+この操作は「同時」であり、列挙順を意味に含めない。実装上は有限リストを用いて計算してもよいが、仕様上の意味は `F` から `p.down` への部分写像による一括更新である。
 
-> **障害物シェイプ O の内容**: 処理開始時、O は全落下単位を除去した静止要素のみを含む。下位の落下単位が着地するたびに O に追加されるため、上位の落下単位は先に着地した単位を障害物として認識する。
+### 6.4 `Shape.gravity` のアルゴリズム
 
-### 6.4 衝突安全性
+落下処理全体は `waveStep` を有限回反復し、最後に正規化する。
 
-落下処理は落下単位を下位から順に処理し、着地した単位を障害物シェイプに逐次追加するため、落下単位同士の衝突（重なり）は発生しない。
+```lean
+def waveGravityCore (fuel : Nat) (s : Shape) : Shape :=
+  Nat.iterate waveStep fuel s
 
-理由:
-- 下位の落下単位は上位の落下単位よりも先に着地し、障害物に加わる
-- 上位の落下単位は先に着地した下位の単位を障害物として認識し、その上に着地する
-- 同列（同方角）にある複数の落下単位は、下位優先の処理順により、元の相対的な上下関係を自然に維持する
-- 異なる列（方角の重なりがない）の落下単位は互いの着地位置に影響せず、処理順序に関わらず同じ結果になる
+def Shape.gravity (s : Shape) : Shape :=
+  (waveGravityCore s.length s).normalize
+```
 
-### 6.5 落下処理の例
+`fuel = s.length` で十分である。floating な非空象限は各 tick で layer index を 1 減らし、layer 0 に到達すると直接接地する。既に接地している象限は動かないため、初期シェイプの高さを超える回数の tick 後には浮遊位置が残らない。
+
+### 6.5 Atomic shift の安全性
+
+`p ∈ F` の移動先 `p.down` が旧シェイプで非空だったとしても、次のいずれかである。
+
+- `p.down` も `F` に属しており、同じ tick で空けられる
+- `p.down` が接地済みなら、`p.down` から `p` への垂直接地接触により `p` も接地しているため、`p ∈ F` と矛盾する
+
+また、同じ方角にある 2 つの異なる位置 `p`, `q` について `p.down = q.down` は成立しない。したがって、同時書き込み同士が同じ位置を取り合うこともない。
+
+この安全性は cluster / pin の場合分けではなく、`FloatingPos` と `IsGrounded` の定義から導く。
+
+### 6.6 落下処理の例
 
 #### 例 1: 基本的な落下
 
 ```
 初期: --------:Cr------
 
-構造クラスタ: {L2:NE(Cr)}
-接地判定: L2:NE → L1:NE は空 → 非接地
-落下単位: {L2:NE(Cr)}
-
-障害物シェイプ O: --------
-d({L2:NE}): L2→L1 で layer 0 到達 → d = 1
+tick 0:
+  L2:NE(Cr) は非接地なので F に入る
+  L2:NE → L1:NE へ移動
 
 結果: Cr------
 ```
 
-#### 例 2: 2 つの独立した浮遊クラスタ
+#### 例 2: 独立した浮遊象限の同時落下
 
 ```
 初期: --------:--Cr--Cr
 
-構造クラスタ: {L2:SE(Cr)}, {L2:NW(Cr)}
-接地判定: 両方とも L1 が空 → 非接地
-落下単位: {L2:SE(Cr)}, {L2:NW(Cr)}
-
-障害物シェイプ O: --------
-d = 1（両方とも layer 0 到達）
+tick 0:
+  L2:SE(Cr), L2:NW(Cr) はどちらも非接地
+  両方を同時に 1 レイヤ下げる
 
 結果: --Cr--Cr
 ```
 
-#### 例 3: 部分浮遊（クラスタの一部が接地）
-
-```
-初期: CrCr----:----RgRg
-
-構造クラスタ: {L1:NE(Cr), L1:SE(Cr)}, {L2:SW(Rg), L2:NW(Rg)}
-接地判定:
-  - {L1:NE, L1:SE}: L1 にあるので接地
-  - {L2:SW, L2:NW}: L1:SW, L1:NW ともに空 → L2:SW, L2:NW は非接地
-落下単位: {L2:SW(Rg), L2:NW(Rg)}
-
-障害物シェイプ O: CrCr----
-d = 1（L2→L1 で layer 0 到達）
-
-結果: CrCrRgRg
-```
-
-#### 例 4: 結合による一体落下の防止
+#### 例 3: 接地済み cluster は動かない
 
 ```
 初期: CrCr----:--RgRg--
 
 構造クラスタ: {L1:NE(Cr), L1:SE(Cr), L2:SE(Rg), L2:SW(Rg)}
   ※ L1:SE(Cr) と L2:SE(Rg) が垂直構造結合
-接地判定: L1:NE, L1:SE が L1 にあるため全体が接地
-落下単位: なし
+
+L1 側が直接接地しているため、構造クラスタ全体が接地している。
+FloatingPos は存在しない。
 
 結果: CrCr----:--RgRg--（変化なし）
 ```
 
-#### 例 5: 結合凍結の検証
-
-```
-初期: Cr------:RgRg----:----Sb--
-
-構造クラスタ:
-  A = {L1:NE(Cr)}
-  B = {L2:NE(Rg), L2:SE(Rg)}
-  C = {L3:SW(Sb)}
-
-接地判定:
-  A: L1 にあるため接地
-  B: L2:NE → L1:NE(Cr) → 構造結合で垂直接地接触 → 接地
-  C: L3:SW → L2:SW は空 → 非接地
-
-落下単位: {L3:SW(Sb)}
-
-障害物シェイプ O: Cr------:RgRg----（静止要素のみ）
-d({L3:SW}):
-  L3→L2: 位置 (1, SW) を確認 → L2:SW は空 → 着地しない
-  L3→L1: 位置 (0, SW) → layer 0 到達 → d = 2
-
-結果: Cr--Sb--:RgRg----
-```
-
-> **ポイント**: Sb は途中の L2 で Rg と隣接するが、結合凍結により途中で引っかからず、layer 0 まで落下する。
-
-#### 例 6: 同列の複数落下単位
+#### 例 4: 同列 stack の同時落下
 
 ```
 初期: --------:P-------:Cr------
 
-孤立ピン: L2:NE(P)
-構造クラスタ: {L3:NE(Cr)}
-
-接地判定:
-  L2:NE(P): L1:NE は空 → 非接地
-  {L3:NE(Cr)}: L2:NE は P で CrはcanFormBondだがPはcanFormBondでないので
-               構造クラスタ外。L2:NE 接地接触は垂直でP非空なら成立するが、
-               L2:NE(P) 自体が非接地かつ落下単位なので接地判定時は
-               初期配置で判定 → L2:NE(P)が非接地 → L3:NE も接地チェーン不成立 → 非接地
-
-落下単位: L2:NE(P), {L3:NE(Cr)}
-ソート: L2:NE(P) [最小レイヤ=1], {L3:NE(Cr)} [最小レイヤ=2]
-
-障害物シェイプ O: --------（全て除去済み）
-
-[1] L2:NE(P) を処理:
-  d=1: layer 0 到達 → d = 1
-  P を (0, NE) に配置 → O: P-------
-
-[2] {L3:NE(Cr)} を処理:
-  d=1: 位置 (1, NE)。直下 (0, NE) = P（O に存在） → 着地。d = 1
-  Cr を (1, NE) に配置 → O: P-------:Cr------
+tick 0:
+  L2:NE(P) と L3:NE(Cr) はどちらも非接地
+  P は L1:NE へ、Cr は L2:NE へ同時に移動
 
 結果: P-------:Cr------
 ```
 
-> **ポイント**: P が先に着地して障害物に加わるため、Cr は P の上に正しく着地する。結果は同列の上下関係が維持される。
+下側の P の旧位置は Cr の移動先だが、P 自身も同じ tick で下へ移動するため、上書きや処理順は発生しない。
 
-#### 例 7: ピンを通した接地
-
-```
-初期: CrCrCrCr:P-------:RgRgRgRg
-
-構造クラスタ:
-  A = {L1:NE(Cr), L1:SE(Cr), L1:SW(Cr), L1:NW(Cr)}
-  B = {L3:NE(Rg), L3:SE(Rg), L3:SW(Rg), L3:NW(Rg)}
-孤立ピン: L2:NE(P)
-
-接地判定:
-  A: L1 → 接地
-  L2:NE(P): L2:NE → L1:NE(Cr) → 垂直接地接触（両方非空） → 接地
-  B: L3:NE → L2:NE(P) → 垂直接地接触（両方非空） → L1 まで繋がる → 接地
-     L3:SE → L2:SE 空 → 直接垂直なし
-                L3:SE ← L3:NE(Rg) 水平接地接触（隣接・非ピン） → L3:NE は接地 → 接地
-     (同様に L3:SW, L3:NW も L3:NE 経由で接地)
-
-落下単位: なし
-
-結果: CrCrCrCr:P-------:RgRgRgRg（変化なし）
-```
-
-#### 例 8: 切断後のピン経由接地消失
-
-```
-初期: --CrCr--:--------:--RgRg--
-  ※ 例 7 の西側半分が切断で除去された状態
-
-構造クラスタ:
-  A = {L1:SE(Cr), L1:SW(Cr)}
-  B = {L3:SE(Rg), L3:SW(Rg)}
-
-接地判定:
-  A: L1 → 接地
-  B: L3:SE → L2:SE 空 → 垂直なし
-     L3:SW → L2:SW 空 → 垂直なし
-     L3 内で水平に辿っても L2 は全空 → 非接地
-
-落下単位: {L3:SE(Rg), L3:SW(Rg)}
-
-障害物シェイプ O: --CrCr--
-d({L3:SE, L3:SW}):
-  d = 1: 移動後位置は (2-1=1, SE) と (2-1=1, SW)
-         直下 (0, SE) = Cr(非空), (0, SW) = Cr(非空)
-         → 着地条件 ② を満たす → d = 1
-
-結果: --CrCr--:--RgRg--
-```
-
-#### 例 9: 複数落下単位の段階的着地（下位優先処理の検証）
+#### 例 5: tick ごとの再評価
 
 ```
 初期: CrCr----:--------:--RgRg--:--------:----SbSb
 
-構造クラスタ:
-  A = {L1:NE(Cr), L1:SE(Cr)}
-  B = {L3:SE(Rg), L3:SW(Rg)}
-  C = {L5:SW(Sb), L5:NW(Sb)}
+tick 0:
+  L3 の Rg cluster と L5 の Sb cluster はどちらも非接地
+  両方を同時に 1 レイヤ下げる
+  中間: CrCr----:--RgRg--:--------:----SbSb
 
-接地判定:
-  A: L1 → 接地
-  B: L3:SE → L2:SE 空 → 垂直なし
-     L3:SW → L2:SW 空 → 垂直なし → 非接地
-  C: L5:SW → L4:SW 空 → 垂直なし
-     L5:NW → L4:NW 空 → 垂直なし → 非接地
-
-落下単位: B = {L3:SE(Rg), L3:SW(Rg)}, C = {L5:SW(Sb), L5:NW(Sb)}
-ソート: B [最小レイヤ=2], C [最小レイヤ=4]
-
-障害物シェイプ O: CrCr----（静止要素のみ）
-
-[1] B を処理:
-  d=1: 移動後位置は (2-1=1, SE) と (2-1=1, SW)
-       直下 (0, SE) = Cr(非空) → 着地条件 ② → d = 1
-  B を (1, SE=Rg), (1, SW=Rg) に配置 → O: CrCr----:--RgRg--
-
-[2] C を処理:
-  d=1: 移動後位置は (4-1=3, SW) と (4-1=3, NW)
-       直下 (2, SW) は空, (2, NW) は空 → 着地しない
-  d=2: 移動後位置は (2, SW) と (2, NW)
-       直下 (1, SW) = Rg(非空、B の着地先が O に含まれる) → 着地条件 ② → d = 2
-  C を (2, SW=Sb), (2, NW=Sb) に配置 → O: CrCr----:--RgRg--:----SbSb
+tick 1:
+  Rg cluster は L1 の Cr に支えられて接地済み
+  Sb cluster だけが非接地なので 1 レイヤ下げる
 
 結果: CrCr----:--RgRg--:----SbSb
 ```
 
-> **ポイント**: B と C は共に浮遊クラスタだが、B（レイヤ 2）が先に処理されて障害物シェイプに加わるため、C（レイヤ 4）は B の着地先の上に正しく着地する。もし全落下単位を一括除去した残余シェイプのみで着地判定を行うと、C は B を認識できず layer 0 まで落下してしまい、誤った結果 `CrCrSbSb:--RgRg--` を生む。これが下位優先処理が必要な理由である。
+Wave Gravity は各 tick の現在状態で `FloatingPos` を再計算する。先に誰かを処理するのではなく、同時移動と再評価の反復で積み重なりを表現する。
 
 ---
 
@@ -488,66 +335,40 @@ d({L3:SE, L3:SW}):
 
 落下処理は必ず有限ステップで完了する。
 
-**理由**: 各落下単位の落下距離 d(U) は 1 以上の有限値であり、落下処理はアルゴリズム 6.2 のとおり 1 パスで全落下単位の目標位置を算出して適用するため、反復は不要である。
-
-> **注意（≥6L の制限）**: 上記「反復は不要」の主張は **layerCount ≤ 5 のシェイプに限り正しい**。6 層以上のシェイプでは、foldl 中の pin 配置が水平接地接触を切断し、隣接方向の crystal が非接地のまま残存するケースが存在する（反例: `L0=[--,--], L1=[--,cr], L2=[--,P], L3=[cr,P], L4=[cr,P], L5=[cr,cr]` → gravity 出力に浮遊クラスタが残る）。§10.4 の「繰り返される」記述と矛盾するため、**現行実装 `Gravity.process` は 1 パス方式を採用し、`gravity_IsSettled` 定理には `s.layerCount ≤ 5` の仮説が付与されている**。将来的に反復方式への移行が必要（MILESTONES.md 参照）。
+**理由**: floating な非空象限は各 `waveStep` で layer index を 1 減らす。layer 0 に到達した象限は直接接地し、それ以後は動かない。したがって `s.length` 回の反復後には浮遊位置が残らない。
 
 ### 7.2 決定性 (Determinism)
 
 落下処理の結果は入力シェイプに対して一意に定まる。
 
-**理由**: 落下単位の列挙は初期シェイプから一意に決まる。処理順序は 6.2 節の `shouldProcessBefore` 述語による挿入ソートで決定される。
-
-> **注意**: `shouldProcessBefore` は **反対称律を満たさない**。すなわち `shouldProcessBefore A B = true` かつ `shouldProcessBefore B A = true` となる循環ペアが存在する。例えば、クラスタ A が {(layer 0, East), (layer 3, West)} に、クラスタ B が {(layer 1, East), (layer 2, West)} に象限を持つ場合、East 列では A が下位 (0 < 1) だが West 列では B が下位 (2 < 3) であり、双方向で true となる。
-
-決定性が成り立つ根拠は以下の 2 点である:
-
-1. **方角列を共有しない落下単位同士は互いの着地位置に影響しない** ため、処理順序に関わらず同一の結果を産む（6.4 節参照）
-2. **方角列を共有する落下単位のうち `shouldProcessBefore` が循環するペアは、共有する各方角列で異なる方向の上下関係を持つ** ため、settleStep の交換法則 (`settleStep_comm_ne_dir`) により処理順序に関わらず同一の結果を産む
-
-> **未完了**: 上記の決定性は現在 sorry を含む形で Lean 上に記述されている。`floatingUnits_perm_rotate180` および `settle_foldl_eq` の証明が完了すれば、`process_rotate180`（回転等変性）から間接的に決定性も帰結する。
+**理由**: 各 tick の移動対象 `F = { p | FloatingPos S p }` は現在のシェイプ `S` から一意に決まる。`waveStep` は `F` から `p.down` への同時写像として定義され、処理順を持たない。
 
 ### 7.3 冪等性 (Idempotency)
 
 `gravity(gravity(S)) = gravity(S)`
 
-落下後のシェイプには浮遊する落下単位が存在しないため、再度落下処理を適用しても変化しない。
+落下後のシェイプには浮遊位置が存在しないため、再度落下処理を適用しても変化しない。正確な等式として扱う場合は、末尾空レイヤの除去を考慮し、正規化済みシェイプを基準にする。
 
 ### 7.4 レイヤ数不増 (Layer Count Non-Increase)
 
-落下処理によりレイヤ数が増加することはない。落下は象限を下方にのみ移動させるため、新しいレイヤが追加されることはない。
+落下処理によりレイヤ数が増加することはない。各 `waveStep` は象限を下方にのみ移動させ、新しい上位レイヤを追加しない。
 
 ### 7.5 正規化との関係
 
 落下により最上位レイヤが全て空になる場合がある。落下処理の最終ステップで `Shape.normalize` を適用し、末尾の空レイヤを除去する。
 
-### 7.6 foldl 方式のレイヤ数制限（≤5L）
+### 7.6 形式検証方針
 
-> **正式決定（2026-04-13）**: 現行の foldl（1 パス）方式による落下処理の形式検証は、**`layerCount ≤ 5` のシェイプのみ**を対象とする。
+Wave Gravity の主定理は、層数を vanilla4 に限定せずに証明する方針とする。
 
-#### 根拠
-
-1. **反例の存在**: `Gravity.process` の回転等変性 `process_rotate180` は 6 層以上のシェイプに対して反例が存在する（§7.1 参照）。同 minLayer の FU が同一方角を共有する場合、カスケード障害物効果によりソート順序が結果に影響する
-2. **安定性の破綻**: `gravity_IsSettled`（落下処理の出力が安定状態であること）も 6 層以上で偽。pin 配置が水平接地接触を切断し、浮遊クラスタが残存するケースが存在する
-3. **ゲーム上の到達可能性**: vanilla4（maxLayers=4）および vanilla5（maxLayers=5）では、各加工装置の入力は常に `layerCount ≤ maxLayers ≤ 5` である。6 層以上のシェイプが `Gravity.process` に渡されるのは Stacker の 1st gravity（`placeAbove` 後）のみであり、この場合は `IsSettled` 仮説による別定理で対応する（§10.4 参照）
-4. **計算的検証**: ≤5L のシェイプ 1.9M+ 個で回転等変性 0 failures、65K+ 個で CW 回転等変性 0 failures
-
-#### 影響範囲
-
-以下の定理に `s.layerCount ≤ 5` 仮説が付与されている:
-
-| 定理 | ファイル | 内容 |
-|---|---|---|
-| `process_rotate180` | Gravity.lean | 180° 回転等変性 |
-| `process_rotateCW` | Gravity.lean | 90° 回転等変性 |
-| `gravity_rotate180_comm` | Gravity.lean | Shape API レベルの 180° 回転可換性 |
-| `gravity_rotateCW_comm` | Gravity.lean | Shape API レベルの 90° 回転可換性 |
-| `gravity_IsSettled` | SettledState.lean | 落下処理出力の安定性 |
-| `all_grounded_settle_foldl` | SettledState.lean | foldl 帰納法での接地不変量 |
-
-#### 将来的な拡張
-
-6 層以上のシェイプのサポートには、反復方式（波動モデル）への移行が必要である（MILESTONES.md 参照）。反復方式では `settle_foldl_eq`（ソート不変性）の証明資産は不要になるが、着地位置の性質に関する証明（sorry #4b 相当）は引き続き必要。
+| 補題 / 性質 | 方針 |
+|---|---|
+| `waveStep` の atomic shift 仕様 | `FloatingPos` と `p.down` の関係として証明 |
+| `waveStep` の安全性 | `p.down` が非空なら接地済みでないことから導く |
+| `waveStep` の接地保存 | 接地パスが floating 位置を通らないことへ還元 |
+| `waveGravityCore` の終了性 | floating height の減少で証明 |
+| `Shape.gravity.isSettled` | `s.length` 回の反復後に浮遊位置がないことから導く |
+| `Shape.gravity.rotateCW_comm` | `FloatingPos` と `down` の CW 可換性から導く |
 
 ---
 
@@ -577,22 +398,23 @@ d({L3:SE, L3:SW}):
 
 ### 8.2 落下対象と砕け散り対象の関係
 
-| 操作 | 砕け散りの基準 | 落下単位の基準 |
+| 操作 | 砕け散りの基準 | 落下対象の基準 |
 |---|---|---|
-| **積み重ね** | 落下対象の脆弱象限のクラスタ | 砕け散り後の浮遊クラスタ/ピン |
-| **切断** | 東西に跨がるクラスタ | 砕け散り + 切断後の浮遊クラスタ/ピン |
-| **ピン押し** | 廃棄レイヤの脆弱象限のクラスタ | 砕け散り後の浮遊クラスタ/ピン |
+| **積み重ね** | 落下対象の脆弱象限のクラスタ | 砕け散り後の `FloatingPos` |
+| **切断** | 東西に跨がるクラスタ | 砕け散り + 切断後の `FloatingPos` |
+| **ピン押し** | 廃棄レイヤの脆弱象限のクラスタ | 砕け散り後の `FloatingPos` |
 
 ### 8.3 Lean コードとの対応
 
 | 概念 | Lean 定義 | ファイル |
 |---|---|---|
-| 砕け散り対象の算出（落下時） | `Shape.shatterTargetsOnFall` | [`Shatter.lean`](../../S2IL/Behavior/Shatter.lean) |
+| 砕け散り対象の算出（落下時） | `Shape.shatterTargetsOnFall` | [`Shatter.lean`](../../S2IL/Operations/Shatter.lean) |
 | 砕け散りの適用（落下時） | `Shape.shatterOnFall` | 同上 |
 | 砕け散り対象の算出（切断時） | `Shape.shatterTargetsOnCut` | 同上 |
 | 砕け散りの適用（切断時） | `Shape.shatterOnCut` | 同上 |
-| 構造結合・接地・浮遊・落下処理 | `Gravity.process`, `Shape.gravity` | [`Gravity/Defs.lean`](../../S2IL/Behavior/Gravity/Defs.lean), [`Gravity.lean`](../../S2IL/Behavior/Gravity.lean) |
-| 落下処理の 180° 回転等変性 | `Gravity.process_rotate180` | [`Gravity/Equivariance.lean`](../../S2IL/Behavior/Gravity/Equivariance.lean) |
+| 構造結合・接地・安定状態 | `IsStructurallyBonded`, `IsGrounded`, `IsSettled` | [`Settled.lean`](../../S2IL/Operations/Settled.lean) |
+| 落下処理 | `Shape.gravity` | [`Gravity.lean`](../../S2IL/Operations/Gravity.lean) |
+| 落下処理の回転等変性 | `Shape.gravity.rotateCW_comm` | [`Gravity.lean`](../../S2IL/Operations/Gravity.lean) |
 
 ---
 
@@ -615,22 +437,25 @@ d({L3:SE, L3:SW}):
 
 ### 10.1 安定状態の定義
 
-**安定状態 (Settled State)** とは、シェイプ内に浮遊する落下単位が存在しない状態を指す。
-すなわち、全ての構造クラスタが接地している状態である。
+**安定状態 (Settled State)** とは、シェイプ内の全ての有効な非空象限が接地している状態を指す。
+すなわち、`FloatingPos` を満たす位置が存在しない状態である。
 
 Lean での定義:
 
 ```lean
--- S2IL/Behavior/Gravity.lean
-def Shape.IsSettled (s : Shape) : Prop := Gravity.floatingUnits s = []
-def Shape.isSettled (s : Shape) : Bool := (Gravity.floatingUnits s).isEmpty
+-- S2IL/Operations/Settled.lean
+def IsSettled (s : Shape) : Prop :=
+  ∀ p : QuarterPos, p ∈ QuarterPos.allValid s →
+    ¬ (QuarterPos.getQuarter s p).isEmpty → IsGrounded s p
+
+noncomputable def isSettled (s : Shape) : Bool := decide (IsSettled s)
 ```
 
-空シェイプ（`Shape`は非空リストなので存在しない）、および単一レイヤのみのシェイプは自明に安定状態である。
+空シェイプ、および単一レイヤのみのシェイプは自明に安定状態である。
 
 ### 10.2 ゲーム規定
 
-ゲーム上、**ベルトで搬送されるシェイプおよび各加工装置の入出力は常に安定状態であることが保証されている**（[glossary.md](glossary.md) 参照）。
+ゲーム上、**ベルトで搬送されるシェイプおよび各加工装置の入出力は常に安定状態であることが保証されている**（[game-system-overview.md](game-system-overview.md) 参照）。
 
 不安定状態は加工装置の **内部処理** においてのみ一時的に発生する:
 
@@ -640,7 +465,7 @@ def Shape.isSettled (s : Shape) : Bool := (Gravity.floatingUnits s).isEmpty
 | **積み重ね (Stack)** | 上側シェイプの一部が下側の空象限上に浮遊する |
 | **ピン押し (PinPush)** | レイヤ上限超過による truncate 後に浮遊部分が生じる |
 
-これらの内部処理では、最終出力前に必ず落下処理 (`Gravity.process`) が適用され、安定状態に復帰する。
+これらの内部処理では、最終出力前に必ず落下処理 (`Shape.gravity`) が適用され、安定状態に復帰する。
 
 ### 10.3 安定状態を保存する操作
 
@@ -651,13 +476,12 @@ def Shape.isSettled (s : Shape) : Bool := (Gravity.floatingUnits s).isEmpty
 | 着色 (Paint) | `Shape.paint` | 象限の有無を変えない |
 | 結晶化 (Crystallize) | `Shape.crystallize` | 象限の有無を変えない |
 | 回転 (Rotate) | `Shape.rotateCW` 等 | 構造クラスタの位置関係を保存 |
-| 180° 回転 | `Shape.rotate180` | `IsSettled_rotate180` として証明済み |
+| 180° 回転 | `Shape.rotate180` | `IsSettled.rotate180` として証明済み |
 
 ### 10.4 落下処理の保証
 
-落下処理 `Gravity.process` の出力は（空でない限り）常に安定状態である（**layerCount ≤ 5 の場合**）。
-
-> **注意**: 原文「全ての浮遊落下単位が着地するまで処理が繰り返される」は反復方式を前提とした記述だが、現行実装は 1 パス方式（foldl）である。§7.1 で述べたとおり、≤5L では 1 パスで十分であるが、≥6L では不十分。この矛盾の解消は将来課題（MILESTONES.md「gravity_IsSettled の layerCount ≤ 5 制約解消」参照）。
+落下処理 `Shape.gravity` の出力は常に安定状態である。本性質は `Shape.gravity.isSettled` として形式化する。
+Wave Gravity では、`s.length` 回の `waveStep` 後に `FloatingPos` が存在しないことを示し、そこから `IsSettled` を導く。
 
 ---
 
@@ -665,7 +489,7 @@ def Shape.isSettled (s : Shape) : Bool := (Gravity.floatingUnits s).isEmpty
 
 ### 11.1 実装済みの定義
 
-**`S2IL/Shape/Quarter.lean`**:
+**`S2IL/Shape/Types.lean`**:
 
 ```lean
 /-- 象限が構造結合を形成できるかを判定する。
@@ -679,51 +503,46 @@ def Quarter.canFormBond : Quarter → Bool
 
 ### 11.2 実装ファイル
 
-**`S2IL/Behavior/Gravity/Defs.lean`**:
+**`S2IL/Operations/Settled.lean`**:
 
 | 関数 | 役割 | 状態 |
 |---|---|---|
-| `isStructurallyBonded` | 2象限間の構造結合判定 | ✅ 実装済み |
-| `structuralCluster` | BFS による構造クラスタ算出 | ✅ 実装済み |
-| `allStructuralClusters` | 全構造クラスタの列挙 | ✅ 実装済み |
-| `isGroundingContact` | 2象限間の接地接触判定 | ✅ 実装済み |
-| `isUpwardGroundingContact` | 上方向接地接触（BFS 用） | ✅ 実装済み |
-| `groundingEdge` | 接地 BFS の合成エッジ（上方向接触 ∥ 構造結合） | ✅ 実装済み |
-| `isGrounded` | 象限の接地判定（BFS from layer 0） | ✅ 実装済み |
-| `floatingUnits` | 全落下単位の列挙 | ✅ 実装済み |
-| `process` | 落下シミュレーション（本仕様 6 節のアルゴリズム） | ✅ 実装済み |
+| `IsContact` | 2象限間の接地接触 | ✅ 実装済み |
+| `IsUpwardGroundingContact` | 上方向接地接触 | ✅ 実装済み |
+| `IsStructurallyBonded` | 2象限間の構造結合 | ✅ 実装済み |
+| `IsGroundingEdge` | 接地関係の合成エッジ | ✅ 実装済み |
+| `IsGrounded` | 象限の接地判定 | ✅ 実装済み |
+| `IsSettled` / `isSettled` | 安定状態の判定 | ✅ 実装済み |
 
-**`S2IL/Behavior/Gravity.lean`** (facade):
+**`S2IL/Operations/Gravity.lean`** (facade):
 
 | 関数 | 役割 | 状態 |
 |---|---|---|
-| `Shape.gravity` | `Gravity.process` のラッパー | ✅ 実装済み |
-| `Shape.IsSettled` / `Shape.isSettled` | 安定状態の判定 | ✅ 実装済み |
-| `gravity_rotate180_comm` | 180° 回転等変性（≤5L） | ✅ 実装済み |
-| `gravity_rotateCW_comm` | 90° 回転等変性（≤5L） | ✅ 実装済み |
+| `Shape.gravity` | 落下処理の公開 API | ✅ Wave Gravity 実装済み |
+| `Shape.gravity.isSettled` | 落下後の安定性 | ✅ theorem |
+| `Shape.gravity.of_isSettled` | 安定入力の不動点性 | ✅ theorem |
+| `Shape.gravity.rotateCW_comm` | CW 回転等変性 | ✅ theorem |
+| `Shape.gravity.rotate180_comm` / `Shape.gravity.rotateCCW_comm` | CW からの系 | ✅ theorem |
 
-**`Test/Behavior/Gravity.lean`**:
-
-本仕様の例を `#guard` テストとして検証済み。
+Wave Gravity の `Defs` / `Behavior` / `Equivariance` / `Internal` 分割は `S2IL/Operations/Gravity/` に実装済み。公開 API は facade の `S2IL/Operations/Gravity.lean` から参照する。
 
 ---
 
 ## 12. 用語対応表
 
-| 本仕様での用語 | glossary.md での用語 | Lean コード上の対応 |
+| 本仕様での用語 | game-system-overview.md での用語 | Lean コード上の対応 |
 |---|---|---|
-| 構造結合 (Structural Bond) | — | `Gravity.isStructurallyBonded` |
+| 構造結合 (Structural Bond) | — | `IsStructurallyBonded` |
 | 結合能力 (Bond Capability) | — | `Quarter.canFormBond` |
-| 構造クラスタ (Structural Cluster) | — | `Gravity.structuralCluster` |
-| 接地接触 (Grounding Contact) | — | `Gravity.isGroundingContact` |
-| 上方向接地接触 (Upward Grounding Contact) | — | `Gravity.isUpwardGroundingContact` |
-| 接地エッジ (Grounding Edge) | — | `Gravity.groundingEdge` |
-| 接地 (Grounded) | — | `Gravity.isGrounded` |
-| 浮遊 (Floating) | — | `Gravity.floatingUnits` |
-| 落下単位 (Falling Unit) | — | `Gravity.FallingUnit` |
-| 落下 (Falling / Gravity) | 落下 | `Shape.gravity` / `Gravity.process` |
-| 安定状態 (Settled State) | 安定状態 (Settled State) | `Shape.IsSettled`, `Shape.isSettled` |
-| 結合凍結 (Bond Freezing) | — | アルゴリズムの設計原則として反映 |
-| 結晶結合 (Crystal Bond) | — | `CrystalBond.isBonded` |
+| 構造クラスタ (Structural Cluster) | — | `IsStructurallyBonded` の推移閉包として扱う |
+| 接地接触 (Grounding Contact) | — | `IsContact` |
+| 上方向接地接触 (Upward Grounding Contact) | — | `IsUpwardGroundingContact` |
+| 接地エッジ (Grounding Edge) | — | `IsGroundingEdge` |
+| 接地 (Grounded) | — | `IsGrounded` |
+| 浮遊位置 (Floating Position) | — | `FloatingPos` |
+| Wave tick | — | `Shape.waveStep` |
+| 落下 (Falling / Gravity) | 落下 | `Shape.gravity` |
+| 安定状態 (Settled State) | 安定状態 (Settled State) | `IsSettled`, `isSettled` |
+| 結晶結合 (Crystal Bond) | — | `IsCrystalBonded` |
 | 砕け散り (Shatter) | 砕け散り (Shatter) | `Shape.shatterOnFall` |
 | 脆弱 (Fragile) | 脆弱 (Fragile) | `Quarter.isFragile` |

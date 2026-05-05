@@ -12,7 +12,7 @@
 
 ### ステップ 0（着手前の真偽確認）
 
-- sorry のシグネチャが確定したら、最初に `lean-theorem-checker` または REPL `#eval` で真偽確認
+- theorem / sorry のシグネチャが確定したら、最初に `lean-theorem-investigator` エージェントまたは REPL `#eval` で真偽確認
 - 偽なら先にシグネチャ修正し、証明戦略検討を後回しにする
 
 ### ステップ 0.5（偽と判明した直後）
@@ -52,18 +52,16 @@
 
 - 3000 行超ファイルの Wave 開始時は、Explore で対象定理の行番号・シグネチャを一括取得
 - 取得結果を `/memories/session/` に記録し、以降はピンポイント読みに切り替える
-- 新規ヘルパー追加前に重複チェック（`symbol-map.jsonl` + キーワード検索）を行う
+- 新規ヘルパー追加前に重複チェック（`S2IL/**/*.lean` のキーワード検索）を行う
 
 ## Mathlib 補題探索のエスカレーション
 
 1. REPL `#check @候補名`
-2. `lean-mathlib-search` スキル
+2. `lean-proof-methods` スキル
 3. Explore で `.lake/packages/mathlib/` 検索
 4. 最後に build で統合確認
 
 ## 関連ドキュメント
 
-- `docs/s2il/equivariance-proof-patterns.md`
-- `docs/s2il/false-theorem-catalog.md`
-- `docs/plans/gravity-proof-execution-plan.md`
-- `.github/skills/lean-repl/references/repl-guide.md`
+- `.github/skills/lean-tooling/SKILL.md`
+- `.github/skills/lean-tooling/references/repl-guide.md`

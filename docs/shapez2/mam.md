@@ -1,6 +1,6 @@
 # MaM (Make Anything Machine) の形式化
 
-> 最終更新: 2026-04-09
+> 最終更新: 2026-05-05
 
 ---
 
@@ -8,7 +8,7 @@
 
 **MaM (Make Anything Machine / 全自動工場)** は、Shapez2 のオペレーターレベルで要求される「任意のシェイプを自動生産する設備」のことである。
 
-ゲームでは **ランダム図形 (Randomized Shape)** と呼ばれる毎回変化する目標が要求される。  
+ゲームでは **ランダム図形 (Randomized Shape)** と呼ばれる毎回変化する目標が要求される。
 プレイヤーは **オペレーター図形レシーバー (Operator Shape Receiver)** で目標シェイプを論理信号として受け取り、MaM がその信号を解析して物理的なシェイプを産出する。
 
 ### 1-1. MaM の動作原理
@@ -48,7 +48,7 @@ MaM は以下の 2 フェーズで構成される。
 - **シェイプ種別**: 空 (empty) / Circle / Rectangle / Star / Windmill の 5 種
 - **レイヤ数**: 1
 
-1 レイヤシェイプの象限数と種別の組み合わせは最大 $5^4 = 625$ 通り（ただし全て空は正規化上無効）。  
+1 レイヤシェイプの象限数と種別の組み合わせは最大 $5^4 = 625$ 通り（ただし全て空は正規化上無効）。
 基本 MaM はこのうち全てのシェイプを生成できることが要求される。
 
 ### 2-2. 着色 1 レイヤシェイプ
@@ -56,16 +56,16 @@ MaM は以下の 2 フェーズで構成される。
 着色機 (Painter) と混色機 (Color Mixer) を組み合わせることで色付きシェイプも生成可能。
 
 - **カラー種別**: 8 種（Red / Green / Blue / Cyan / Magenta / Yellow / White / Uncolored）
-- 混色の非結合性（`mix_not_assoc`）により、全ての色は  
+- 混色の非結合性（`mix_not_assoc`）により、全ての色は
   「原色 (Red / Green / Blue)」の 3 色の組み合わせと White で生成できる
 
 ### 2-3. 多レイヤシェイプ
 
 積層機 (Stacker) を繰り返し使うことで最大 4 レイヤのシェイプを生成できる。
 
-- **ピン (Pin)** を使うと象限をレイヤ方向に「底上げ」できる  
+- **ピン (Pin)** を使うと象限をレイヤ方向に「底上げ」できる
   （ピン押し機 (Pin Pusher) による操作）
-- **結晶 (Crystal)** を含むシェイプは CrystalGenerator を経由する  
+- **結晶 (Crystal)** を含むシェイプは CrystalGenerator を経由する
   （積層時に結晶は全て砕け散る）
 
 ---
@@ -78,16 +78,16 @@ MaM の形式化・正しさの証明には以下の定理群が必要になる�
 
 | 操作 | Lean の定義 | 備考 |
 |---|---|---|
-| 切断処理機 | `Shape.halfDestroy` | `S2IL/Behavior/Cutter.lean` |
-| 切断機 | `Shape.cut` | `S2IL/Behavior/Cutter.lean` |
-| 回転機 | `Shape.rotateCW` | `S2IL/Behavior/Rotate.lean` |
-| 逆回転機 | `Shape.rotateCCW` | `S2IL/Behavior/Rotate.lean` |
-| 180° 回転機 | `Shape.rotate180` | `S2IL/Behavior/Rotate.lean` |
-| 積層機 | `Shape.stack` | `S2IL/Behavior/Stacker.lean` |
-| 着色機 | `Shape.paint` | `S2IL/Behavior/Painter.lean` |
-| ピン押し機 | `Shape.pinPush` | `S2IL/Behavior/PinPusher.lean` |
-| 結晶製造機 | `Shape.crystallize` | `S2IL/Behavior/CrystalGenerator.lean` |
-| 落下処理 | `Shape.gravity` | `S2IL/Behavior/Gravity.lean` |
+| 切断処理機 | `Shape.halfDestroy` | `S2IL/Operations/HalfDestroyer.lean` |
+| 切断機 | `Shape.cut` | `S2IL/Operations/Cutter.lean` |
+| 回転機 | `Shape.rotateCW` | `S2IL/Kernel/Transform.lean` |
+| 逆回転機 | `Shape.rotateCCW` | `S2IL/Kernel/Transform.lean` |
+| 180° 回転機 | `Shape.rotate180` | `S2IL/Kernel/Transform.lean` |
+| 積層機 | `Shape.stack` | `S2IL/Operations/Stacker.lean` |
+| 着色機 | `Shape.paint` | `S2IL/Operations/Painter.lean` |
+| ピン押し機 | `Shape.pinPush` | `S2IL/Operations/PinPusher.lean` |
+| 結晶製造機 | `Shape.crystallize` | `S2IL/Operations/CrystalGenerator.lean` |
+| 落下処理 | `Shape.gravity` | `S2IL/Operations/Gravity.lean` |
 
 これらは `Machine` 名前空間でまとめて `Option` 対応ラッパーとして提供される（`S2IL/Machine/Machine.lean`）。
 
@@ -100,65 +100,66 @@ MaM の核心は「任意の象限を他の象限と独立に抽出できる」�
 -- halfDestroy(rotateCCW(halfDestroy(s))).layer[0].ne = s.layer[0].ne
 ```
 
-具体的には以下の補題を用いた連鎖証明が必要となる。
+具体的には以下の証明ステップを用いた連鎖証明が必要となる。
 
 | # | 必要な補題 | 概要 |
 |---|---|---|
-| T-1 | `halfDestroy_east_half` | 切断処理後の東半分が元のシェイプの NE・SE と一致する |
-| T-2 | `rotateCCW_ne_maps_to_nw` | CCW 回転後に元の NE 象限が NW 位置に移動する |
-| T-3 | `halfDestroy_after_rotate_isolation` | 2 回の切断処理で単一象限が分離されることを証明 |
-| T-4 | `quarter_extraction_completeness` | 全象限について T-1〜T-3 が成立する |
+| T-1 | 東半分の保存 | 切断処理後の東半分が元のシェイプの NE・SE と一致する |
+| T-2 | 象限の回転変位 | CCW 回転後に元の NE 象限が NW 位置に移動する |
+| T-3 | 2 段切断による象限分離 | 2 回の切断処理で単一象限が分離されることを証明 |
+| T-4 | 象限抽出の完全性 | 全象限について T-1〜T-3 が成立する |
 
 ### 3-3. 積層の正しさ（部分的に実装済み）
 
 積層機に関して以下の性質が必要。
 
-| # | 定理名（予定） | 概要 | 状態 |
+| # | 性質 | 概要 | 状態 |
 |---|---|---|---|
-| T-5 | `stack_correct_no_float` | 浮遊なし入力のスタック結果が正しい | ⬜ 未着手 |
-| T-6 | `stack_correct_single_quarter` | 単一象限シェイプのスタックが正しい | ⬜ 未着手 |
-| T-7 | `stack_layerCount_bound` | スタック結果のレイヤ数が上限以下 | ✅ `placeAbove_layerCount` で基礎済み |
+| T-5 | 浮遊なし入力の積層 | 浮遊なし入力のスタック結果が正しい | ⬜ 未着手 |
+| T-6 | 単一象限積層 | 単一象限シェイプのスタックが正しい | ⬜ 未着手 |
+| T-7 | 積層のレイヤ数上界 | スタック結果のレイヤ数が上限以下 | ✅ 基礎補題あり |
 
-### 3-4. 操作の等変性（一部証明済み・一部未着手）
+### 3-4. 操作の等変性（CW 回転ベース）
 
-「同じ操作を別の向きで行っても、回転してから操作しても同じ」という等変性定理群。  
+「同じ操作を別の向きで行っても、回転してから操作しても同じ」という等変性定理群。
 MaM が扱うシェイプの方向依存性をなくすために重要。
 
-| # | 定理名 | 概要 | 状態 |
+**現アプローチ**: 各操作について CW 回転（rotateCW）との可換性を基本単位として証明し、
+rotate180 などの他の回転の等変性はその帰結として導出する（`rotate180 = rotateCW ∘ rotateCW` を利用）。
+
+| # | 等変性の対象 | 概要 | 状態 |
 |---|---|---|---|
-| T-8 | `rotateCW_rotate180_comm` | `rotateCW(s.rotate180) = (rotateCW s).rotate180` | ✅ 証明済み |
-| T-9 | `cut_rotate180_comm` | 切断と 180° 回転の可換性 | ✅ 証明済み |
-| T-10 | `gravity_rotate180_comm` | 落下処理と 180° 回転の可換性 | ✅ 証明済み（≤ 5L） |
-| T-11 | `stack_rotate180_comm` | `stack(s, t).rotate180 = stack(s.rotate180, t.rotate180)` | 🔄 sorry 1（placeAbove 後 >5L の gravity 等変性） |
-| T-12 | `paint_rotate180_comm` | 着色と 180° 回転の可換性 | ✅ 証明済み |
+| T-8 | 回転操作間の整合性 | rotateCW を生成元とする回転群の代数的性質 | ✅ 証明済み |
+| T-9 | 切断の等変性 | 切断操作と CW 回転の可換性 | ✅ 証明済み |
+| T-10 | 落下処理の等変性 | 落下処理と CW 回転の可換性 | ✅ 証明済み |
+| T-11 | 積層の等変性 | 積層と CW 回転の可換性 | 🔄 再構築中 |
+| T-12 | 着色の等変性 | 着色操作と CW 回転の可換性 | ✅ 証明済み |
 
 ### 3-5. MaM 完全性（未着手）
 
 最終的なゴールとなる定理群。
 
-| # | 定理名（予定） | 概要 | 状態 |
+| # | 性質 | 概要 | 状態 |
 |---|---|---|---|
-| T-13 | `mam_produces_any_uncolored_1layer` | 任意の無着色 1 レイヤシェイプを MaM は生成できる | ⬜ 未着手 |
-| T-14 | `mam_produces_any_colored_1layer` | 着色も含めた 1 レイヤシェイプを生成できる | ⬜ 未着手 |
-| T-15 | `mam_produces_any_multilayer` | 多レイヤシェイプを生成できる（レイヤ制限内） | ⬜ 未着手 |
+| T-13 | 無着色 1 レイヤ完全性 | 任意の無着色 1 レイヤシェイプを MaM は生成できる | ⬜ 未着手 |
+| T-14 | 着色 1 レイヤ完全性 | 着色も含めた 1 レイヤシェイプを生成できる | ⬜ 未着手 |
+| T-15 | 多レイヤ完全性 | 多レイヤシェイプを生成できる（レイヤ制限内） | ⬜ 未着手 |
 
 ---
 
-## 4. `process_rotate180` の立ち位置
+## 4. 等変性証明のアプローチ
 
-### 4-1. 定理の内容
+### 4-1. 基本方針
 
-`process_rotate180`（公開名: `gravity_rotate180_comm`）は次の等変性を主張する:
+現在の証明アプローチでは、各操作の **CW 回転（rotateCW）との可換性を基本単位**として証明し、
+他の回転（rotate180・rotateCCW）の等変性はその帰結として導出する。
 
-```lean
-theorem gravity_rotate180_comm (s : Shape) :
-    (s.gravity).map Shape.rotate180 = s.rotate180.gravity
-```
+この方針の利点:
+- `rotate180 = rotateCW ∘ rotateCW` の代数的関係を利用して証明を集約できる
+- 回転群（Z/4Z）の構造を直接活用し、冗長な証明を排除できる（MECE 設計）
+- より少ない基礎補題から完全な等変性定理群を再導出できる
 
-すなわち「あるシェイプに落下処理を施した後に 180° 回転させた結果」と  
-「あるシェイプを 180° 回転させた後に落下処理を施した結果」が一致する、という定理である。
-
-### 4-2. 積層等変性のブロッカー
+### 4-2. 積層等変性への連鎖
 
 積層機は以下の処理パイプラインで実装される。
 
@@ -167,23 +168,16 @@ stack(bottom, top)
     = gravity(shatter_top_crystals(placeAbove(bottom, top)))
 ```
 
-このため、積層と回転の可換性（T-11）は `gravity_rotate180_comm`（T-10）に依存する。  
-T-10 は≤ 5L で証明済みだが、placeAbove 出力は最大 2×maxLayers（>5L）になりうるため、  
-T-11 には別途 IsSettled 仮説ベースの証明が必要。
+このため、積層の等変性（T-11）は「落下処理の等変性（T-10）」に依存する。
+落下処理の等変性は Wave Gravity で `Shape.gravity.rotateCW_comm` として証明済み。
+今後の焦点は、`placeAbove` / truncate / shatter / gravity の合成として積層等変性を保つことである。
 
-### 4-3. プロジェクト全体における位置
+### 4-3. 現在の状況
 
-プロジェクト全体で残っている `sorry` は現在 **3 件** である。
+Gravity 層の Wave Gravity 化と CW 回転等変性の theorem 化は完了。
+旧 rotate180 ベースの Gravity プレースホルダーは `Shape.gravity.rotateCW_comm` とその 180° / CCW 系に置換済み。
 
-| # | ファイル | 定理 | 内容 |
-|---|---|---|---|
-| 1 | Stacker.lean L171 | `stack_rotate180_comm` | placeAbove 後 >5L の gravity 等変性 |
-| 2 | SettledState.lean L1023 | `h_empty_landing_case_d_eq_one` | d=1 着地時の着地位置空性（cluster FU 限定） |
-| 3 | SettledState.lean L1998 | `one_step_all_grounded_pin` | pin FU 配置の接地不変量保存 |
-
-sorry #2/#3 は `gravity_IsSettled`（落下処理出力が安定状態）の Case 2 内の補題であり、  
-sorry #1 は sorry #2/#3 の解消に依存する（IsSettled 仮説の充足）。  
-詳細は [`docs/plans/gravity-proof-execution-plan.md`](../plans/gravity-proof-execution-plan.md) を参照。
+積層等変性（T-11）の構成的証明が、MaM 形式化への残る主要ブロッカーである。
 
 ---
 
@@ -194,14 +188,14 @@ sorry #1 は sorry #2/#3 の解消に依存する（IsSettled 仮説の充足）
     │
     ├─ 象限抽出の正しさ (T-1〜T-4) ─────────────────────┐
     │                                                     │
-    ├─ gravity_rotate180_comm (T-10) ✅                    │
+    ├─ 落下処理の等変性 (T-10) ✅ 証明済み               │
     │       │                                             │
     │       ▼                                             │
-    │   stack_rotate180_comm (T-11) ← sorry 1件             │
-    │       │    (placeAbove後>5L + gravity_IsSettled sorry) │
+    │   積層の等変性 (T-11) 🔄 再構築中                  │
+    │       │                                             │
     │       ▼                                             ▼
-    └─── paint_rotate180_comm (T-12) ✅ ──→  MaM 完全性 (T-13～T-15)
+    └─── 着色・その他操作の等変性 (T-8,T-9,T-12) ✅ ──→  MaM 完全性 (T-13～T-15)
 ```
 
-`stack_rotate180_comm` の sorry 解消が、MaM 形式化への道を開く最後のブロッカーである。  
-その解消には `gravity_IsSettled`（SettledState.lean の sorry 2 件）の先行解消が必要。
+積層の等変性（T-11）の構成的証明完成が、MaM 形式化への残る主要ブロッカーである。
+Gravity 側の CW 等変性は証明済みのため、今後は Stacker / PinPusher などの合成操作側の接続に集中する。
