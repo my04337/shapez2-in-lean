@@ -1,94 +1,134 @@
 # エージェント運用プレイブック（詳細版）
 
-`AGENTS.md` には頻出・必須ルールのみを置き、ここには参照頻度が低い詳細ルールを集約する。
+`AGENTS.md` の最上位ルールから外した詳細閾値・例外運用をここに集約する。
+原則・トリガ語句は AGENTS.md 側に置き、ここでは「数字付き運用ルール」のみを扱う。
 
-## 目的
-
-- 指示の肥大化を防ぎ、日常作業のトークン消費を抑える
-- 例外運用・閾値付きルールを一箇所にまとめる
-- ルールの更新履歴を追いやすくする
+---
 
 ## 検索戦略（詳細）
 
 ### 加工操作タスクの探索プロトコル
 
-1. まず `S2IL/_agent/route-map.json` の `routes.{operation}.entry` を読む
-2. entry の公開 API シグネチャ（先頭約 50 行）を確認
-3. 必要時のみ `chain` を辿る（lazy exploration）
-4. Kernel 層には `chain` か `kernel_deps` 経由で到達する（直接 grep しない）
-5. タスク種別が明確なら `S2IL/_agent/query-playbook.json` のレシピを使う
+1. 対応する facade（`S2IL/<Namespace>.lean`、例: `S2IL/Operations.lean`）の冒頭目次コメントを読む
+2. facade で宣言されている公開 API シグネチャを確認する
+3. 実装が必要なら facade が import している公開部品ファイル (`S2IL/<Namespace>/<Component>.lean`) を辿る
+4. `Internal/` は facade / 同 namespace からのみ参照する
+5. それでも未到達なら対象 namespace に絞って `grep_search`
 
-### symbol-map 優先
+### Explore 委譲の判断軸
 
-- シンボル名が分かる場合、最初に `S2IL/_agent/symbol-map.jsonl` を検索する
-- symbol-map は `build.ps1` / `build.sh` によるビルド成功時に自動再生成される（`update-symbol-map.ps1` / `update-symbol-map.sh`）
-- 行番号が必要な場合のみ追加検索する
-- symbol-map にないシンボルは「存在しない」と見なしてよい
+機械的な数値閾値（「ファイル N 本」「シンボル M 個」）は撤廃した。Greenfield 後の Lean ソースは facade + MECE 分割で 1 ファイルあたりの責務が小さく、数で測ると過剰委譲または過小委譲のいずれかに振れる。
 
-### Explore 委譲の閾値
+委譲が **有効** な状況:
 
-- 3000 行超ファイルで、同一ファイルに対する探索が 3 回以上続き、目的情報が未取得なら Explore に委譲
-- 複数シンボル（3 件以上）の位置特定は、ファイルサイズに関わらず Explore 推奨
-- 同一ファイルへの `grep_search` は原則 2 回まで
+- 横断的な合成要約が要る（spec + 実装 + テストの三点照合、未知 namespace の構造把握）
+- 同一キーワードでの `grep_search` が空ヒット 2 回続いたとき（Explore に語彙的揺らぎを委ねる）
+- session memory / context に類似の探索結果が無く、結果を要約のみ受け取れば十分なとき
 
-## セッションメモリ運用（詳細）
+委譲が **不要** な状況:
 
-- 多段作業（Wave / 証明チェーン）では、初期ツール呼び出し 3 回以内に `/memories/session/` を作成
-- 1 セッションあたり原則 2 ファイル以内
-- 長大ドキュメント（5000 tokens 超）を扱う場合は、先に要約メモを作り、全文再読を避ける
+- 既知シンボルの 1〜2 行確認（`grep_search` + 短い `read_file` で済む）
+- 直近のターンで context に既に取り込まれているファイルの再参照
+- facade 冒頭目次だけで答えが出るとき
 
-詳細テンプレート: `docs/agent/session-memory-guide.md`
+> 重要サブエージェント（`lean-theorem-investigator` / `lean-build-doctor`）の呼び出しは数値閾値で抑制しない。閾値は guard rail ではなく **目安** として扱う。
 
-## タスク管理と進捗報告
+### 委譲テンプレート
 
-### 進捗報告
+```text
+runSubagent Explore
+  query: "{File}.lean の L{X}〜L{Y} 付近で {目的} を探して、行番号付きで上位 5 件を返して"
+  thoroughness: quick
+```
 
-- 長文コンテキストの常時同梱を禁止
-- 収集系ツールを目的単位でバッチ化
-- 中間報告は「現在地 + 次アクション」の短文に限定
-
-## 証明作業の撤退閾値
-
-- 同一 sorry に 8 アプローチ以上失敗したら撤退判断
-- 同一ゴール形状が戦略変更後に 2 回再出現したら撤退検討
+---
 
 ## ビルド後チェックリスト
 
-### `lake build` 直接実行時の必須フォロー
+### `lake build` を VS Code task で直接叩いた場合
 
-VS Code task や `lake build` 単体実行では `symbol-map.jsonl` が自動更新されない。
-コミット直前に以下を必ず確認する:
+`build.ps1` を経由しない場合は `sorry-goals.md` が更新されない。コミット前に次を実行する。
 
-1. **symbol-map 更新**: 新規 `theorem` / `lemma` を追加した場合は明示的に実行
-   ```powershell
-   .github/skills/lean-build/scripts/update-symbol-map.ps1
-   ```
-2. **sorry-goals 更新**: sorry が増減した場合
-   ```powershell
-   .github/skills/lean-build/scripts/update-sorry-goals.ps1
-   ```
-3. **`git status` で未追跡を確認**: `S2IL/_agent/symbol-map.jsonl` / `sorry-goals.md` の差分が想定通りか確認
+```powershell
+.github/skills/lean-tooling/scripts/update-sorry-goals.ps1
+git status   # sorry-goals.md の差分が想定通りか確認
+```
 
-### 推奨: スキル経由のビルド
+`build.ps1` 経由ならこの手順は自動化されるため省略可。
 
-上記ルーティンが組み込まれているため、手動フォローを省略したい場合は
-[`.github/skills/lean-build/scripts/build.ps1`](../../.github/skills/lean-build/scripts/build.ps1) を直接使う。
-成功時に `update-symbol-map.ps1` が自動実行される。
+---
 
-## ファイル編集ツール方針（詳細）
-
-### Lean
-
-- 変更後は必ず差分確認
+## ファイル編集の落とし穴
 
 ### 置換失敗時
 
-`replace_string_in_file` が失敗しても未変更とは限らない。`grep_search` または `read_file` で現状確認してから再試行する。
+`replace_string_in_file` の失敗は「未変更」を意味しない。
+失敗後は `read_file` か `grep_search` で現状を確認してから再試行する。
+
+### 大量置換
+
+10 件以上の独立した置換は `multi_replace_string_in_file` でバッチ化する。
+連鎖編集（前の置換結果に依存する）は順次 `replace_string_in_file` で行う。
+
+---
+
+## 進捗報告
+
+- 中間報告は「現在地（1 行）」と「次アクション（1 行）」のみで構成する
+- 長文の探索結果やコードブロックを毎ターン繰り返さない（`Scratch/` または session memory に退避）
+- 収集系ツールは目的単位でバッチ呼び出しする（`grep_search` 単発の連打を避ける）
+
+---
+
+## 撤退判断の閾値
+
+| 条件 | 判定 |
+|---|---|
+| 同一 sorry に 8 アプローチ以上失敗 | 撤退 |
+| 同一ゴール形状が戦略変更後に 2 回再出現 | 撤退検討 |
+| 3 セッションまたぎで同一 sorry が未進展 | 撤退 |
+
+詳細フロー: [proof-retreat-pivot-guide.md](proof-retreat-pivot-guide.md)。
+
+---
 
 ## シェル運用（補足）
 
-- PowerShell の文字列置換は常に `-creplace`
-- `.github/skills/` スクリプトはシェル前置なしで直接実行
-- 非同期ビルド監視で `get_terminal_output` を連打しない
+- PowerShell 文字列置換は `-creplace` 固定（理由: [powershell-conventions.md](powershell-conventions.md)）
+- `.github/skills/` のスクリプトはシェル前置なしで直接実行する
+- `run_in_terminal` へ PowerShell here-string (`@' ... '@`, `@" ... "@`) や `lake env lean --stdin` パイプを直接渡さない。継続入力 `>>` が残ると後続コマンドが混線するため、Scratch ファイルを `Set-Content -LiteralPath ... -Value @('line1','line2')` で作り、`.github/skills/lean-tooling/scripts/run-lean-file.ps1 -File <file>` で実行する
+- terminal コマンド内で `exit $code` を使わず、`LEAN_EXIT=<code>` のような marker を表示して判定する
+- 非同期ビルドの状態確認は `get_terminal_output` を 1 ターン 1 回までにする（タイマーが未完了なら次ターンの自動通知を待つ）
+- `#eval` / `run-lean-file.ps1` / Plausible / ベンチマークなどの探索的 Lean 実行は必ず有限 timeout 付きで小さく始める。初回は 30 秒以内、1 チャンクは原則 180 秒以内。Plausible は 50 → 300 → 1000 samples の段階で増やす。timeout / cancel 後は該当 Lean worker を停止し、Scratch 側の重い評価を縮小してから再開する
 
-詳細: `docs/agent/powershell-conventions.md`
+---
+
+## セッションメモリ運用（詳細）
+
+- 多段作業（Wave / 証明チェーン）は最初の 3 ツール呼び出し以内に `/memories/session/` を作成する
+- 1 セッション 2 ファイル以内
+- 5000 トークン超のドキュメントを扱うときは要約メモを先に作り、全文の再読を避ける
+
+詳細テンプレート: [session-memory-guide.md](session-memory-guide.md)
+
+---
+
+## sorry-plan.json の `axiom_delta` 規約
+
+`recently_completed[]` の各エントリで axiom を増減させた場合は次フィールドを必ず付ける。
+総数が変わらない（`net = 0`）場合でも記録する — 引き継ぎ時に「なぜ総数が変わっていないか」を再確認するコストを排除するため。
+
+```json
+"axiom_delta": {
+  "removed": ["<symbol>"],
+  "added": ["<bridge-axiom-symbol>"],
+  "net": 0,
+  "rationale": "後続マイルストーンで `Internal/Collision.lean` から theorem 化予定のブリッジ"
+}
+```
+
+適用契機:
+
+- 旧 axiom を取り下げ（反例発覚 / シグネチャ強化）
+- 中間結果を意図的にブリッジ axiom として導入（後続 phase で同時解消の見込みあり）
+- axiom を theorem 化（`removed` のみ、`net < 0`）

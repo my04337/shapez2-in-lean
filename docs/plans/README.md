@@ -14,11 +14,11 @@ Shapez2 in Lean (S2IL) プロジェクトの最終目標・大きな方針・層
 |---|---|
 | [MILESTONES.md](MILESTONES.md) | MAM 完全性に至る最終目標と、Data / Behavior / Flow / MAM の層構造 |
 
-### 層別の実行計画
+### 確立済みアーキテクチャ資料
 
 | ファイル | 概要 |
 |---|---|
-| [gravity-greenfield-rewrite-plan.md](gravity-greenfield-rewrite-plan.md) | Layer B（落下・結晶砕け散り・安定化）の再構築計画。CW 等変性への一本化と重複排除 |
+| [../s2il/architecture-layer-ab.md](../s2il/architecture-layer-ab.md) | Layer A/B のディレクトリ構造・設計原則・主要 theorem チェーンの正本 |
 
 ---
 
@@ -27,7 +27,7 @@ Shapez2 in Lean (S2IL) プロジェクトの最終目標・大きな方針・層
 | 作業 | 参照先 |
 |---|---|
 | プロジェクト全体の位置付けを確認 | `MILESTONES.md` |
-| Gravity 層の構造を変更する | `gravity-greenfield-rewrite-plan.md` |
+| Layer A/B の構造原則を確認 | `../s2il/architecture-layer-ab.md` |
 | 個別 sorry の現状を確認 | `../../S2IL/_agent/sorry-plan.json` / `../../S2IL/_agent/sorry-goals.md` |
 | 新しい証明計画を策定する | `../agent/proof-plan-current-focus-guide.md` |
 

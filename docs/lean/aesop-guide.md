@@ -240,7 +240,7 @@ theorem nat_ineq (n : Nat) : n + 1 > n := by aesop  -- omega で十分
 | `Cutter.lean` | Layer: `eastHalf_rotate180`, `westHalf_rotate180`, `combineEastWest_rotate180`; Shape: `eastHalf_rotate180`, `westHalf_rotate180` |
 | `CrystalGenerator.lean` | `fillLayer_rotate180`, `crystallize_rotate180_comm` |
 | `Painter.lean` | `paintLayer_rotate180`, `paint_rotate180_comm` |
-| `CrystalBond.lean` | `isBondedInLayer_rotate180`, `isBondedCrossLayer_rotate180`, `isBonded_rotate180` |
+| `CrystalBond.lean` | `isCrystalBondedInLayer_rotate180`, `isCrystalBondedCrossLayer_rotate180`, `isCrystalBonded_rotate180` |
 | `PinPusher.lean` | `liftUp_rotate180`, `generatePins_rotate180` |
 | `Stacker.lean` | `placeAbove_rotate180`, `shatterTopCrystals_rotate180`, `truncate_rotate180` |
 | `Shatter.lean` | `shatterOnCut_rotate180_comm`, `shatterOnFall_rotate180_comm`, `shatterOnTruncate_rotate180` |

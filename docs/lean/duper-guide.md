@@ -254,6 +254,5 @@ REPL のデフォルト環境 (`env: 0`) で `duper` タクティクは即座に
 
 ## 関連
 
-- **[lean-tactic-select スキル](../../.github/skills/lean-tactic-select/SKILL.md)** — Step 3 フォールバックで `duper` を使用
-- **[lean-proof-planning スキル](../../.github/skills/lean-proof-planning/SKILL.md)** — 行き詰まり時の Duper 試行フロー
+- **[lean-proof-methods スキル](../../.github/skills/lean-proof-methods/SKILL.md)** — tactic 選択と行き詰まり時の Duper 試行フロー
 - **[Aesop 活用ガイド](aesop-guide.md)** — `aesop` との使い分け

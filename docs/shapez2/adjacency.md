@@ -166,15 +166,9 @@ structure QuarterPos where
     dir   : Direction
 ```
 
-最大で 4レイヤ × 4方角 = **16個** の象限位置が存在する。
+最大で ゲームモードで規定されたレイヤ数 × 4方角 の象限位置が存在する。
 ただしシェイプのレイヤ数によって有効な位置数は異なる。
 
-| レイヤ数 | 有効な象限位置数 |
-|---|---|
-| 1 | 4 |
-| 2 | 8 |
-| 3 | 12 |
-| 4 | 16 |
 
 参照: `S2IL/Shape/QuarterPos.lean`
 
@@ -188,6 +182,6 @@ structure QuarterPos where
 |---|---|---|
 | **結晶の結合判定** | 同レイヤ内隣接 + 垂直隣接 | [`crystal-shatter.md`](crystal-shatter.md) |
 | **回転** | 方角の円環順序 | `S2IL/Processing/Rotate.lean` |
-| **切断** | East/West Half の分類 | [`glossary.md`](glossary.md) |
+| **切断** | East/West Half の分類 | [`game-system-overview.md`](game-system-overview.md) |
 | **落下（構造結合・接地）** | 同レイヤ内隣接 + 垂直隣接 | [`falling.md`](falling.md) |
 | **積み重ね** | 垂直隣接 | （今後定義予定） |

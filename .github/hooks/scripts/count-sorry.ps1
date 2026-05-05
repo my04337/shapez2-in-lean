@@ -27,7 +27,7 @@ try {
     }
 
     # proof-suppressed.flag が存在する場合は証明フック出力を抑止する
-    # (session-efficiency スキル発動時 / 明示的な証明停止時に作成される)
+    # (セッション停止の明示指示や一時的な proof freeze 時に作成される)
     #
     # NOTE: ConvertFrom-Json は tool_input.content / newString / oldString 等が
     # 不正な JSON エスケープ (例: "\" の後に有効なエスケープ文字がない) を含む場合に

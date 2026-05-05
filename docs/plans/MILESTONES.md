@@ -2,7 +2,7 @@
 
 Shapez2 in Lean (S2IL) プロジェクトの最終目標と、そこへ至る大きな塊を整理した計画書。
 
-> 各項目の進捗（ビルド状況・残 sorry など）は扱わない。リアルタイム状態は [`S2IL/_agent/sorry-goals.md`](../../S2IL/_agent/sorry-goals.md)（自動生成）および [`S2IL/_agent/sorry-plan.json`](../../S2IL/_agent/sorry-plan.json) を参照。
+> 中項目には大まかな完了状況を記す。ビルド状況・残 sorry などのリアルタイム状態は [`S2IL/_agent/sorry-goals.md`](../../S2IL/_agent/sorry-goals.md)（自動生成）および [`S2IL/_agent/sorry-plan.json`](../../S2IL/_agent/sorry-plan.json) を参照。
 
 ---
 
@@ -32,11 +32,22 @@ Layer B (Behavior)         ← 振る舞い系証明（落下・砕け散り・�
 Layer A (Data & Operations) ← 静的データ型と純粋関数
 ```
 
+## 進捗サマリ
+
+| 層 | 進捗 |
+|---|---|
+| Layer A | **主要基盤は実装済み・運用中**。Shape / Kernel / Operations の純粋関数群は現行コードの土台として使われている。Wires はスケルトン段階。 |
+| Layer B | **Gravity 中心に定理化が前進**。Wave Gravity の終端性・安定性・等変性は theorem 化済みで、Shatter / 複合操作へ接続済み。 |
+| Layer C | **未着手**。ただし Flow 側の主要ブロッカーだった Gravity の安定性・等変性は解消済み。 |
+| Layer D | **未着手**。MAM 完全性は Layer C のフロー形式化後に扱う。 |
+
 ---
 
 ## Layer A: データ型と加工操作の静的な定義
 
 ### A-1. Shape Code Notation
+
+進捗: **実装済み・運用中**。`Shape` / `Layer` / `QuarterPos` の具象型と notation は Layer A/B の基盤として使われ、代表的な round-trip は `Test.Shape.Notation` で確認している。
 
 | 項目 | 概要 |
 |---|---|
@@ -47,6 +58,8 @@ Layer A (Data & Operations) ← 静的データ型と純粋関数
 ### A-2. 加工操作（純粋関数としての定義）
 
 振る舞いに依存しない加工操作。
+
+進捗: **主要操作は実装済み**。`S2IL.Operations` から公開され、Gravity 依存を含む Stacker / PinPusher は Layer B の theorem 化済み定理を合成して扱う。
 
 | 項目 | 概要 |
 |---|---|
@@ -60,6 +73,8 @@ Layer A (Data & Operations) ← 静的データ型と純粋関数
 ### A-3. Wires and Logic の静的定義
 
 論理回路の値と素子を純粋関数として定義。
+
+進捗: **スケルトン運用中**。`S2IL.Wires` に受け皿を置き、Flow / MAM 統合時に評価関数と検証を拡張する。
 
 | 項目 | 概要 |
 |---|---|
@@ -76,6 +91,8 @@ Layer A (Data & Operations) ← 静的データ型と純粋関数
 
 ### B-1. 落下 (Gravity)
 
+進捗: **完了**。Wave Gravity として `Shape.gravity` を def 化し、終端性・安定性・CW/180°/CCW 等変性まで theorem 化済み。
+
 | 項目 | 概要 |
 |---|---|
 | B-1-1 | 落下処理 `gravity` の定義と終端性 |
@@ -86,10 +103,12 @@ Layer A (Data & Operations) ← 静的データ型と純粋関数
 | 項目 | 概要 |
 |---|---|
 | B-2-1 | `shatterOnCut` / `shatterOnTruncate` の定義 |
-| B-2-2 | BFS による結晶連結成分の抽出と、その完全性 |
+| B-2-2 | 結晶連結成分（クラスタ）の抽出と、その完全性 |
 | B-2-3 | Shatter の CW 回転等変性 |
 
 ### B-3. 安定化 (Settlement / IsSettled)
+
+進捗: **Gravity 出力の安定化は完了**。`Shape.gravity.isSettled` と安定入力の不動点性 `Shape.gravity.of_isSettled` は theorem 化済み。
 
 | 項目 | 概要 |
 |---|---|
@@ -110,6 +129,8 @@ Layer B の基盤を使って証明される加工装置。
 
 ### B-5. 等変性の統一
 
+進捗: **Gravity で適用完了**。CW を主証明にし、180° / CCW を機械的な系にする方針が `Shape.gravity` まで通った。
+
 等変性は **CW 回転を基本単位**として各操作につき 1 本だけ証明し、他の回転は帰結として機械的に導出する。これにより証明チェーンの重複を排除する。
 
 | 項目 | 概要 |
@@ -123,6 +144,8 @@ Layer B の基盤を使って証明される加工装置。
 ## Layer C: 加工フロー
 
 ### C-1. Shape Processing フロー
+
+進捗: **未着手**。ただし、主要ブロッカーだった Gravity の安定性・等変性は解消済み。
 
 | 項目 | 概要 |
 |---|---|
@@ -176,10 +199,10 @@ Layer B の基盤を使って証明される加工装置。
 
 ---
 
-## 関連計画ファイル
+## 関連資料
 
 | ファイル | 概要 |
 |---|---|
-| [gravity-greenfield-rewrite-plan.md](gravity-greenfield-rewrite-plan.md) | Layer B の再構築計画（CW 一本化・重複排除） |
+| [../s2il/architecture-layer-ab.md](../s2il/architecture-layer-ab.md) | Layer A/B のディレクトリ構造・設計原則・主要 theorem チェーンの正本 |
 
 将来的に層ごとの個別計画が必要になった場合、`docs/plans/` に追加する（ケバブケース命名）。

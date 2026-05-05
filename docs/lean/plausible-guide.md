@@ -1,7 +1,6 @@
 # Plausible 活用ガイド（S2IL プロジェクト向け）
 
-> **関連**: [lean-counterexample スキル](../../.github/skills/lean-counterexample/SKILL.md) /
-> [lean-proof-planning スキル](../../.github/skills/lean-proof-planning/SKILL.md) /
+> **関連**: [lean-proof-methods スキル](../../.github/skills/lean-proof-methods/SKILL.md) /
 > [GitHub: leanprover-community/plausible](https://github.com/leanprover-community/plausible)
 
 ---
@@ -9,7 +8,7 @@
 ## 前提
 
 - Plausible は Mathlib の推移的依存として**既に利用可能**（追加 `require` 不要）
-- **S2IL REPL では `import Plausible` がデフォルト auto-import に含まれる**  
+- **S2IL REPL では `import Plausible` がデフォルト auto-import に含まれる**
   `plausible` タクティクは追加 import なしでそのまま使える
 - `-NoPickle` モードや S2IL と無関係のスタンドアロンファイルでは `import Plausible` が必要
 
@@ -42,6 +41,35 @@ example : ∀ n : Nat, n + 1 = n := by plausible
 
 ---
 
+## S2IL の検査規模
+
+S2IL 型を含む Plausible 検査では、普段の試行錯誤も **vanilla5 相当**を既定にする。
+`vanilla4` は特に Gravity で層数不足による偽証明リスクが高いため、Plausible の反例探索ティアとしては使わない。
+
+| 用途 | 対象 | 推奨 `numInst` | 備考 |
+|---|---|---:|---|
+| 試行錯誤 | vanilla5 相当 | 500 | `Shape` generator は 0～5 レイヤ |
+| 証明昇格前 | vanilla5 相当 | 1000 | sorry → theorem 前の再確認 |
+| stress8 sanity | stress8 想定 | 1000 | 全数検査は禁止 |
+| stress8 heavy | `Shape.gravity` / `waveStep` 系 | まず 500、最大 2000～5000 | 90～120 秒以内を目安に分割 |
+
+再現性が必要な検査では `randomSeed` を固定する。
+
+```lean
+example : ∀ s : Shape, (Shape.gravity s).length ≤ s.length := by
+  plausible (config := { numInst := 500, maxSize := 8, randomSeed := some 20260504 })
+```
+
+検証専用ファイルでは、証明ゴールに `sorry` を残さない `#eval! Testable.check` 形式も使える。
+
+```lean
+#eval! Plausible.Testable.check
+  (∀ s : Shape, (Shape.gravity s).length ≤ s.length)
+  { numInst := 500, maxSize := 8, randomSeed := some 20260504, quiet := true }
+```
+
+---
+
 ## 良い使い方 ✅
 
 ### 1. sorry 着手前の真偽チェック（最重要用途）
@@ -50,8 +78,8 @@ example : ∀ n : Nat, n + 1 = n := by plausible
 
 ```lean
 -- 証明作業前に REPL で実行して偽定理への投資を防ぐ
-example : ∀ (s : Shape) (config : GameConfig),
-    (s.gravity config).layers.length ≤ config.maxLayers := by plausible
+example : ∀ s : Shape, (Shape.gravity s).length ≤ s.length := by
+  plausible (config := { numInst := 500, maxSize := 8 })
 ```
 
 ### 2. 全称命題のサニティチェック
@@ -136,7 +164,7 @@ example : ∀ (s : Shape), s.layers ≠ [] := by plausible
 | `Direction` | ✅ | 4 バリアントから均一選択 | `decide` も利用可 |
 | `Quarter` | ✅ | 4 種コンストラクタを均一選択 | — |
 | `Layer` | ✅ | 4 象限を独立ランダム生成 | — |
-| `Shape` | ✅ | 1～4 レイヤをランダム生成 | — |
+| `Shape` | ✅ | 0～5 レイヤをランダム生成 | vanilla5 相当。Plausible で vanilla4 は使わない |
 | `QuarterPos` | ✅ | レイヤ (0～7) × 方角 | `decide` も利用可 |
 | `GameConfig` | ✅ | maxLayers を 1～8 で生成 | — |
 | `SettledShape` | ✅ | ランダム Shape に gravity 適用で安定化 | `SettledShape.lean` |
@@ -163,4 +191,4 @@ example : ∀ (s : Shape), s.layers ≠ [] := by plausible
 - `plausible` が成功しても `sorry` 警告が出る。最終証明では必ず置換する
 - 反例がなくても帰納的サイズの大きい問題（大きい `Nat` 値等）では反例を見逃す可能性がある
 - S2IL 型のインスタンス定義は `S2IL/Shape/Arbitrary.lean` に集約されている。新しい型を追加した場合はこのファイルにインスタンスを追加すること
-- `Shape` の生成は 1～4 レイヤ。5 レイヤ以上の特殊ケースをテストしたい場合は `#eval` で具体値を作成する
+- `Shape` の生成は 0～5 レイヤ。stress8 固有の 8 レイヤ境界は sample cap 付きの専用 `#eval` / `Testable.check` で確認し、全数検査しない
