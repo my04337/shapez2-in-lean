@@ -7,12 +7,12 @@ import S2IL.Kernel
 # S2IL.Operations.Painter
 
 着色機 (A-2-3)。最上位レイヤの **通常パーツ** (`Quarter.colored _ _`) のみを
-指定色で塗り替える。空・ピン・結晶は不変。
+指定色で塗り替える。空・ピン・結晶・交換ステーション出力は不変。
 
 ## セマンティクス
 
 - 対象: 最上位レイヤ (`s.getLast?`) の `Quarter.colored part _` を `Quarter.colored part c` に置換
-- 非対象: 空 / ピン / 結晶 / それ以外のレイヤの全象限
+- 非対象: 空 / ピン / 結晶 / 精錬図形 / 渦プラットフォーム / それ以外のレイヤの全象限
 - 0 層シェイプは不変（`[]` は最上位レイヤを持たない）
 
 ## 公開 API
@@ -44,6 +44,10 @@ def Quarter.paint (q : Quarter) (c : Color) : Quarter :=
 @[simp] theorem Quarter.paint_pin (c : Color) : Quarter.pin.paint c = Quarter.pin := rfl
 @[simp] theorem Quarter.paint_crystal (c c' : Color) :
     (Quarter.crystal c').paint c = Quarter.crystal c' := rfl
+@[simp] theorem Quarter.paint_refined (c c' : Color) :
+    (Quarter.refined c').paint c = Quarter.refined c' := rfl
+@[simp] theorem Quarter.paint_vortexPlatform (c c' : Color) :
+    (Quarter.vortexPlatform c').paint c = Quarter.vortexPlatform c' := rfl
 @[simp] theorem Quarter.paint_colored (p : RegularPartCode) (c c' : Color) :
     (Quarter.colored p c').paint c = Quarter.colored p c := rfl
 

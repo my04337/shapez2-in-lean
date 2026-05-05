@@ -12,7 +12,7 @@ import S2IL.Kernel
 
 - 対象: `Quarter.empty` と `Quarter.pin` の **両方** を指定色の結晶 (`Quarter.crystal c`) に置換
   （docs/shapez2/game-system-overview.md「隙間 (Gaps) や ピン (Pins)」に対応）
-- 非対象: 既存の通常パーツと結晶は置き換わらない（色も保持）
+- 非対象: 既存の通常パーツ・結晶・交換ステーション出力は置き換わらない（色も保持）
 - 全レイヤを対象: 接地・settled 判定を問わず、シェイプ内の全 empty/pin を結晶化する
   （ゲーム仕様上、出力が必ず settled になるかは stack/pinPush 側の責務）
 
@@ -48,6 +48,10 @@ def Quarter.crystallize (q : Quarter) (c : Color) : Quarter :=
     Quarter.pin.crystallize c = Quarter.crystal c := rfl
 @[simp] theorem Quarter.crystallize_crystal (c c' : Color) :
     (Quarter.crystal c').crystallize c = Quarter.crystal c' := rfl
+@[simp] theorem Quarter.crystallize_refined (c c' : Color) :
+    (Quarter.refined c').crystallize c = Quarter.refined c' := rfl
+@[simp] theorem Quarter.crystallize_vortexPlatform (c c' : Color) :
+    (Quarter.vortexPlatform c').crystallize c = Quarter.vortexPlatform c' := rfl
 @[simp] theorem Quarter.crystallize_colored (p : RegularPartCode) (c c' : Color) :
     (Quarter.colored p c').crystallize c = Quarter.colored p c' := rfl
 

@@ -13,8 +13,8 @@ import S2IL.Shape.Types
 ## エンコード規約
 
 | Color    | `r`/`g`/`b`/`y`/`c`/`m`/`w`/`k`/`u` |
-| PartCode | `C`(circle)/`R`(rectangle)/`S`(star)/`W`(windmill)/`P`(pin)/`c`(crystal) |
-| RegularPartCode | PartCode から pin/crystal を除いたもの |
+| PartCode | `C`/`R`/`S`/`W`/`P`(pin)/`c`(crystal)/`X`(refined)/`Y`(vortex platform) |
+| RegularPartCode | PartCode から pin/crystal/refined/vortex platform を除いたもの |
 -/
 
 namespace S2IL
@@ -68,6 +68,8 @@ def toChar : PartCode → Char
   | windmill  => 'W'
   | pin       => 'P'
   | crystal   => 'c'
+  | refined   => 'X'
+  | vortexPlatform => 'Y'
 
 def ofChar? : Char → Option PartCode
   | 'C' => some circle
@@ -76,6 +78,8 @@ def ofChar? : Char → Option PartCode
   | 'W' => some windmill
   | 'P' => some pin
   | 'c' => some crystal
+  | 'X' => some refined
+  | 'Y' => some vortexPlatform
   | _   => none
 
 @[simp] theorem ofChar_toChar (p : PartCode) : ofChar? p.toChar = some p := by

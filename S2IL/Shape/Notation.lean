@@ -25,7 +25,7 @@ import S2IL.Shape.Internal.Parse
 
 ## シェイプコード仕様
 
-- Quarter: 2 文字（`--` empty / `P-` pin / `cX` crystal / `XY` colored）
+- Quarter: 2 文字（`--` empty / `P-` pin / `c<color>` crystal / `X<color>` refined / `Y<color>` vortex platform / `<part><color>` colored）
 - Layer: 8 文字（NE → SE → SW → NW の順）
 - Shape: レイヤを `:` で連結。0 層は空文字列。
 -/
@@ -42,6 +42,8 @@ protected def toString : Quarter → String
   | empty       => "--"
   | pin         => "P-"
   | crystal c   => s!"c{c.toChar}"
+  | refined c   => s!"X{c.toChar}"
+  | vortexPlatform c => s!"Y{c.toChar}"
   | colored p c => s!"{p.toChar}{c.toChar}"
 
 instance : ToString Quarter := ⟨Quarter.toString⟩
@@ -54,6 +56,14 @@ def ofString? (s : String) : Option Quarter :=
     match Color.ofChar? c1 with
     | some c => some (crystal c)
     | none   => none
+  | ['X', c1]  =>
+    match Color.ofChar? c1 with
+    | some c => some (refined c)
+    | none   => none
+  | ['Y', c1]  =>
+    match Color.ofChar? c1 with
+    | some c => some (vortexPlatform c)
+    | none   => none
   | [c0, c1]   =>
     match RegularPartCode.ofChar? c0, Color.ofChar? c1 with
     | some p, some c => some (colored p c)
@@ -65,6 +75,8 @@ theorem ofString_toString (q : Quarter) : ofString? q.toString = some q := by
   | empty => rfl
   | pin => rfl
   | crystal c => cases c <;> rfl
+  | refined c => cases c <;> rfl
+  | vortexPlatform c => cases c <;> rfl
   | colored p c => cases p <;> cases c <;> rfl
 
 end Quarter
@@ -100,6 +112,8 @@ theorem ofString_toString (l : Layer) : ofString? l.toString = some l := by
     | empty => exact ⟨'-', '-', rfl, rfl⟩
     | pin   => exact ⟨'P', '-', rfl, rfl⟩
     | crystal c => cases c <;> exact ⟨_, _, rfl, rfl⟩
+    | refined c => cases c <;> exact ⟨_, _, rfl, rfl⟩
+    | vortexPlatform c => cases c <;> exact ⟨_, _, rfl, rfl⟩
     | colored p c => cases p <;> cases c <;> exact ⟨_, _, rfl, rfl⟩
   obtain ⟨a, b, hab, hne⟩ := hQ (l 0)
   obtain ⟨c, d, hcd, hse⟩ := hQ (l 1)
@@ -128,6 +142,8 @@ private theorem quarter_toString_form (q : Quarter) :
   | empty => exact ⟨'-', '-', rfl, by decide, by decide⟩
   | pin   => exact ⟨'P', '-', rfl, by decide, by decide⟩
   | crystal c => cases c <;> exact ⟨_, _, rfl, by decide, by decide⟩
+  | refined c => cases c <;> exact ⟨_, _, rfl, by decide, by decide⟩
+  | vortexPlatform c => cases c <;> exact ⟨_, _, rfl, by decide, by decide⟩
   | colored p c => cases p <;> cases c <;> exact ⟨_, _, rfl, by decide, by decide⟩
 
 private theorem quarter_toString_noColon (q : Quarter) : ':' ∉ q.toString.toList := by

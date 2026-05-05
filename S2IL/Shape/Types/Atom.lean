@@ -9,8 +9,8 @@
 | 型 | 概要 |
 |---|---|
 | `Color` | 象限のカラー（無色 + 1 原色 3 種 + 2 原色 3 種 + 3 原色 2 種） |
-| `PartCode` | 全パーツ種別（ピン・結晶含む） |
-| `RegularPartCode` | 通常パーツ（ピン・結晶を除く） |
+| `PartCode` | 全パーツ種別（ピン・結晶・交換ステーション出力含む） |
+| `RegularPartCode` | 通常パーツ（ピン・結晶・交換ステーション出力を除く） |
 
 文字列表現は `S2IL.Shape.Notation.Atom` に分離。混色規則は
 `docs/shapez2/game-system-overview.md` を参照。
@@ -130,20 +130,21 @@ end Color
 
 /-- 象限のシェイプ種別。 -/
 inductive PartCode where
-  | circle | rectangle | star | windmill | pin | crystal
+  | circle | rectangle | star | windmill | pin | crystal | refined | vortexPlatform
   deriving Repr, DecidableEq, BEq
 
 namespace PartCode
 
-def all : List PartCode := [circle, rectangle, star, windmill, pin, crystal]
+def all : List PartCode :=
+  [circle, rectangle, star, windmill, pin, crystal, refined, vortexPlatform]
 
 end PartCode
 
 -- ============================================================
--- RegularPartCode（ピン・結晶を除く）
+-- RegularPartCode（ピン・結晶・交換ステーション出力を除く）
 -- ============================================================
 
-/-- ピン・結晶を除いた通常パーツのコード。`Quarter.colored` の制約に使う。 -/
+/-- ピン・結晶・交換ステーション出力を除いた通常パーツのコード。`Quarter.colored` の制約に使う。 -/
 inductive RegularPartCode where
   | circle | rectangle | star | windmill
   deriving Repr, DecidableEq, BEq
@@ -159,13 +160,13 @@ def toPartCode : RegularPartCode → PartCode
   | star      => .star
   | windmill  => .windmill
 
-/-- `PartCode` から通常パーツコードへ。ピン・結晶は `none`。 -/
+/-- `PartCode` から通常パーツコードへ。ピン・結晶・交換ステーション出力は `none`。 -/
 def ofPartCode? : PartCode → Option RegularPartCode
   | .circle    => some circle
   | .rectangle => some rectangle
   | .star      => some star
   | .windmill  => some windmill
-  | .pin | .crystal => none
+  | .pin | .crystal | .refined | .vortexPlatform => none
 
 @[simp] theorem ofPartCode_toPartCode (p : RegularPartCode) :
     ofPartCode? p.toPartCode = some p := by

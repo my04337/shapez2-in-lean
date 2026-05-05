@@ -23,6 +23,10 @@ namespace Test.Operations.CrystalGenerator
 #guard Quarter.pin.crystallize Color.green == Quarter.crystal Color.green
 -- 既存結晶は不変（色も維持）
 #guard (Quarter.crystal Color.blue).crystallize Color.red == Quarter.crystal Color.blue
+-- 交換ステーション出力は不変（色も維持）
+#guard (Quarter.refined Color.uncolored).crystallize Color.red == Quarter.refined Color.uncolored
+#guard (Quarter.vortexPlatform Color.white).crystallize Color.red == Quarter.vortexPlatform Color.white
+#guard (Quarter.vortexPlatform Color.black).crystallize Color.red == Quarter.vortexPlatform Color.black
 -- 通常パーツは不変
 #guard (Quarter.colored .circle Color.uncolored).crystallize Color.red
         == Quarter.colored .circle Color.uncolored
@@ -39,12 +43,12 @@ example (q : Quarter) (c : Color) :
 -- ============================================================
 
 private def L_mixed : Layer :=
-  Layer.mk .empty .pin (.crystal .green) (.colored .star .red)
+  Layer.mk .empty .pin (.refined .uncolored) (.vortexPlatform .black)
 
 #guard (L_mixed.crystallize Color.red) Direction.ne == Quarter.crystal Color.red
 #guard (L_mixed.crystallize Color.red) Direction.se == Quarter.crystal Color.red
-#guard (L_mixed.crystallize Color.red) Direction.sw == Quarter.crystal Color.green
-#guard (L_mixed.crystallize Color.red) Direction.nw == Quarter.colored .star Color.red
+#guard (L_mixed.crystallize Color.red) Direction.sw == Quarter.refined Color.uncolored
+#guard (L_mixed.crystallize Color.red) Direction.nw == Quarter.vortexPlatform Color.black
 
 -- ============================================================
 -- Shape.crystallize — 全レイヤに作用

@@ -75,32 +75,44 @@ section QuarterTest
 #guard Quarter.empty.isEmpty
 #guard !Quarter.pin.isEmpty
 #guard !(Quarter.crystal .red).isEmpty
+#guard !(Quarter.refined .uncolored).isEmpty
+#guard !(Quarter.vortexPlatform .white).isEmpty
 #guard !(Quarter.colored .circle .red).isEmpty
 
 #guard !Quarter.empty.canFormBond
 #guard !Quarter.pin.canFormBond
 #guard (Quarter.crystal .red).canFormBond
+#guard (Quarter.refined .uncolored).canFormBond
+#guard (Quarter.vortexPlatform .white).canFormBond
 #guard (Quarter.colored .circle .red).canFormBond
 
 #guard !Quarter.empty.isFragile
 #guard !Quarter.pin.isFragile
 #guard (Quarter.crystal .red).isFragile
+#guard !(Quarter.refined .uncolored).isFragile
+#guard !(Quarter.vortexPlatform .white).isFragile
 #guard !(Quarter.colored .circle .red).isFragile
 
 #guard !Quarter.empty.isCrystal
 #guard !Quarter.pin.isCrystal
 #guard (Quarter.crystal .red).isCrystal
+#guard !(Quarter.refined .uncolored).isCrystal
+#guard !(Quarter.vortexPlatform .white).isCrystal
 #guard !(Quarter.colored .circle .red).isCrystal
 
 -- partCode? / color?
 #guard Quarter.empty.partCode? == none
 #guard Quarter.pin.partCode? == some .pin
 #guard (Quarter.crystal .red).partCode? == some .crystal
+#guard (Quarter.refined .uncolored).partCode? == some .refined
+#guard (Quarter.vortexPlatform .white).partCode? == some .vortexPlatform
 #guard (Quarter.colored .circle .red).partCode? == some .circle
 
 #guard Quarter.empty.color? == none
 #guard Quarter.pin.color? == none
 #guard (Quarter.crystal .red).color? == some .red
+#guard (Quarter.refined .uncolored).color? == some .uncolored
+#guard (Quarter.vortexPlatform .white).color? == some .white
 #guard (Quarter.colored .star .blue).color? == some .blue
 
 end QuarterTest

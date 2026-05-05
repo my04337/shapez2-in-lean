@@ -14,9 +14,9 @@ S2IL の主要型に対する Plausible のインスタンスを提供する。
 | 型 | 生成戦略 |
 |---|---|
 | `Color` | 9 値から均一選択 |
-| `PartCode` | 6 値から均一選択 |
+| `PartCode` | 8 値から均一選択 |
 | `RegularPartCode` | 4 値から均一選択 |
-| `Quarter` | 4 種コンストラクタを均一選択し必要フィールドを生成 |
+| `Quarter` | 6 種コンストラクタを均一選択し必要フィールドを生成 |
 | `Layer` | 4 象限を独立に生成し `Layer.mk` で合成 |
 | `Shape` | 0～5 レイヤをランダム生成 |
 | `GameConfig` | `maxLayers` を 1～8 でランダム選択 |
@@ -48,7 +48,8 @@ instance : Shrinkable PartCode where shrink _ := []
 instance : Arbitrary PartCode where
   arbitrary := Gen.oneOf #[
     pure .circle, pure .rectangle, pure .star,
-    pure .windmill, pure .pin, pure .crystal]
+    pure .windmill, pure .pin, pure .crystal,
+    pure .refined, pure .vortexPlatform]
 instance : SampleableExt PartCode where
   proxy := PartCode; sample := inferInstance; shrink := inferInstance; interp := id
 
@@ -70,11 +71,13 @@ instance : SampleableExt RegularPartCode where
 instance : Shrinkable Quarter where shrink _ := []
 
 private def quarterGen : Gen Quarter := do
-  let tag ← Gen.oneOf #[pure 0, pure 1, pure 2, pure 3]
+  let tag ← Gen.oneOf #[pure 0, pure 1, pure 2, pure 3, pure 4, pure 5]
   match tag with
   | 0 => return .empty
   | 1 => return .pin
   | 2 => return .crystal (← Arbitrary.arbitrary (α := Color))
+  | 3 => return .refined (← Arbitrary.arbitrary (α := Color))
+  | 4 => return .vortexPlatform (← Arbitrary.arbitrary (α := Color))
   | _ =>
     let p ← Arbitrary.arbitrary (α := RegularPartCode)
     let c ← Arbitrary.arbitrary (α := Color)

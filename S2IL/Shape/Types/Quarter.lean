@@ -8,7 +8,7 @@ import S2IL.Shape.Types.Atom
 
 namespace S2IL
 
-/-- 1 象限の状態。空 / ピン / 結晶 / 着色通常パーツ。 -/
+/-- 1 象限の状態。空 / ピン / 結晶 / 交換ステーション出力 / 着色通常パーツ。 -/
 inductive Quarter where
   /-- 空の象限（シェイプが存在しない）。 -/
   | empty
@@ -16,6 +16,10 @@ inductive Quarter where
   | pin
   /-- 結晶（脆弱、色を持つ）。 -/
   | crystal (color : Color)
+  /-- 精錬図形（交換ステーション出力、色は固定で着色不可）。 -/
+  | refined (color : Color)
+  /-- 渦プラットフォーム（渦グランドアセンブラ出力、色は固定で着色不可）。 -/
+  | vortexPlatform (color : Color)
   /-- 着色通常パーツ。 -/
   | colored (part : RegularPartCode) (color : Color)
   deriving Repr, DecidableEq, BEq
@@ -56,6 +60,8 @@ instance : DecidablePred IsCrystal := fun q =>
 @[simp] theorem isCrystal_crystal (c : Color) : isCrystal (crystal c) = true := rfl
 @[simp] theorem isCrystal_empty : isCrystal empty = false := rfl
 @[simp] theorem isCrystal_pin : isCrystal pin = false := rfl
+@[simp] theorem isCrystal_refined (c : Color) : isCrystal (refined c) = false := rfl
+@[simp] theorem isCrystal_vortexPlatform (c : Color) : isCrystal (vortexPlatform c) = false := rfl
 @[simp] theorem isCrystal_colored (p : RegularPartCode) (c : Color) :
     isCrystal (colored p c) = false := rfl
 
@@ -64,11 +70,15 @@ def partCode? : Quarter → Option PartCode
   | empty       => none
   | pin         => some .pin
   | crystal _   => some .crystal
+  | refined _   => some .refined
+  | vortexPlatform _ => some .vortexPlatform
   | colored p _ => some p.toPartCode
 
 /-- 象限の色（空・ピンは `none`）。 -/
 def color? : Quarter → Option Color
   | crystal c   => some c
+  | refined c   => some c
+  | vortexPlatform c => some c
   | colored _ c => some c
   | _           => none
 

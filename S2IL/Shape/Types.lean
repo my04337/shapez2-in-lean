@@ -17,7 +17,7 @@ Shape 型系の公開型定義 facade。
 |---|---|---|
 | `Color` / `PartCode` / `RegularPartCode` | inductive | `S2IL.Shape.Types.Atom` |
 | `Direction`        | `abbrev := Fin 4`                   | `S2IL.Shape.Types.Direction` |
-| `Quarter`          | `inductive` (empty/pin/crystal/colored) | `S2IL.Shape.Types.Quarter` |
+| `Quarter`          | `inductive` (empty/pin/crystal/refined/vortexPlatform/colored) | `S2IL.Shape.Types.Quarter` |
 | `Layer`            | `abbrev := Fin 4 → Quarter`         | `S2IL.Shape.Types.Layer` |
 | `Shape`            | `abbrev := List Layer`              | `S2IL.Shape.Types.Shape` |
 | `QuarterPos`       | `abbrev := Nat × Fin 4`             | `S2IL.Shape.Types.QuarterPos` |

@@ -26,6 +26,9 @@ namespace Test.Operations.Painter
 #guard Quarter.empty.paint Color.red == Quarter.empty
 #guard Quarter.pin.paint Color.red == Quarter.pin
 #guard (Quarter.crystal Color.green).paint Color.red == Quarter.crystal Color.green
+#guard (Quarter.refined Color.uncolored).paint Color.red == Quarter.refined Color.uncolored
+#guard (Quarter.vortexPlatform Color.white).paint Color.red == Quarter.vortexPlatform Color.white
+#guard (Quarter.vortexPlatform Color.black).paint Color.red == Quarter.vortexPlatform Color.black
 #guard (Quarter.colored .circle Color.uncolored).paint Color.red
         == Quarter.colored .circle Color.red
 #guard (Quarter.colored .star Color.green).paint Color.blue
@@ -45,12 +48,12 @@ example (q : Quarter) (c : Color) : (q.paint c).paint c = q.paint c :=
 
 private def L_mixed : Layer :=
   Layer.mk (.colored .circle .uncolored) .pin
-           (.crystal .green) (.colored .star .red)
+           (.refined .uncolored) (.vortexPlatform .black)
 
 #guard (L_mixed.paint Color.blue) Direction.ne == Quarter.colored .circle Color.blue
 #guard (L_mixed.paint Color.blue) Direction.se == Quarter.pin
-#guard (L_mixed.paint Color.blue) Direction.sw == Quarter.crystal Color.green
-#guard (L_mixed.paint Color.blue) Direction.nw == Quarter.colored .star Color.blue
+#guard (L_mixed.paint Color.blue) Direction.sw == Quarter.refined Color.uncolored
+#guard (L_mixed.paint Color.blue) Direction.nw == Quarter.vortexPlatform Color.black
 
 example (l : Layer) (c : Color) : (l.paint c).paint c = l.paint c :=
   Layer.paint_idempotent l c

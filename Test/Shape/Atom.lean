@@ -112,15 +112,18 @@ section PartCode
 #guard PartCode.windmill.toChar  == 'W'
 #guard PartCode.pin.toChar       == 'P'
 #guard PartCode.crystal.toChar   == 'c'
+#guard PartCode.refined.toChar   == 'X'
+#guard PartCode.vortexPlatform.toChar == 'Y'
 
 #guard PartCode.ofChar? 'C' == some PartCode.circle
 #guard PartCode.ofChar? 'P' == some PartCode.pin
 #guard PartCode.ofChar? 'c' == some PartCode.crystal
-#guard PartCode.ofChar? 'X' == none
+#guard PartCode.ofChar? 'X' == some PartCode.refined
+#guard PartCode.ofChar? 'Y' == some PartCode.vortexPlatform
 -- 'r' は Color の文字。PartCode 側では無効
 #guard PartCode.ofChar? 'r' == none
 
-#guard PartCode.all.length == 6
+#guard PartCode.all.length == 8
 
 end PartCode
 
@@ -132,6 +135,8 @@ section RegularPartCode
 -- ピン・結晶は通常パーツではないので none
 #guard RegularPartCode.ofChar? 'P' == none
 #guard RegularPartCode.ofChar? 'c' == none
+#guard RegularPartCode.ofChar? 'X' == none
+#guard RegularPartCode.ofChar? 'Y' == none
 #guard RegularPartCode.ofChar? 'C' == some RegularPartCode.circle
 
 #guard RegularPartCode.all.length == 4
@@ -142,6 +147,8 @@ example (p : RegularPartCode) : RegularPartCode.ofPartCode? p.toPartCode = some 
 
 #guard RegularPartCode.ofPartCode? .pin == none
 #guard RegularPartCode.ofPartCode? .crystal == none
+#guard RegularPartCode.ofPartCode? .refined == none
+#guard RegularPartCode.ofPartCode? .vortexPlatform == none
 #guard RegularPartCode.ofPartCode? .circle == some .circle
 
 end RegularPartCode
