@@ -11,15 +11,14 @@
     },
     "chat.tools.terminal.enableAutoApprove": true,
     "chat.tools.terminal.autoApprove": {
-        ".github/skills/lean-setup/scripts/setup.ps1": true,
-        ".github/skills/lean-setup/scripts/setup.sh": true,
-        ".github/skills/lean-build/scripts/build.ps1": true,
-        ".github/skills/lean-build/scripts/build.sh": true,
-        ".github/skills/lean-repl/scripts/repl.ps1": true,
-        ".github/skills/lean-repl/scripts/repl.sh": true,
+        ".github/skills/lean-tooling/scripts/setup.ps1": true,
+        ".github/skills/lean-tooling/scripts/setup.sh": true,
+        ".github/skills/lean-tooling/scripts/build.ps1": true,
+        ".github/skills/lean-tooling/scripts/build.sh": true,
+        ".github/skills/lean-tooling/scripts/repl.ps1": true,
+        ".github/skills/lean-tooling/scripts/repl.sh": true,
         "ConvertFrom-Json": true,
         "ConvertTo-Json": true,
-        "lake exe s2il-toolkit": true,
         "lake exe s2il-diag": true
     }
 }
