@@ -1,138 +1,149 @@
 # Shapez2 in Lean — エージェント運用指示
 
-## 応答と日時
+原則ベースの最上位ルールのみを置く。手続き・閾値の詳細は [docs/agent/agent-operations-playbook.md](docs/agent/agent-operations-playbook.md)。
 
-- 最終応答は日本語。サブエージェント指示は英語可
-- 日付 `YYYY-MM-DD` / 時刻 `hh:mm:ss`。当日日付が不明なら `Get-Date -Format 'yyyy-MM-dd'` で確認
-- `作成日` / `最終更新` は当日ローカル日付を使う
+## 1. 応答と日付
 
-## 参照入口
+- 最終応答は日本語。サブエージェントへの指示は英語可
+- 日付 `YYYY-MM-DD` / 時刻 `hh:mm:ss`。当日が不明なら `Get-Date -Format 'yyyy-MM-dd'`
+- ドキュメントの `作成日` / `最終更新` は当日ローカル日付を書く
 
-作業開始時、対象カテゴリの README を最初に読む。
+## 2. 参照入口
 
-- shapez2: `docs/shapez2/README.md`
-- lean: `docs/lean/README.md`
-- s2il: `docs/s2il/README.md`
-- plans: `docs/plans/README.md`
-- agent: `docs/agent/README.md`
+作業着手時、まず対象カテゴリの README を読む。
 
-新規証明計画の策定は `docs/agent/proof-plan-current-focus-guide.md` に従う。
-撤退・pivot 判断は `docs/agent/proof-retreat-pivot-guide.md` に従う。
+| 領域 | 入口 |
+|---|---|
+| Shapez2 仕様 | [docs/shapez2/README.md](docs/shapez2/README.md) |
+| Lean 一般 | [docs/lean/README.md](docs/lean/README.md) |
+| S2IL コードベース | [docs/s2il/README.md](docs/s2il/README.md) |
+| 計画 / アーキ | [docs/plans/README.md](docs/plans/README.md) |
+| エージェント運用 | [docs/agent/README.md](docs/agent/README.md) |
 
-## 品質優先順位
+新規証明計画 → [proof-plan-current-focus-guide.md](docs/agent/proof-plan-current-focus-guide.md)。
+撤退・pivot → [proof-retreat-pivot-guide.md](docs/agent/proof-retreat-pivot-guide.md)。
+エージェント / スキル設計 → [opus-47-design-principles.md](docs/agent/opus-47-design-principles.md)。
 
-1. 数学的な美しさ（構造・一般性・MECE: 補題が漏れなくダブりなく設計されているか）
+## 3. 品質優先順位
+
+1. 数学的な美しさ（構造・一般性・MECE）
 2. コードの美しさ（可読性・保守性）
 
-## 情報探索の優先順位
+## 4. 情報探索の最短経路
 
-次の順で探し、前段で見つかったら後段には進まない:
+Lean のシンボル探索は **facade（`S2IL.lean` / `S2IL/<Namespace>.lean`）の冒頭目次** を出発点に、最短経路で目的に到達する。前段で見つかれば後段に進まない。
 
-| # | 目的 | 参照先 |
+| # | 目的 | 参照 |
 |---|---|---|
-| 1 | シンボル名で位置特定 | `grep_search(includePattern="S2IL/_agent/symbol-map.jsonl", query='"symbol":".*名前')` → `line` / `endLine` で `read_file` |
-| 2 | ファイル 1 本の全体構造（200 行超） | `S2IL/_agent/sig-digest/<dotted-module>.md` |
-| 3 | sorry 周辺の候補補題 | sorry-card の「候補補題（事前抽出）」→ なければ `.github/skills/lean-build/scripts/extract-goal-context.ps1 -File <f> -Line <n>` |
-| 4 | Operation 配下の探索 | `S2IL/_agent/route-map.json` |
-| 5 | タスク種別別レシピ | `S2IL/_agent/query-playbook.json` |
-| 6 | sorry 状況 | `sorry-plan.json` → `sorry-goals.md` → `sorry-cards/{symbol}.md` |
-| 7 | それでも不足 | Lean ソースへ `grep_search`（Lean 直 grep は symbol-map 経由後に限る） |
+| 1 | モジュール入口 | facade 冒頭目次コメント |
+| 2 | シンボル位置 | `grep_search`（対象 `S2IL/**/*.lean`） |
+| 3 | sorry 状況 | `S2IL/_agent/sorry-plan.json` → `sorry-goals.md` |
+| 4 | sorry のゴール形状 | REPL で `example ... := by sorry` |
+| 5 | 補完 | Lean ソースへ広めの `grep_search` |
 
-Lean では `semantic_search` を使わない。検索系は `grep_search` / `file_search` を優先。
-`grep_search` が `No matches found` のときは `includeIgnoredFiles: true` で 1 回だけ再試行する。
+検索ツールは `grep_search` / `file_search` を優先（Lean に対して `semantic_search` は使わない）。
+`grep_search` が空ヒットの場合のみ `includeIgnoredFiles: true` で 1 回再試行する。
 
-### preflight チェックリスト
+> 詳細閾値（Explore 委譲、`grep_search` 上限など）は playbook §「検索戦略（詳細）」。
 
-`.lean` ファイルを `read_file` する直前に次を確認する:
+### 4.1 サブエージェント委譲トリガー（コンテキスト節約）
 
-- [ ] シンボル名が既知なら symbol-map.jsonl を先に参照したか
-- [ ] 200 行超のファイルは sig-digest を先に read したか（直近 3 ターン以内に該当 sig-digest を read していない場合）
-- [ ] sorry 周辺の補題調査は sorry-card の Preflight 行 / extract-goal-context.ps1 を先に使ったか
-- [ ] 会話要約継続セッションで、対象 sorry の「ファイル:行 / コード状態 / 次アクション / ビルド状態」が summary に揃っていれば sig-digest スキップ可
+メインのコンテキストを舵取り用に保ち、実装・検証はサブエージェントに分担させる。次の状況では委譲を優先:
 
-## セッションメモリ
-
-- 原則 2 ファイル以内（断片化禁止）
-- 次の状況で必ず `/memories/session/` を更新:
-  - 異なる `.lean` ファイルを 3 本以上 read した
-  - セッションターン数が 30 を超えた
-  - 同じ sorry について 2 ラウンド以上 tactic を試した
-- 要約は「現在の目的・読んだファイルと要点・次アクション」の 3 項目のみ
-- 更新は `str_replace` / `insert` を使う。`delete → create` サイクルは禁止
-
-詳細テンプレート: `docs/agent/session-memory-guide.md`
-
-## ドキュメント管理（シングルソース原則）
-
-| 情報 | 正規の場所 | 禁止事項 |
+| トリガー | 委譲先 | 補足 |
 |---|---|---|
-| ビルド状態・sorry 件数 | `sorry-goals.md`（自動生成） | 計画 MD への手動転記 |
-| 次アクション・手順・フォローアップ | `sorry-plan.json` の `next_actions` / `remaining_steps` | sorry-card への重複記載 |
-| 実装設計（シグネチャ候補・不変量・依存） | `sorry-cards/{symbol}.md` の実装設計セクション | sorry-plan.json への数学的詳細 |
-| sorry 依存・blockers | `sorry-plan.json` | proof-plan.md への併記 |
-| セッション経緯・発見 | `git log` | 計画 MD への時系列追記 |
-| 数学的設計・記号定義 | `docs/plans/{name}-proof-plan.md` | sorry-card への重複 |
+| 反例調査ループ（同じ `#eval` を 2 回以上失敗で再実行） | `lean-theorem-investigator`（`mode=full` または `mode=behavior`） | 自前で diag `.lean` を書く前に投げる |
+| 新規 `def` の spec 例による振る舞い検証（§4.x の I/O 表 / falling.md などの例） | `lean-theorem-investigator mode=behavior` | 期待表を渡し pass/fail と最小反例を受け取る |
+| 横断要約が欲しい調査（spec + 実装 + テストの三点照合、未知シンボルの周辺把握） | `Explore` | 既知シンボルの再確認なら直叩きでよい |
+| 単発の単純なグリーンビルド確認 | `lean-build-doctor mode=verify-only` | 失敗時のみ自動で full に escalation |
+| セッション開始 / 大規模編集後 / コミット前の総点検 | `lean-build-doctor`（既定 full） | sorry 一覧と error triage が必要なとき |
+| 複数 theorem target / sorry の並行三角測量 | `lean-theorem-investigator` を target ごとに fan-out | parallel 呼び出し可 |
 
-新規ドキュメント作成前に「自動更新されるか／既存で代替できるか」を確認する。
-自動生成と 50% 以上重複する、または 2 セッション以上更新されていないドキュメントは `archive/` へ移す。
+直接やるべき場面:
 
-## 証明作業
+- 単一補題への 1 タクティク試行 / 確定済み実装方針のコード編集 / 既に context にある情報での判断
+- 既知シンボルの定義 1〜2 行を再確認したいだけの `read_file`
 
-- 新規補題・仮説は証明前に反例検証を優先（`lean-counterexample` / `by plausible` / `#eval`）
-- 既存 sorry の状態確認は `sorry-plan.json` → `sorry-goals.md` → 当該 sorry-card の順
-- 完了済み補題は本文を読まず `symbol-map.jsonl` の `sig` で型だけ確認
-- 新規 `theorem` / `lemma` を書き込む前に REPL の `#check` / `example ... := by sorry` で型シグネチャを確認する
-- 新規補題名は REPL 型チェック通過後に確定する（仮称を sorry-card / sorry-plan.json に書かない）
-- REPL → `.lean` 移植は `transplant-proof.ps1` を使う（bare `simp` は `-SimpStabilize`）
-- `intro` / `rintro` を書く前に REPL で sorry ゴール形状を確認する
+> ファイル数や読込行数の数値閾値は撤廃し、**「context に既知情報があるか」「合成要約が要るか」** を委譲判断の主軸とする。重要なサブエージェント（`lean-theorem-investigator` / `lean-build-doctor`）の呼び出しを機械的閾値で抑制しない。
 
-### 行き詰まったときの必須フロー
+## 5. preflight（`.lean` を読む直前）
 
-「推論で難しそう」だけで撤退しない。次を順に実施してから pivot を判断する:
+- 該当 namespace の facade 冒頭目次を先に読む
+- sorry 周辺なら REPL でゴール形状を先に確認
+- 会話要約継続セッションでは、対象 sorry の「ファイル:行 / コード状態 / 次アクション / ビルド状態」が summary に揃っていればスキップ可
 
-1. `lean-proof-planning` SKILL を読む
-2. REPL で `example ... := by sorry` を発行してゴール形状を確認
-3. `lean-goal-advisor` エージェントに渡して候補タクティクを試す
+## 6. ドキュメント管理（シングルソース原則）
 
-3 ステップ実施後に候補が全滅、反例が見つかった、または 3 セッション / 8 アプローチ失敗に達した場合にのみ撤退判断を行う。
-詳細: `docs/agent/proof-retreat-pivot-guide.md`
+各情報の正本は 1 箇所。重複転記しない。
 
-### sorry-cards の更新
-
-証明済みになった補題・`next_actions` の変化・セッション末コミット前に必ず更新する。
-更新は差分のみを `replace_string_in_file` で行う。
-
-## Lean ビルド
-
-- `.github/skills/lean-build/scripts/build.ps1` を使う（VS Code task の直接実行よりスキル経由を優先）
-- ビルド成功時に次が自動生成される:
-
-| 生成物 | 用途 |
+| 情報 | 正本 |
 |---|---|
-| `sig-digest/*.md` | ファイル概観・宣言行インデックス |
-| `symbol-map.jsonl` | シンボル名 → `line` / `endLine` / `digest` |
-| `sorry-goals.md` | sorry 宣言シグネチャ |
-| `sorry-cards/*.md` の候補補題セクション | extract-goal-context 出力の事前埋込 |
+| ビルド状態・sorry 件数 | `S2IL/_agent/sorry-goals.md`（自動生成） |
+| 次アクション / 手順 | `sorry-plan.json` の `next_actions` / `remaining_steps` |
+| sorry 依存・blockers | `sorry-plan.json` |
+| セッション経緯・発見 | `git log` |
+| 数学的設計・記号定義 | `docs/plans/{name}-proof-plan.md` |
 
-手動起動スクリプト（デバッグ用）は [`docs/agent/agent-operations-playbook.md`](docs/agent/agent-operations-playbook.md) 参照。
+新規ドキュメントは「自動更新されるか／既存で代替できるか」を確認してから作る。
 
+## 7. 証明作業の原則
+
+- 新規補題・仮説は証明前に反例検証（`lean-proof-methods` / `by plausible` / `#eval`）
+- 既存 sorry は `sorry-plan.json` → `sorry-goals.md` → 当該 sorry-card の順で確認
+- 新規 `theorem` / `lemma` 記述前に REPL `#check` / `example ... := by sorry` で型を確認し、補題名は REPL 通過後に確定する
+- `intro` / `rintro` 前に REPL でゴール形状を確認する
+- 証明作業の開始時、REPL で試行錯誤する前に `.github/skills/lean-tooling/scripts/build.ps1` を一度実行し、REPL / `.olean` キャッシュを最新化する。局所作業なら `-Target <module>` でもよい
+- REPL → `.lean` 移植は `transplant-proof.ps1`（bare `simp` は `-SimpStabilize`）
+- 完了済み補題は本文を読まず REPL `#check` で型のみ確認
+
+### 行き詰まったときの必須 3 ステップ
+
+「複雑そう」という推論だけで撤退しない。順に実施してから pivot 判断する。
+
+1. `lean-proof-methods` SKILL を読む
+2. REPL で `example ... := by sorry` を発行しゴール形状を確認
+3. `lean-theorem-investigator` エージェントで候補タクティクを試す
+
+3 ステップ後に候補全滅 / 反例発覚 / 3 セッション or 8 アプローチ失敗のいずれかでのみ撤退する。詳細: [proof-retreat-pivot-guide.md](docs/agent/proof-retreat-pivot-guide.md)。
+
+
+## 8. セッションメモリ
+
+- 1 セッション原則 2 ファイル以内（断片化禁止）
+- 更新は `str_replace` / `insert`（`delete → create` サイクルは避ける）
+- 要約は「現在の目的 / 読んだファイルと要点 / 次アクション」の 3 項目で書く
+- 次のいずれかで必ず `/memories/session/` を更新:
+  - セッションターン数が 30 を超えた
+  - 同じ sorry に 2 ラウンド以上タクティクを試した
+  - `/compact` が近そうなとき（PreCompact フックで通知される）
+- 上記以外でも、context 圧縮で失われると再収集コストが高い情報（探索の結論・補題リスト・行範囲表）はエージェントの判断で随時保存する
+
+詳細: [session-memory-guide.md](docs/agent/session-memory-guide.md)
+
+## 9. Lean ビルド
+
+- `.github/skills/lean-tooling/scripts/build.ps1` 経由で実行する（成功時に `S2IL/_agent/sorry-goals.md` を自動更新）
 - 新規 API はビルド前に REPL `#check` で型確認
-- 新規ファイル追加時は `route-map.json` で transitive import を確認（重複宣言エラー防止）
-- 2 ファイル以上の修正は依存下流側から段階ビルド
-- `Verification/` に新規スクリプトを作る前は同種の既存スクリプトを 1 本読む
+- 新規ファイル追加時は facade の transitive import を確認（重複宣言の防止）
+- 2 ファイル以上の修正は依存下流側から段階的にビルド
+- Lean の VS Code Problems / `get_errors` は証明作業中に stale / partial state を拾いやすいため、基本的に判断材料にしない。Lean の正本は build script の diagnostics と REPL 出力に置く
 
-## テスト方針
+VS Code task で `lake build` を直接叩く場合のフォロー手順は playbook §「ビルド後チェックリスト」。
+
+## 10. テスト方針
 
 - 標準: `vanilla4`, `vanilla5`
 - ストレス: `stress8` 等の大規模設定
 - `#guard` は `lake build` 成功で検証完了とみなす
 
-## シェル運用
+## 11. シェル運用
 
 - PowerShell 文字列置換は常に `-creplace`
-- `.github/skills/` スクリプトはシェル前置なしで直接実行
-- 非同期ビルドで `get_terminal_output` を連打しない
-- Lean ソース検索は `grep_search` のみ（`grep` / `Select-String` による `run_in_terminal` 検索は禁止）
-- 行数カウント目的の `Get-Content | Measure-Object -Line` を `run_in_terminal` で実行しない
+- `.github/skills/` のスクリプトはシェル前置なしで直接実行する
+- Lean ソース検索は `grep_search` を使う（`grep` / `Select-String` の `run_in_terminal` 経由検索は避ける）
+- 行数カウントは `grep_search` のヒット件数や `read_file` で済ませる
+- `#eval` / `run-lean-file.ps1` / Plausible / ベンチマークなど探索的 Lean 実行は、必ず小さい smoke run から始め、`run_in_terminal` に有限 `timeout` を指定する。`timeout: 0` や timeout 省略は禁止（通常ビルドは §9 の build script 規約を優先）
+- 探索的実行の 1 回あたり上限は原則 180 秒以内。最初は 30 秒以内に収まる規模（例: 64 ケース以下）で通し、Plausible は 50 → 300 → 1000 samples の段階で増やす
+- 探索的実行が timeout / cancel された場合は、再実行前に該当 Lean worker を確認・停止し、Scratch ファイルの重い `#eval` を縮小または無効化してから再開する
 
-詳細: `docs/agent/powershell-conventions.md` / `docs/agent/agent-operations-playbook.md`
+詳細: [powershell-conventions.md](docs/agent/powershell-conventions.md) / [agent-operations-playbook.md](docs/agent/agent-operations-playbook.md)

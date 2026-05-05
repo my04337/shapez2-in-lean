@@ -4,32 +4,6 @@
 
 ---
 
-## String 型の証明における注意点
-
-Lean 4 の `String` 型は内部が UTF-8 バイト列であり、多くの関数がカーネルレベルで最適化されている。定理証明では以下の制約がある。
-
-### 展開不可能な関数一覧
-
-| 関数 | 理由 | 代替手段 |
-|---|---|---|
-| `String.splitOn` | 内部で `@[irreducible] String.splitOnAux` を使用 | 自前の `List Char` ベース split 関数 |
-| `String.intercalate` | 内部ヘルパー `go✝`（ハイジェニック名）が展開不可 | `List Char` で結合 → `String.ofList` |
-
-### `String` ↔ `List Char` ブリッジの活用
-
-証明が必要な場合は `List Char` レベルに落として操作し、以下の stdlib 補題でブリッジする:
-
-```lean
--- String → List Char → String のラウンドトリップ
-String.ofList_toList : String.ofList s.toList = s
--- List Char → String → List Char のラウンドトリップ
-String.toList_ofList : (String.ofList l).toList = l
-```
-
-詳細は [`string-roundtrip-proof.md`](string-roundtrip-proof.md) を参照。
-
----
-
 ## タクティクの使い分け
 
 ### `simp only` 原則 — 裸 `simp` を使わない
@@ -452,64 +426,10 @@ induction n with
 
 ---
 
-## v4.29.0 での注目変更点（補足）
-
-### `lean4checker` が Lean 4 本体に統合
-
-v4.29.0 より、これまで独立リポジトリだった `lean4checker` が Lean 4 本体に統合された。
-`lean4checker` は import されたモジュールの証明が `sorry` に依存していないことを
-カーネルレベルで再確認するツール。
-
-```
-# lake を使ったビルド実行例
-lake exe lean4checker Mathlib
-```
-
-本プロジェクトでは大きな変更なし。今後 `lean4checker` を別途インストールする必要はない。
-
-### Lake: Git 依存パッケージ更新後の `.hash` ファイル自動クリーン
-
-`lake update` でパッケージの revision を変更すると、以前は古い `.hash` ファイルが残留し、
-ビルドトレースが不正になることがあった（[関連 Zulip スレッド](https://leanprover.zulipchat.com/#narrow/channel/113488-general/topic/ProofWidgets.20not.20up-to-date)）。
-
-v4.29.0 では `updateGitPkg` が `git clean -xf` をチェックアウト後に実行するようになり修正された。
-**`lake update` 後にビルドが正常に通らない場合は `.lake` ディレクトリを手動で削除する必要は原則なくなった。**
-
-### `inferInstanceAs` のドキュメント改善
-
-`inferInstanceAs` の内部実装が `InstanceNormalForm` → `WrapInstance` にリネームされた（内部変更のみ）。
-ユーザー向けには、ドキュメントの表現が
-「instance normal form に正規化する」→「expected type に合わせてインスタンスをラップする」
-と改善された。動作は実質的に変わらない。
-
----
-
-## Gravity 証明で判明した偽定理カタログ
-
-`Gravity.lean` の `process_rotate180` 証明過程で、以下の仮定が全て偽と判明した。
-これらに依拠するアプローチを取ってはならない。
-
-| 偽の仮定 | なぜ偽か |
-|---|---|
-| `shouldProcessBefore_no_chain` | 4L+ で 3 pin 連鎖反例。2-3L 限定検証の不備 |
-| `sortFallingUnits_spb_order_on_floatingUnits` | 4 要素反例。insertSorted のグリーディ停止が順序を壊す |
-| `sortFallingUnits_shouldProcessBefore_one_way_order` | spb 非推移性。3 要素反例 |
-| `sortFallingUnits_later_not_spb_earlier` | 同根原因（非推移的 spb サイクル） |
-| `sortFallingUnits_inversion_is_tied` (一般 Perm) | 3L 3色 8628 violations。r180 固有 Perm でのみ真 |
-| sortFallingUnits が正しい topological sort を生成する | insertSorted はグリーディで後方不整合を生む |
-| spb が floatingUnits 上で全順序 | tied ペアが存在する |
-| BFS 列挙結果がリスト等号で r180 等変 | 探索順序が方角で変わる |
-| `floatingUnits_rotate180` (list equality) | BFS order changes (.any メンバーシップのみ等変) |
-| `sortFallingUnits_preserves_spb_order` | 3-cycle 下で insertSorted の順序保存が偽 |
-| `spb_antisymm_of_disjoint` | 位置素のみでは反対称律不成立 |
-| `foldl_sorted_disjoint_flatMap_eq` | flatMap .any 等価 + 位置素では unit 分割不一致 |
-| sortFallingUnits 出力が pointwise .any 等価 | 2L: 800 不一致, 3L: 9072 不一致 |
-
-### 共通教訓
+## 共通教訓
 
 - **ペアワイズ非循環 ≠ DAG**: 全ペアの 2-cycle がなくても 3-cycle 以上が存在しうる
 - **計算検証は十分な規模で**: 2-3L のみの計算検証は 4L+ 反例を見逃す
-- **リスト等号は探索順序依存**: BFS 出力はリスト等号ではなく `.any` メンバーシップで述べる
 - **偽定理に依拠する証明チェーンは直ちに不健全**: sorry 1 個でも上流全体が汚染される
 
 ---
@@ -518,27 +438,22 @@ v4.29.0 では `updateGitPkg` が `git clean -xf` をチェックアウト後に
 
 このセクションはエージェントの作業効率を向上させるために実績から抽出したルールをまとめる。
 
-### 提案 1: lean-proof-planning Phase 0 を最初に読む
+### 提案 1: lean-proof-methods チェックリスト を最初に読む
 
-`lean-proof-planning` スキルが適用される場面（新規証明開始・方針転換）では、実装着手の前に必ず読む。
+`lean-proof-methods` スキルが適用される場面（新規証明開始・方針転換）では、実装着手の前に必ずチェックリストを読む。
 
-```
-❌ 禁止: スキル読み → 即実装
-✅ 正解: スキル読み → Phase 0（真偽チェック）→ ゲート 1（反例チェック）→ 実装
-```
-
-Phase 0 を省略して実装に入ると、偽定理に長時間費やすリスクが高い（本プロジェクト実績: 複数回発生）。
+チェックリストを無視して実装に入ると、偽定理に長時間費やすリスクが高い（本プロジェクト実績: 複数回発生）。
 
 ### 提案 2: 関連シンボル群は 1 回の alternation regex で取得する
 
-`symbol-map.jsonl` を検索するとき、関連する複数シンボルをバラバラに検索しない。
+Lean ソースを `grep_search` するとき、関連する複数シンボルをバラバラに検索しない。
 
 ```
 ❌ 非効率: grep "foldl_placeFU_cluster" → grep "foldl_placeFU_pin" → grep "isOccupied_placeFallingUnit"
 ✅ 効率的: grep "foldl_placeFU|isOccupied_placeFallingUnit" (1 クエリで全件取得)
 ```
 
-**実装**: `grep_search` の `query` フィールドに正規表現の alternation `|` を使う。  
+**実装**: `grep_search` の `query` フィールドに正規表現の alternation `|` を使う。
 `isRegexp: true` を忘れずに設定する。
 
 ### 提案 3: 補題の前提条件は最も一般的な形で書く
