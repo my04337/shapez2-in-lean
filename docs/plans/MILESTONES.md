@@ -38,7 +38,7 @@ Layer A (Data & Operations) ← 静的データ型と純粋関数
 |---|---|
 | Layer A | **主要基盤は実装済み・運用中**。Shape / Kernel / Operations の純粋関数群は現行コードの土台として使われている。Wires はスケルトン段階。 |
 | Layer B | **Gravity 中心に定理化が前進**。Wave Gravity の終端性・安定性・等変性は theorem 化済みで、Shatter / 複合操作へ接続済み。 |
-| Layer C | **C-1 設計計画を作成済み**。装置グラフ、Belt / Pipe ストリーム、抽象処理能力を [layer-c1-shape-processing-flow-plan.md](layer-c1-shape-processing-flow-plan.md) に整理。Flow 側の主要ブロッカーだった Gravity の安定性・等変性は解消済み。 |
+| Layer C | **C-1 設計計画を作成済み**。加工ライン、ベルト / パイプのストリーム、抽象処理能力を [layer-c1-shape-processing-flow-plan.md](layer-c1-shape-processing-flow-plan.md) に整理。Flow 側の主要ブロッカーだった Gravity の安定性・等変性は解消済み。 |
 | Layer D | **未着手**。MAM 完全性は Layer C のフロー形式化後に扱う。 |
 
 ---
@@ -145,14 +145,14 @@ Layer B の基盤を使って証明される加工装置。
 
 ### C-1. Shape Processing フロー
 
-進捗: **設計計画を作成済み**。初期スコープは DAG 形式の装置グラフ、Belt / Pipe の二種ストリーム、抽象スループット / 容量を含める。具体的な装置別数値は後続調査で確定する。正本計画は [layer-c1-shape-processing-flow-plan.md](layer-c1-shape-processing-flow-plan.md)。
+進捗: **設計計画を作成済み**。初期スコープは DAG 形式の加工ライン、ベルト / パイプの二種ストリーム、抽象スループット / 容量を含める。基本スループット値は [../shapez2/game-system-overview.md](../shapez2/game-system-overview.md) を正本とし、Flow 側では後から設定として取り込める形にする。正本計画は [layer-c1-shape-processing-flow-plan.md](layer-c1-shape-processing-flow-plan.md)。
 
 | 項目 | 概要 |
 |---|---|
-| C-1-1 | 加工装置を接続する DAG 形式のグラフ / パイプライン型 |
-| C-1-2 | Belt 上の Shape と Pipe 上の Fluid を区別するストリームモデル |
+| C-1-1 | マシンを接続する DAG 形式の加工ライン / パイプライン型 |
+| C-1-2 | ベルト上の Shape とパイプ上の液剤を区別するストリームモデル |
 | C-1-3 | フローの評価関数（入力ストリーム → 出力ストリーム） |
-| C-1-4 | 抽象 throughput / capacity / demand / capability と最低装置数下界 |
+| C-1-4 | 抽象 throughput / capacity / throughput requirement / capability と必要マシン数下界 |
 | C-1-5 | 代表フロー（例: 切断 → 回転 → 切断、Painter、ColorMixer）の検証 |
 | C-1-6 | フロー等価性の定義と補助補題 |
 
@@ -206,6 +206,6 @@ Layer B の基盤を使って証明される加工装置。
 | ファイル | 概要 |
 |---|---|
 | [../s2il/architecture-layer-ab.md](../s2il/architecture-layer-ab.md) | Layer A/B のディレクトリ構造・設計原則・主要 theorem チェーンの正本 |
-| [layer-c1-shape-processing-flow-plan.md](layer-c1-shape-processing-flow-plan.md) | Layer C-1 Shape Processing Flow の装置グラフ、Belt / Pipe ストリーム、抽象処理能力の設計・実装計画 |
+| [layer-c1-shape-processing-flow-plan.md](layer-c1-shape-processing-flow-plan.md) | Layer C-1 Shape Processing Flow の加工ライン、ベルト / パイプのストリーム、抽象処理能力の設計・実装計画 |
 
 将来的に層ごとの個別計画が必要になった場合、`docs/plans/` に追加する（ケバブケース命名）。

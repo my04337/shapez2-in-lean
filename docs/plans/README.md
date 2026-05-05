@@ -24,7 +24,7 @@ Shapez2 in Lean (S2IL) プロジェクトの最終目標・大きな方針・層
 
 | ファイル | 概要 |
 |---|---|
-| [layer-c1-shape-processing-flow-plan.md](layer-c1-shape-processing-flow-plan.md) | Layer C-1 Shape Processing Flow の装置グラフ、Belt / Pipe ストリーム、抽象処理能力の設計・実装計画 |
+| [layer-c1-shape-processing-flow-plan.md](layer-c1-shape-processing-flow-plan.md) | Layer C-1 Shape Processing Flow の加工ライン、ベルト / パイプのストリーム、抽象処理能力の設計・実装計画 |
 
 ---
 
