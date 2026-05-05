@@ -20,6 +20,12 @@ Shapez2 in Lean (S2IL) プロジェクトの最終目標・大きな方針・層
 |---|---|
 | [../s2il/architecture-layer-ab.md](../s2il/architecture-layer-ab.md) | Layer A/B のディレクトリ構造・設計原則・主要 theorem チェーンの正本 |
 
+### Layer C 実行計画
+
+| ファイル | 概要 |
+|---|---|
+| [layer-c1-shape-processing-flow-plan.md](layer-c1-shape-processing-flow-plan.md) | Layer C-1 Shape Processing Flow の装置グラフ、Belt / Pipe ストリーム、抽象処理能力の設計・実装計画 |
+
 ---
 
 ## いつ参照するか
@@ -27,6 +33,7 @@ Shapez2 in Lean (S2IL) プロジェクトの最終目標・大きな方針・層
 | 作業 | 参照先 |
 |---|---|
 | プロジェクト全体の位置付けを確認 | `MILESTONES.md` |
+| Layer C-1 の Flow 設計に着手 | `layer-c1-shape-processing-flow-plan.md` |
 | Layer A/B の構造原則を確認 | `../s2il/architecture-layer-ab.md` |
 | 個別 sorry の現状を確認 | `../../S2IL/_agent/sorry-plan.json` / `../../S2IL/_agent/sorry-goals.md` |
 | 新しい証明計画を策定する | `../agent/proof-plan-current-focus-guide.md` |
