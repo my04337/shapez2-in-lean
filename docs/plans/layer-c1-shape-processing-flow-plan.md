@@ -2,7 +2,7 @@
 
 - 作成日: 2026-05-05
 - 最終更新: 2026-05-06
-- ステータス: **設計ドラフト / 基本スループット反映済み / Layer C-1 着手準備**
+- ステータス: **設計ドラフト / 基本スループット反映済み / Layer C-1 初期実装完了**
 - スコープ: Shape Processing フロー、ベルト / パイプのストリーム、加工ライン、抽象処理能力
 
 ---
@@ -480,11 +480,11 @@ Lean 実装に入った後は、次の順で検証する。
 | C1-DOC-3 | 完了 | 基本スループット正本の整備 | [../shapez2/game-system-overview.md](../shapez2/game-system-overview.md) に基本速度の正本表を追加済み |
 | C1-DOC-4 | 完了 | 液剤ランチャー換算の併記 | 着色機・混色機・ミニポンプ・結晶製造機の台数 / 液剤ランチャーを反映済み |
 | C1-DOC-5 | 完了 | Layer C 関連インデックスの同期 | [README.md](README.md) / [MILESTONES.md](MILESTONES.md) の C-1 説明を更新済み |
-| C1-IMPL-1 | 未着手 | `S2IL/Flow` scaffold | `S2IL/Flow.lean` と `S2IL/Flow/Types.lean` を追加する |
-| C1-IMPL-2 | 未着手 | ストリーム / 液剤 / ポート基礎型 | `StreamKind` / `Fluid` / `PortSpec` を REPL で型確認して実装する |
-| C1-IMPL-3 | 未着手 | 抽象処理能力 | `Throughput` / `Capacity` / `ThroughputRequirement` / `Capability` を実装する |
-| C1-IMPL-4 | 未着手 | マシン仕様 | Operations facade と対応する `MachineSpec` を実装する |
-| C1-IMPL-5 | 未着手 | 加工ライン妥当性 | `FlowGraph` / `WellFormed` と代表テストを追加する |
+| C1-IMPL-1 | 完了 | `S2IL/Flow` scaffold | `S2IL/Flow.lean` と `S2IL/Flow/Types.lean` を追加し、`S2IL.lean` から公開済み |
+| C1-IMPL-2 | 完了 | ストリーム / 液剤 / ポート基礎型 | `StreamKind` / `FlowAmount` / `Fluid` / `PortSpec` / `NodeId` / `PortId` を実装し、REPL `#check` と build script で検証済み |
+| C1-IMPL-3 | 完了 | 抽象処理能力 | `S2IL/Flow/Capability.lean` を追加し、`Throughput` / `Capacity` / `ThroughputRequirement` / `Capability` を REPL `#check` と build script で検証済み |
+| C1-IMPL-4 | 完了 | マシン仕様 | `S2IL/Flow/MachineSpec.lean` を追加し、Operations facade と対応する `MachineKind` / `MachineSpec` を実装・代表テスト済み |
+| C1-IMPL-5 | 完了 | 加工ライン妥当性 | `S2IL/Flow/Graph.lean` と `Test/Flow/Graph.lean` を追加し、端点存在・種別一致・NodeId 順 DAG 近似の `FlowGraph.WellFormed` を代表テスト済み |
 
 進捗更新時は、完了した行の状態を `完了` に変更し、必要なら成果物 / 次アクション欄へ検証コマンドや参照先を追記する。
 
@@ -492,11 +492,8 @@ Lean 実装に入った後は、次の順で検証する。
 
 ## 15. 次の実作業チェックリスト
 
-1. `S2IL/Flow.lean` と `S2IL/Flow/Types.lean` の最小 scaffold を作る
-2. `StreamKind` / `Fluid` / `PortSpec` を REPL で型確認する
-3. `Flow/Capability.lean` で抽象処理能力の型を決める
-4. `Flow/MachineSpec.lean` でマシン分類を Lean の inductive に落とす
-5. `Flow/Graph.lean` で `WellFormed` の最初の条件を実装する
-6. `Test/Flow/` にポート種別不一致と代表マシン spec のテストを追加する
-7. `S2IL.lean` と `Test.lean` の import を更新する
-8. build script で `S2IL.Flow`、続いて全体を検証する
+1. `Flow/Eval.lean` で finite observation window の評価関数を設計する
+2. `Flow/Internal/PortLookup.lean` へ port lookup 補題を必要に応じて分離する
+3. `Flow/Internal/GraphAcyclic.lean` で NodeId 順 DAG 近似を一般の DAG 判定へ拡張する
+4. `Flow/Equivariance.lean` で機能的等価性と回転等変性の型を確定する
+5. 具体スループット値を取り込む `FlowConfig` / `SpeedTier` 相当を別フェーズで設計する
