@@ -179,6 +179,11 @@ namespace Shape
 def waveStep (s : Shape) : Shape :=
   _root_.S2IL.Gravity.Internal.atomicShiftDown s (floatingPositions s)
 
+/-- `waveStep` はレイヤ数を変えない。 -/
+@[simp] theorem waveStep.layerCount (s : Shape) :
+    (waveStep s).layerCount = s.layerCount := by
+  simp [waveStep, Shape.layerCount]
+
 /-- `waveStep` を fixed fuel 回だけ反復する Wave Gravity core。 -/
 def waveGravityCore (fuel : Nat) (s : Shape) : Shape :=
   Nat.iterate waveStep fuel s
@@ -193,9 +198,29 @@ def waveGravityCoreFast : Nat → Shape → Shape
       else
         waveGravityCoreFast fuel (_root_.S2IL.Gravity.Internal.atomicShiftDown s floating)
 
+/-- `waveGravityCoreFast` はレイヤ数を変えない。 -/
+@[simp] theorem waveGravityCoreFast.layerCount (fuel : Nat) (s : Shape) :
+    (waveGravityCoreFast fuel s).layerCount = s.layerCount := by
+  induction fuel generalizing s with
+  | zero => simp [waveGravityCoreFast, Shape.layerCount]
+  | succ fuel ih =>
+      unfold waveGravityCoreFast
+      by_cases h : floatingPositions s = []
+      · simp [h]
+      · simp only [h, ↓reduceIte]
+        rw [ih]
+        simp [Shape.layerCount]
+
 /-- Wave Gravity 本体。fixed fuel と同値な早期停止 core 後に末尾空レイヤを正規化する。 -/
 def gravity (s : Shape) : Shape :=
   (waveGravityCoreFast s.length s).normalize
+
+/-- `gravity` はレイヤ数を増やさない。 -/
+theorem gravity.layerCount_le (s : Shape) :
+    (gravity s).layerCount ≤ s.layerCount := by
+  rw [gravity]
+  exact Nat.le_trans (Shape.normalize.layerCount_le _) (by
+    rw [waveGravityCoreFast.layerCount])
 
 end Shape
 

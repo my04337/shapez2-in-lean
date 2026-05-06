@@ -15,6 +15,7 @@ import S2IL.Operations.Shatter.Equivariance
 - `Shape.shatterOnFall` — 落下時砕け散り（脆弱位置リストの結晶結合クラスタを消去）
 - `Shape.shatterOnCut` — 切断時砕け散り（東西跨ぎ結晶結合クラスタを消去）
 - `Shape.shatterTopCrystals` — 切り詰め時砕け散り（しきい値以上の層に絡む結晶結合クラスタ）
+- `Shape.shatterTopCrystals.layerCount_le` — 切り詰め時砕け散りはレイヤ数を増やさない
 - 対応する等変性（`*.rotateCW_comm` / `rotate180_comm` / `rotateCCW_comm`）
 
 ## サブモジュール（公開）

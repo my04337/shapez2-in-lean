@@ -41,6 +41,7 @@ Wave Gravity の定義層、Behavior A/B/C の接地・終端性・不動点定�
 - `waveGravityCoreFast_isSettled`
 - `Shape.gravity.isSettled`
 - `Shape.gravity.of_isSettled`
+- `Shape.gravity.layerCount_le`
 - `Shape.gravity.rotateCW_comm`
 
 ## サブモジュール（公開）

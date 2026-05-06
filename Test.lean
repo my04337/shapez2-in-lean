@@ -20,6 +20,7 @@ import Test.Operations.Stacker
 import Test.Operations.Swapper
 import Test.Flow.MachineSpec
 import Test.Flow.Graph
+import Test.Flow.QuadrantExtraction
 
 /-!
 # Test root
@@ -49,4 +50,5 @@ Layer A 単体テスト群のエントリポイント。`#guard` ベースで `l
 | `Test.Operations.Swapper` | swap 代表値・180° 等変性 |
 | `Test.Flow.MachineSpec` | Flow マシン仕様と Operations facade 対応 |
 | `Test.Flow.Graph` | FlowGraph well-formed 判定の代表例 |
+| `Test.Flow.QuadrantExtraction` | 象限抽出代表フローの代表値・型確認 |
 -/

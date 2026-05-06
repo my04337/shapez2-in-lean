@@ -27,7 +27,8 @@ import S2IL.Operations.Shatter
 
 - `Shape.placeAbove : Shape → Shape → Shape`（≃ `bottom ++ top`、全関数）
 - `Shape.stack : Shape → Shape → GameConfig → Shape`（合成 `noncomputable def`、全関数）
-- 構造的恒等式 (`placeAbove.layerCount`)
+- 構造的恒等式 (`placeAbove.layerCount` / `stack.layerCount_le`)
+- 安定化 theorem (`stack.isSettled`)
 - CW 等変性 (`placeAbove.rotateCW_comm` 他) と 180° / CCW 1 行系
 
 ## 単一チェーン原則
@@ -95,6 +96,34 @@ noncomputable def Shape.stack (bottom top : Shape) (config : GameConfig) : Shape
     (Shape.shatterTopCrystals
       (Shape.truncate (Shape.placeAbove bottom top) config)
       config.maxLayers)
+
+/-- 単一象限 shape。1 レイヤだけを持ち、指定方角以外は空。 -/
+def Shape.IsSingleQuadrantShape (s : Shape) (d : Direction) (q : Quarter) : Prop :=
+  s = Shape.single (fun d' => if d' = d then q else Quarter.empty)
+
+/-- `stack` の出力は常に安定状態。 -/
+theorem Shape.stack.isSettled (bottom top : Shape) (config : GameConfig) :
+    IsSettled (Shape.stack bottom top config) := by
+  unfold Shape.stack
+  exact Shape.gravity.isSettled _
+
+/-- `stack` の出力レイヤ数は設定上限以下。 -/
+theorem Shape.stack.layerCount_le (bottom top : Shape) (config : GameConfig) :
+    (Shape.stack bottom top config).layerCount ≤ config.maxLayers := by
+  unfold Shape.stack
+  exact Nat.le_trans (Shape.gravity.layerCount_le _) (Nat.le_trans
+    (Shape.shatterTopCrystals.layerCount_le _ _) (Shape.truncate.layerCount_le _ config))
+
+/-- 単一象限入力に対する `stack` 出力の基本 invariants。 -/
+theorem Shape.stack.singleQuadrant_invariants
+    {bottom top : Shape} {bottomDir topDir : Direction} {bottomQuarter topQuarter : Quarter}
+    (hBottom : Shape.IsSingleQuadrantShape bottom bottomDir bottomQuarter)
+    (hTop : Shape.IsSingleQuadrantShape top topDir topQuarter)
+    (config : GameConfig) :
+    IsSettled (Shape.stack bottom top config) ∧
+      (Shape.stack bottom top config).layerCount ≤ config.maxLayers := by
+  rw [hBottom, hTop]
+  exact ⟨Shape.stack.isSettled _ _ config, Shape.stack.layerCount_le _ _ config⟩
 
 /-- `stack` と CW 回転は可換（合成チェーン）。 -/
 theorem Shape.stack.rotateCW_comm (bottom top : Shape) (config : GameConfig) :

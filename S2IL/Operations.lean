@@ -29,6 +29,8 @@ Layer C からは本 facade のみを参照すればよい。
   / `Shape.liftUp` / `Shape.generatePins`
 - 振る舞い系：`Shape.gravity` / `Shape.stack` / `Shape.pinPush` /
   `Shape.shatterOnCut` / `Shape.shatterOnFall`
+- Stacker correctness: `Shape.stack.isSettled` / `Shape.stack.layerCount_le` /
+  `Shape.stack.singleQuadrant_invariants`
 - `IsSettled` / `isSettled`
 - 各操作の `_rotateCW_comm`（CW 等変性；180° / CCW は 1 行系）
 

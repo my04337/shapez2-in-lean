@@ -18,6 +18,14 @@ def shatterMaskFrom (P : Nat → Direction → Bool) : Nat → Shape → Shape
   | n, l :: ls =>
     (fun d => if P n d then Quarter.empty else l d) :: shatterMaskFrom P (n + 1) ls
 
+/-- `shatterMaskFrom` はレイヤ数を変えない。 -/
+@[simp] theorem length_shatterMaskFrom (P : Nat → Direction → Bool) :
+    ∀ (n : Nat) (s : Shape), (shatterMaskFrom P n s).length = s.length := by
+  intro n s
+  induction s generalizing n with
+  | nil => simp [shatterMaskFrom]
+  | cons _ ls ih => simp [shatterMaskFrom, ih (n + 1)]
+
 /-- `shatterMaskFrom` と `Shape.rotateCW` は方角 +1 シフト相当の述語入れ替えで可換。 -/
 theorem shatterMaskFrom.rotateCW_eq
     {P P' : Nat → Direction → Bool} (h : ∀ k d, P k d = P' k (d + 1)) :

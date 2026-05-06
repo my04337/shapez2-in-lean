@@ -1,7 +1,7 @@
 # Layer A/B アーキテクチャ（S2IL 正本）
 
 - 作成日: 2026-04-24
-- 最終更新: 2026-05-05
+- 最終更新: 2026-05-06
 - ステータス: **Wave Gravity 実装・検証完了。Layer A/B 構造を運用中**
 - スコープ: S2IL Layer A（データ型・Kernel・純粋関数な加工操作）および Layer B（振る舞い系）のコード構造
 - 位置付け: 本ドキュメントは **新構造の正本** である。
@@ -114,6 +114,9 @@ $$s.\mathrm{rotate180}.\mathrm{cut} = (s.\mathrm{cut.2}.\mathrm{rotate180},\ s.\
 
 **原則**: E/W 参照操作の primitive（`eastHalf` / `westHalf` / `combineHalves`）については `rotate180_comm` を証明対象とし、CW_comm / CCW_comm は定義しない。合成操作（`cut` / `halfDestroy` / `swap`）の `rotate180_comm` は primitive 版の系として `theorem` 化する。
 
+`halfDestroy` と回転操作を組み合わせた象限抽出は、ゲーム上の独立操作ではなく固定加工ラインの代表例として扱う。
+そのため Layer A/B の Operation API には置かず、C-1 Flow 側の `S2IL/Flow/QuadrantExtraction.lean` でサンプルフロー theorem として管理する。
+
 ### 1.4.2 パイプライン操作（Stacker / PinPusher）
 
 `Stacker` / `PinPusher` のような複合操作は、純粋関数 primitive を組み合わせた
@@ -129,6 +132,9 @@ $$s.\mathrm{rotate180}.\mathrm{cut} = (s.\mathrm{cut.2}.\mathrm{rotate180},\ s.\
 
 実装は `S2IL/Operations/Stacker.lean` / `S2IL/Operations/PinPusher.lean` / `S2IL/Operations/Common.lean` 。
 Gravity 依存の等変性は `Shape.gravity.rotateCW_comm` の theorem 化後、合成チェーンとして導出済み。
+Stacker correctness の基礎 theorem として、`Shape.stack.isSettled`、`Shape.stack.layerCount_le`、`Shape.stack.singleQuadrant_invariants` を公開する。
+レイヤ数上界は `Shape.shatterTopCrystals.layerCount_le` と `Shape.gravity.layerCount_le` を経由して導出する。
+MAM 前提 theorem の完了済み inventory は [mam-foundation-theorems.md](mam-foundation-theorems.md) に置く。
 
 ### 1.4.3 砕け散り操作（Shatter）
 

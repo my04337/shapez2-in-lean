@@ -88,6 +88,37 @@ example (s : Shape) (n : Nat) :
 -- stack: 合成 def の等変性
 -- ============================================================
 
+example (s : Shape) :
+    (Shape.normalize s).layerCount ≤ s.layerCount :=
+  Shape.normalize.layerCount_le s
+
+example (s : Shape) (threshold : Nat) :
+    (Shape.shatterTopCrystals s threshold).layerCount ≤ s.layerCount :=
+  Shape.shatterTopCrystals.layerCount_le s threshold
+
+example (s : Shape) :
+    (Shape.gravity s).layerCount ≤ s.layerCount :=
+  Shape.gravity.layerCount_le s
+
+example (a b : Shape) (cfg : GameConfig) :
+    IsSettled (Shape.stack a b cfg) :=
+  Shape.stack.isSettled a b cfg
+
+example (a b : Shape) (cfg : GameConfig) :
+    (Shape.stack a b cfg).layerCount ≤ cfg.maxLayers :=
+  Shape.stack.layerCount_le a b cfg
+
+private def singleNECircle : Shape :=
+  Shape.single (fun d => if d = 0 then .colored .circle .red else .empty)
+
+example :
+    Shape.IsSingleQuadrantShape singleNECircle 0 (.colored .circle .red) := rfl
+
+example (cfg : GameConfig) :
+    IsSettled (Shape.stack singleNECircle singleNECircle cfg) ∧
+      (Shape.stack singleNECircle singleNECircle cfg).layerCount ≤ cfg.maxLayers :=
+  Shape.stack.singleQuadrant_invariants rfl rfl cfg
+
 example (a b : Shape) (cfg : GameConfig) :
     (Shape.stack a b cfg).rotateCW = Shape.stack a.rotateCW b.rotateCW cfg :=
   Shape.stack.rotateCW_comm a b cfg

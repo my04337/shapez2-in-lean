@@ -16,6 +16,11 @@ namespace S2IL
 def Shape.shatterMask (s : Shape) (P : QuarterPos → Bool) : Shape :=
   Shatter.Internal.shatterMaskFrom (fun n d => P (n, d)) 0 s
 
+/-- `shatterMask` はレイヤ数を変えない。 -/
+@[simp] theorem Shape.shatterMask.layerCount (s : Shape) (P : QuarterPos → Bool) :
+    (Shape.shatterMask s P).layerCount = s.layerCount := by
+  simp [Shape.shatterMask, Shape.layerCount]
+
 /-- 落下時砕け散り判定: 位置 `p` は、`ps` 中の脆弱な象限と結晶結合クラスタで連結している。 -/
 def IsShatteredOnFall (s : Shape) (ps : List QuarterPos) (p : QuarterPos) : Prop :=
   ∃ t ∈ ps, (QuarterPos.getQuarter s t).isFragile = true ∧ CrystalBondClusterRel s t p
@@ -42,6 +47,16 @@ noncomputable instance (s : Shape) (threshold : Nat) :
     Stacker / PinPusher のレイヤ上限切り詰め時に用いる。 -/
 noncomputable def Shape.shatterTopCrystals (s : Shape) (threshold : Nat) : Shape :=
   s.shatterMask (fun p => decide (IsShatteredOnTruncate s threshold p))
+
+/-- `shatterTopCrystals` はレイヤ数を変えない。 -/
+@[simp] theorem Shape.shatterTopCrystals.layerCount (s : Shape) (threshold : Nat) :
+    (Shape.shatterTopCrystals s threshold).layerCount = s.layerCount := by
+  simp [Shape.shatterTopCrystals]
+
+/-- `shatterTopCrystals` はレイヤ数を増やさない。 -/
+theorem Shape.shatterTopCrystals.layerCount_le (s : Shape) (threshold : Nat) :
+    (Shape.shatterTopCrystals s threshold).layerCount ≤ s.layerCount := by
+  rw [Shape.shatterTopCrystals.layerCount]
 
 /-- 切断時砕け散り判定: 位置 `p` は、東半分と西半分の両方の結晶象限を含む
   結晶結合クラスタの構成員である。 -/

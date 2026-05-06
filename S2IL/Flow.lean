@@ -5,6 +5,7 @@ import S2IL.Flow.Types
 import S2IL.Flow.Capability
 import S2IL.Flow.MachineSpec
 import S2IL.Flow.Graph
+import S2IL.Flow.QuadrantExtraction
 
 /-!
 # S2IL.Flow facade
@@ -25,10 +26,17 @@ Shape Processing Flow（Layer C-1）の公開 API 集約点。
 - 型: `MachineNode` / `PortRef` / `FlowEdge` / `FlowGraph`
 - 判定: `FlowGraph.wellFormed` / `FlowGraph.WellFormed`
 
+## 公開 API（QuadrantExtraction 経由）
+
+- 代表フロー例: `Flow.QuadrantExtraction.extractNEToNE` / `extractSEToNE` /
+  `extractSWToNE` / `extractNWToNE`
+- 仕様 theorem: `Flow.QuadrantExtraction.complete`
+
 ## サブモジュール（公開）
 
 - `S2IL.Flow.Types` — ストリーム、液剤、ポートの基礎型
 - `S2IL.Flow.Capability` — スループット、容量、処理能力の抽象型
 - `S2IL.Flow.MachineSpec` — Operations facade と対応するマシン仕様
 - `S2IL.Flow.Graph` — FlowGraph と初期 well-formed 判定
+- `S2IL.Flow.QuadrantExtraction` — `halfDestroy -> rotate* -> halfDestroy` の代表固定フロー例
 -/

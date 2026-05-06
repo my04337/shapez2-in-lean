@@ -17,18 +17,12 @@ MaM は以下の 2 フェーズで構成される。
 
 #### フェーズ A: シミュレーション処理（信号処理）
 
-**シミュレーション装置 (Simulated Machines)** を使い、論理信号内の目標シェイプを象限単位に分解する。
+MAM の信号処理で中心になるのは **図形分析器 (Shape Analyzer)** である。
+図形分析器はシェイプ信号の NE 象限を読み取り、図形タイプと色を別々の信号として出力する。
+他の象限は、シミュレーション回転機で対象象限を NE へ移してから図形分析器へ渡すことで解析する。
 
-基本的な象限抽出パターン（NE 象限の例）:
-
-```
-目標シェイプ信号
-    → シミュレーション切断処理機（West Half を削除 → NE, SE が残る）
-    → シミュレーション逆回転機（CCW 90°回転 → 元の NE が NW 位置に）
-    → シミュレーション切断処理機（West Half を削除 → 元の NE だけが残る）
-```
-
-これを NE / SE / SW / NW の全象限、かつ全シェイプ種別（Circle / Rectangle / Star / Windmill）に対して繰り返し、各象限・各種別が一致するかを論理回路で選択する。
+`halfDestroy -> rotate* -> halfDestroy` のようなシミュレーション処理列も、固定加工ラインとして象限だけを残すサンプルには使える。
+ただしこれは MAM の中核操作ではなく、S2IL では Layer C-1 Flow の代表例として扱う。
 
 #### フェーズ B: 物理生産（実機処理）
 
@@ -148,33 +142,34 @@ MaM の形式化・正しさの証明には以下の定理群が必要になる�
 
 これらは `Machine` 名前空間でまとめて `Option` 対応ラッパーとして提供される（`S2IL/Machine/Machine.lean`）。
 
-### 4-2. 象限抽出の正しさ（未着手）
+### 4-2. 象限抽出フロー例の正しさ（実装済み）
 
-MaM の核心は「任意の象限を他の象限と独立に抽出できる」ことである。
+MAM の実際の象限解析は図形分析器を中心とする Wire 系の処理であり、これは別スコープで扱う。
+一方で、`halfDestroy` と回転操作の合成は、固定加工ラインがどの象限を残すかを確認する代表例として有用である。
+S2IL ではこの代表例を `S2IL/Flow/QuadrantExtraction.lean` に置き、Operation API からは分離している。
+確定済みの方角対応表と theorem inventory は [../s2il/mam-foundation-theorems.md](../s2il/mam-foundation-theorems.md) を参照する。
 
-```
--- 必要となる補題の例 (NE 象限抽出)
--- halfDestroy(rotateCCW(halfDestroy(s))).layer[0].ne = s.layer[0].ne
-```
+具体的には以下のサンプル theorem を用いる。
 
-具体的には以下の証明ステップを用いた連鎖証明が必要となる。
-
-| # | 必要な補題 | 概要 |
+| # | theorem | 概要 |
 |---|---|---|
-| T-1 | 東半分の保存 | 切断処理後の東半分が元のシェイプの NE・SE と一致する |
-| T-2 | 象限の回転変位 | CCW 回転後に元の NE 象限が NW 位置に移動する |
-| T-3 | 2 段切断による象限分離 | 2 回の切断処理で単一象限が分離されることを証明 |
-| T-4 | 象限抽出の完全性 | 全象限について T-1〜T-3 が成立する |
+| T-1 | `Flow.QuadrantExtraction.halfDestroy_getQuarter` | 切断処理後の東半分が元のシェイプの NE・SE と一致する |
+| T-2 | `Flow.QuadrantExtraction.rotateCW_getDir` など | 回転後の方角変位を確認する |
+| T-3 | `Flow.QuadrantExtraction.extractAfterRotate*_getQuarter` | 2 回の切断処理でどの象限が残るかを点ごとに述べる |
+| T-4 | `Flow.QuadrantExtraction.complete` | 全象限について、対象象限だけを NE に残す固定工程が存在する |
 
-### 4-3. 積層の正しさ（部分的に実装済み）
+### 4-3. 積層の正しさ（実装済み）
 
 積層機に関して以下の性質が必要。
 
 | # | 性質 | 概要 | 状態 |
 |---|---|---|---|
-| T-5 | 浮遊なし入力の積層 | 浮遊なし入力のスタック結果が正しい | ⬜ 未着手 |
-| T-6 | 単一象限積層 | 単一象限シェイプのスタックが正しい | ⬜ 未着手 |
-| T-7 | 積層のレイヤ数上界 | スタック結果のレイヤ数が上限以下 | ✅ 基礎補題あり |
+| T-5 | 浮遊なし入力の積層 | スタック出力が安定状態になる | ✅ `Shape.stack.isSettled` 実装済み |
+| T-6 | 単一象限積層 | 単一象限入力に対する基本 invariants | ✅ `Shape.stack.singleQuadrant_invariants` 実装済み |
+| T-7 | 積層のレイヤ数上界 | スタック結果のレイヤ数が上限以下 | ✅ `Shape.stack.layerCount_le` 実装済み |
+
+`Shape.stack.singleQuadrant_invariants` は出力の正確な位置を主張する theorem ではなく、単一象限入力でも `IsSettled` とレイヤ数上界が保たれることを述べる保守的な theorem である。
+位置挙動を強化する場合は、crystal / pin / truncate / normalized intermediate の条件を分離して扱う。
 
 ### 4-4. 操作の等変性（CW 回転ベース）
 
@@ -187,9 +182,9 @@ rotate180 などの他の回転の等変性はその帰結として導出する�
 | # | 等変性の対象 | 概要 | 状態 |
 |---|---|---|---|
 | T-8 | 回転操作間の整合性 | rotateCW を生成元とする回転群の代数的性質 | ✅ 証明済み |
-| T-9 | 切断の等変性 | 切断操作と CW 回転の可換性 | ✅ 証明済み |
+| T-9 | 切断の等変性 | 切断操作は E/W 参照のため CW では不成立。180° 等変性のみ扱う | ✅ 180° 証明済み |
 | T-10 | 落下処理の等変性 | 落下処理と CW 回転の可換性 | ✅ 証明済み |
-| T-11 | 積層の等変性 | 積層と CW 回転の可換性 | 🔄 再構築中 |
+| T-11 | 積層の等変性 | 積層と CW 回転の可換性 | ✅ 証明済み |
 | T-12 | 着色の等変性 | 着色操作と CW 回転の可換性 | ✅ 証明済み |
 
 ### 4-5. MAM 能力分類と完全性（未着手）
@@ -229,14 +224,15 @@ stack(bottom, top)
 
 このため、積層の等変性（T-11）は「落下処理の等変性（T-10）」に依存する。
 落下処理の等変性は Wave Gravity で `Shape.gravity.rotateCW_comm` として証明済み。
-今後の焦点は、`placeAbove` / truncate / shatter / gravity の合成として積層等変性を保つことである。
+この合成チェーンの等変性は Lean 側で証明済みである。
 
 ### 5-3. 現在の状況
 
 Gravity 層の Wave Gravity 化と CW 回転等変性の theorem 化は完了。
 旧 rotate180 ベースの Gravity プレースホルダーは `Shape.gravity.rotateCW_comm` とその 180° / CCW 系に置換済み。
 
-積層等変性（T-11）の構成的証明が、MaM 形式化への残る主要ブロッカーである。
+積層等変性（T-11）に加え、`Shape.stack` の出力安定性、単一象限入力 invariants、レイヤ数上界も public theorem 化済みである。
+今後の焦点は、MAM 完全性側で必要になる `ShapeLanguage` / `ProcessCapability` predicate と、必要に応じた stacker 位置挙動 theorem の追加である。
 
 ---
 
@@ -245,12 +241,12 @@ Gravity 層の Wave Gravity 化と CW 回転等変性の theorem 化は完了。
 ```
 各操作の正確な定義（実装済み）
     │
-    ├─ 象限抽出の正しさ (T-1〜T-4) ─────────────────────┐
+    ├─ 象限抽出フロー例 (T-1〜T-4) ✅ Flow サンプル済み ──┐
     │                                                     │
     ├─ 落下処理の等変性 (T-10) ✅ 証明済み               │
     │       │                                             │
     │       ▼                                             │
-    │   積層の等変性 (T-11) 🔄 再構築中                  │
+    │   積層の等変性 (T-11) ✅ 証明済み                  │
     │       │                                             │
     │       ▼                                             ▼
     └─── 着色・その他操作の等変性 (T-8,T-9,T-12) ✅ ──→  MAM 分類 predicate (T-16)
@@ -259,5 +255,5 @@ Gravity 層の Wave Gravity 化と CW 回転等変性の theorem 化は完了。
                                                         tier 別完全性 (T-17)
 ```
 
-積層の等変性（T-11）の構成的証明完成が、MAM 形式化への残る主要ブロッカーである。
-Gravity 側の CW 等変性は証明済みのため、今後は Stacker / PinPusher などの合成操作側の接続に集中する。
+出力安定性、単一象限入力 invariants、レイヤ数上界は public theorem 化済みである。
+今後、MAM 完全性側でより強い位置挙動が必要になった場合は、crystal / pin / truncate の条件を分離した stacker theorem として追加する。
