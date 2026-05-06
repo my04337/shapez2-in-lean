@@ -2,713 +2,424 @@
 
 - 作成日: 2026-05-05
 - 最終更新: 2026-05-06
-- ステータス: **設計ドラフト / 基本スループット反映済み / Layer C-1 初期実装 TODO 完了**
+- ステータス: **未解決事項整理フェーズ / 初期実装完了済み**
 - スコープ: ワイヤーなし Shape Processing フロー、ベルト / パイプのストリーム、固定加工ライン、抽象処理能力
 
 ---
 
-## 0. 目的
+## 0. この資料の役割
 
-Layer C-1 では、Layer A/B で定義済みの純粋な加工操作を、実際の加工ラインとして接続・評価できる形に持ち上げる。
+Layer C-1 は、Layer A/B で定義した純粋な Shape 加工操作を、ワイヤー制御を使わない固定加工ラインとして接続・評価・処理能力解析できる形に持ち上げる層である。
 
-本層は **ワイヤー制御を使わない固定 Shape Processing Flow** を扱う。Wires / Signal による条件分岐や動的ルーティングは C-2 以降に分離し、C-1 では「与えられた加工工程を、ワイヤーなしでどの程度表現・評価・処理能力解析できるか」を固める。
+初期実装は一通り完了したため、この資料は詳細な実装手順書ではなく、次の判断を進めるための計画書として維持する。
 
-本計画の中心は次の 5 点である。
-
-| 観点 | 方針 |
+| 目的 | 内容 |
 |---|---|
-| 接続構造 | 線形パイプラインに限定せず、DAG 形式の加工ラインを初期対象に含める |
-| ストリーム | ベルト上の Shape とパイプ上の液剤を区別して扱う |
-| 処理能力 | スループット / 容量 / 消費量を first-class な抽象概念として導入する |
-| 代表工程 | `halfDestroyer -> reverseRotator -> halfDestroyer` のような加工列を処理能力テストとして検証する |
-| 数値 | 基本スループット値はゲーム仕様側を正本とし、Lean 側では後から差し込める構造として扱う |
-
-具体的な基本スループット値は [../shapez2/game-system-overview.md](../shapez2/game-system-overview.md) を正本とする。本計画では、その値を後から差し込める Lean 側の構造と証明ロードマップを定める。容量値や Flow 設定への取り込み方針は、後続の実装フェーズで確定する。
+| 現在地の共有 | C-1 で既に実装済みの範囲を短く確認する |
+| 正本の整理 | 詳細仕様・実装・テストの参照先を明確にする |
+| 未解決事項の判断 | 仕様上まだ決めるべき項目について、問題概要と対処案を並べる |
+| 次アクション選定 | 今後どの設計判断から着手するかを決める材料にする |
 
 ---
 
-## 1. 参照元と正本の分担
+## 1. 現在地
 
-本計画は既存資料の重複説明を避け、次のように正本を分担する。
+C-1 の初期実装では、Flow の基礎型、処理能力抽象、マシン仕様、FlowGraph、有限観測 window の評価 API、代表 graph、回転等変性の型、基本スループット設定層までを実装済みである。
 
-| 情報 | 正本 | Layer C-1 での扱い |
-|---|---|---|
-| プロジェクト全体の層構造 | [MILESTONES.md](MILESTONES.md) | C-1 の位置付けを継承する |
-| Layer A/B のコード構造 | [../s2il/architecture-layer-ab.md](../s2il/architecture-layer-ab.md) | facade / Internal / MECE / 等変性規約を継承する |
-| `GameConfig` | [../s2il/game-config.md](../s2il/game-config.md) | レイヤ上限の設定として維持し、処理能力設定とは混ぜない |
-| ゲーム用語・基本スループット値 | [../shapez2/game-system-overview.md](../shapez2/game-system-overview.md) | ベルト / パイプ / レーン / Shape Processing の用語と基本速度の値を再利用する |
-| MAM の種類と表現能力 | [../shapez2/mam.md](../shapez2/mam.md) | C-1 は MAM 分類を定義せず、固定加工ラインの表現力として下支えする |
-| tick と Wave Gravity | [../shapez2/falling.md](../shapez2/falling.md) | 離散時間モデルの参考にする |
-| 加工操作の Lean API | [../../S2IL/Operations.lean](../../S2IL/Operations.lean) | Flow 層から参照する唯一の Operations facade とする |
-| Machine 統合層 | [../../S2IL/Machine.lean](../../S2IL/Machine.lean) | 将来の統合先。C-1 初期実装では肥大化させない |
+今後の中心は、実装済みの骨格に対して **ゲーム仕様に近いストリーム意味論をどこまで入れるか** を決めることに移る。特に、分岐・合流・複数入力同期・液剤量・速度設定・容量・空間制約は、単独の API 追加ではなく Flow 評価の意味を左右する。
 
 ---
 
-## 2. スコープ
+## 2. 参照元と正本
 
-### 2.1 含めるもの
+この資料では既存情報を重複維持しない。詳細は次の正本を参照する。
 
-| 対象 | 内容 |
+| 情報 | 正本 |
 |---|---|
-| 加工ライン | ワイヤー制御を含まない、マシンとベルト / パイプ接続からなる DAG |
-| ストリーム種別 | Shape を運ぶベルトと、液剤を運ぶパイプの区別 |
-| ポート | マシンごとの入力 / 出力ポートと、受け付けるストリーム種別 |
-| 接続妥当性 | ポートのストリーム種別一致、入力数充足、DAG 性、出力の接続先制約 |
-| 評価関数 | 入力ストリームと加工ラインから、観測範囲内の出力ストリームを得る関数 |
-| 処理能力 | 抽象的なスループット / 容量 / スループット要求 / 処理能力 |
-| 必要マシン数 | スループット要求に対する必要マシン数の下界を計算するための抽象枠組み |
-| フロー等価性 | 機能的等価性と処理能力等価性の分離 |
-| 代表フロー | 切断処理、回転、積層、着色、混色を含む小規模例 |
+| プロジェクト全体の層構造 | [MILESTONES.md](MILESTONES.md) |
+| Layer A/B の設計原則 | [../s2il/architecture-layer-ab.md](../s2il/architecture-layer-ab.md) |
+| C-1 の公開 API | [../../S2IL/Flow.lean](../../S2IL/Flow.lean) |
+| Flow の実装 | [../../S2IL/Flow/](../../S2IL/Flow/) |
+| Flow の代表テスト | [../../Test/Flow/](../../Test/Flow/) |
+| Shapez2 用語・基本スループット値 | [../shapez2/game-system-overview.md](../shapez2/game-system-overview.md) |
+| tick と Wave Gravity | [../shapez2/falling.md](../shapez2/falling.md) |
+| MAM の種類と表現能力 | [../shapez2/mam.md](../shapez2/mam.md) |
+| Lean 実装検証手順 | [../agent/agent-operations-playbook.md](../agent/agent-operations-playbook.md) |
 
-### 2.2 含めないもの
+---
+
+## 3. C-1 の固定境界
+
+### 3.1 含めるもの
+
+| 対象 | 扱い |
+|---|---|
+| 固定加工ライン | ワイヤー制御を含まない MachineNode と接続からなる FlowGraph |
+| ストリーム種別 | Shape を運ぶベルトと、液剤を運ぶパイプを区別する |
+| ポート | MachineSpec の入力 / 出力ポートで StreamKind を管理する |
+| 妥当性 | 端点存在、ポート種別一致、DAG 性を WellFormed で判定する |
+| 評価 | finite observation window 上の入力から出力を得る API を持つ |
+| 処理能力 | Throughput / Capacity / Capability / minMachineCount を扱う |
+| 代表フロー | 象限抽出、Diagonal-Split、4 レイヤ end-to-end を実装例にする |
+
+### 3.2 まだ固定しないもの
 
 | 対象 | 理由 |
 |---|---|
-| マシン別の具体容量値 | 後続調査で確定するため、この計画では値を断定しない |
-| Lean 実装への具体スループット値の直書き | 正本はゲーム仕様側に置き、Flow 側では設定値として取り込める形にする |
-| マシンの占有面積や配置最適化 | C-1 では拡張点のみ。空間制約の最適化は別フェーズに分ける |
-| ワイヤー制御の詳細 | C-2 / Layer D で扱う。C-1 の評価対象は固定加工ラインに限定する |
-| MAM 完全性本体 | Layer D の証明対象として扱う |
-| 実ゲーム実測値の正本維持 | 正本は [../shapez2/game-system-overview.md](../shapez2/game-system-overview.md) に置き、この計画から参照する |
+| 実ゲームの完全なベルト物理 | C-1 では固定フロー評価の意味を先に固める |
+| ワイヤー制御 | C-2 以降に分離する |
+| MAM 完全性本体 | Layer D の証明対象にする |
+| 配置最適化 | 処理能力下界とは別問題として扱う |
+| 実測容量値 | 正本調査が必要なため、抽象容量として保持する |
 
 ---
 
-## 3. 用語
+## 4. 実装済み API の要約
 
-| 用語 | 意味 | 備考 |
+詳細な型や theorem は facade を正本とし、この節では位置だけを示す。
+
+| 領域 | 実装 |
+|---|---|
+| 基礎型 | `StreamKind`, `FlowAmount`, `Fluid`, `PortSpec`, `NodeId`, `PortId` |
+| 処理能力 | `Throughput`, `Capacity`, `ThroughputRequirement`, `Capability` |
+| 台数下界 | `ceilDiv`, `minMachineCount` |
+| マシン仕様 | `MachineKind`, `MachineSpec`, Operations facade への対応 |
+| graph | `MachineNode`, `FlowEdge`, `FlowGraph`, `FlowGraph.WellFormed` |
+| lookup / DAG | `PortLookup`, `GraphAcyclic` |
+| 評価 | `FlowItem`, `FlowStream`, `FlowInputs`, `FlowOutputs`, `FlowGraph.evaluate` |
+| 等価性 | `FlowGraph.FunctionallyEquivalent`, 回転等変性の Prop 型 |
+| 設定 | `SpeedTier`, `FlowConfig`, `FlowConfig.basic` |
+| 代表例 | `diagonalSplitGraph`, `fourLayerEndToEndGraph` |
+
+---
+
+## 5. 代表フローの扱い
+
+代表フローは、C-1 の仕様そのものではなく、評価 API と処理能力 API が最低限表現できることを確認するサンプルである。
+
+| 代表例 | 現状 | 主な検証 |
 |---|---|---|
-| ティック (tick) | フロー評価で用いる離散時間単位 | Wave Gravity の tick と整合させるが、マシン別処理時間の値は未確定 |
-| ベルト (Belt) | Shape アイテムを運ぶ搬送路 | Shape Processing の主経路。C-1 では通常のベルトを扱う |
-| パイプ (Pipe) | 液剤を運ぶ搬送路 | Painter / CrystalGenerator / ColorMixer の入力に必要 |
-| レーン (Lane) | C-1 では通常ベルト 1 本ぶんの搬送路 | 宇宙ベルトの 12 レーンや、抽象的な stream index とは区別する |
-| ストリーム (Stream) | ティックに沿ってベルト / パイプ上で観測される値の流れ | finite observation window で扱う |
-| ストリーム種別 (StreamKind) | ベルト / パイプの種別 | Lean では接続妥当性のキーにする |
-| 液剤 (Fluid) | Color と抽象量を持つ資源 | スループット単位は L/分。Lean 内部の量表現は後続実装で決める |
-| マシン (Machine) | ゲーム内のマシン 1 台 | Lean の graph 表現では `MachineNode` として扱う |
-| ポート (Port) | マシンの入力 / 出力接続口 | ゲーム内に明確な名称がないため、設計用語として採用する |
-| 加工ライン (FlowGraph) | マシンと接続からなる DAG | Lean の内部名は `FlowGraph`。well-formed predicate で妥当性を持つ |
-| スループット (Throughput) | 単位時間あたりに処理できる抽象量 | 基本値はゲーム仕様側を正本とし、Lean では設定値として扱う |
-| 容量 (Capacity) | 入出力や内部待ちの抽象容量 | 具体値は後続調査まで未確定 |
-| 目標シェイプ (Target Shape) | 作りたい、または納品したい Shape | Shapez2 の納品には現状スループット条件を含めない |
-| スループット要求 (Throughput Requirement) | 指定レーン数を満たすなど、加工ラインが満たすべき生産量条件 | 目標シェイプとは別概念として扱う |
-| 処理能力 (Capability) | マシン / 加工ラインが提供できる処理能力 | スループット / 容量 / 消費量制約をまとめる |
-| ボトルネック (Bottleneck) | スループット要求に対して最も厳しい処理能力制約 | 必要マシン数の下界計算に使う |
-| 必要マシン数 (Minimum Machine Count) | スループット要求を満たすために必要なマシン数の下界 | 空間配置の最適化とは分ける |
-| 固定加工ライン (Fixed Flow) | ワイヤーや信号による分岐を使わず、あらかじめ決めたマシン列・DAG だけで加工するライン | C-1 の中心対象 |
+| 象限抽出 | 実装済み | `halfDestroyer -> reverseRotator -> halfDestroyer` の台数下界 8 台 |
+| Diagonal-Split | 実装済み | Cutter / Rotator / Swapper / Rotator graph と代表 I/O |
+| 4 レイヤ end-to-end | 実装済み | Painter / Diagonal-Split x2 / Stacker x3 の構造的出力と 30 台下界 |
+
+代表例の細かい工程説明は、今後この計画書では増やさない。必要な場合は [../../S2IL/Flow/Examples.lean](../../S2IL/Flow/Examples.lean) と [../../Test/Flow/Examples.lean](../../Test/Flow/Examples.lean) を正本にする。
 
 ---
 
-## 4. モデル設計
+## 6. 処理能力モデルの現在形
 
-### 4.1 ストリーム種別 (StreamKind)
+C-1 では、必要台数計算を空間配置や配線長の最適化とは分け、処理能力の下界として扱う。
 
-Lean 実装では、まずベルトとパイプを同じ加工ライン上の異なるストリーム種別として扱う。
-
-```lean
-inductive StreamKind where
-  | belt
-  | pipe
-```
-
-`belt` は `Shape` を運ぶベルトを表す。`pipe` は `Fluid`（液剤）を運ぶパイプを表す。`Fluid` は初期段階では `Color` と抽象量を持つ値として設計し、既存の `Color` / `Color.mix` を再利用する。
-
-```lean
-structure Fluid where
-  color : Color
-  amount : FlowAmount
-```
-
-`FlowAmount` は Lean 内部では抽象量として開始する。スループット表では液剤を L/分で扱うが、tick 評価上の離散化方針は後続実装で決める。
-
-### 4.2 ポート (Port)
-
-各マシンは入力ポートと出力ポートを持つ。加工ライン上の接続は、出力ポートから入力ポートへ向かう。
-
-初期実装では、ポートの型安全性を完全に dependent type へ押し込まず、構造体と well-formed predicate の組み合わせから始める。
-
-```lean
-structure PortSpec where
-  kind : StreamKind
-  name : String
-
-structure NodeSpec where
-  inputs : List PortSpec
-  outputs : List PortSpec
-```
-
-この方針により、Cutter のような多出力マシン、Stacker / Swapper のような複数入力マシン、Painter / CrystalGenerator のようなベルト + パイプ入力マシンを同じ枠で扱える。
-
-### 4.3 加工ライン (FlowGraph)
-
-`FlowGraph` はマシンと接続を持つ DAG として扱う。
-
-```lean
-structure FlowGraph where
-  nodes : List MachineNode
-  edges : List FlowEdge
-```
-
-妥当性は `FlowGraph.WellFormed` で定義する。
-
-| 条件 | 内容 |
+| 概念 | 現在の扱い |
 |---|---|
-| マシン id 一意性 | 加工ライン内でマシンを一意に参照できる |
-| 接続端点の存在 | 接続が存在するマシン / ポートを参照する |
-| ストリーム種別一致 | 出力ポートと入力ポートの `StreamKind` が一致する |
-| 入力充足 | 評価対象マシンの必須入力が満たされる |
-| DAG 性 | tick 評価で閉路による即時依存が発生しない |
-| split / merge 規約 | 分岐・合流の意味を明示する |
-| レーン同期 | 複数入力マシンの入力対応を表す |
+| `FlowAmount` | `units : Nat` を持つ抽象量 |
+| `Throughput` | `StreamKind` と量の組 |
+| `Capability` | throughput / capacity / requires / consumes / produces をまとめる値 |
+| `ceilDiv` | 0 処理量を `none` にする自然数 ceiling division |
+| `minMachineCount` | StreamKind 一致時に必要台数下界を返す |
 
-最初から型だけで DAG 性を保証しようとすると実装負荷が高くなるため、初期段階では predicate 方式を採用する。
+ここでの未解決点は、計算式そのものではなく、`units` をゲーム内の `個/分`・`L/分`・tick 内量・観測 item 量のどれとして解釈するかである。判断カードは §12.2 に置く。
 
 ---
 
-## 5. マシン仕様 (MachineSpec)
+## 7. 評価モデルの現在形
 
-`MachineSpec` はマシンの入出力ポート、抽象処理能力、既存 Operations との対応をまとめる。
+評価 API は finite observation window を持つ tick-indexed stream を入口にしている。現時点では、固定 graph の構造と代表出力を扱える最小 API であり、実ゲームの搬送挙動を完全に固定したものではない。
 
-```lean
-structure MachineSpec where
-  ports : NodeSpec
-  capability : Capability
-```
+今後決める必要がある意味論は次の 3 つに集約できる。
 
-既存の加工意味論は [../../S2IL/Operations.lean](../../S2IL/Operations.lean) から参照し、Flow 層では再定義しない。
+| 未確定領域 | 影響 |
+|---|---|
+| 分岐 | 1 つの出力を複数接続したときに複製・分配・禁止のどれにするか |
+| 合流 | 複数出力が同じ入力 / ストリームへ入るときの順序をどう決めるか |
+| 同期 | Stacker / Swapper など複数入力マシンが入力 item をどう対応付けるか |
 
-| 分類 | 代表マシン | 入力 | 出力 | core semantics |
-|---|---|---|---|---|
-| 単入力 Shape | Rotator / Reverse Rotator / 180 Rotator / Half-Destroyer / Pin Pusher | ベルト | ベルト | `Shape.rotateCW`, `Shape.rotateCCW`, `Shape.rotate180`, `Shape.halfDestroy`, `Shape.pinPush` |
-| 分割 Shape | Cutter | ベルト | ベルト x 2 | `Shape.cut` |
-| 2入力 Shape | Stacker / Swapper | ベルト x 2 | ベルト または ベルト x 2 | `Shape.stack`, `Shape.swap` |
-| Shape + 液剤 | Painter / CrystalGenerator | ベルト + パイプ | ベルト | `Shape.paint`, `Shape.crystallize` |
-| 液剤 + 液剤 | ColorMixer | パイプ x 2 | パイプ | `Color.mix` / `Operations.mix` |
-| 廃棄 | Trash | ベルト | なし | 出力を破棄する抽象マシン |
-
-Painter / CrystalGenerator / ColorMixer は液剤の量や消費量を必要とする。基本速度での液剤量は [../shapez2/game-system-overview.md](../shapez2/game-system-overview.md) を正本とし、初期実装では抽象的な `requires` / `consumes` / `produces` を `Capability` に持たせて、後から設定値として差し込める形にする。
+この 3 点は互いに独立ではない。先に単純な評価関数だけを拡張すると、後から物理寄りの意味へ戻しにくくなるため、§12.6 から §12.8 をまとめて判断する。
 
 ---
 
-## 6. 処理能力 (Capability) と必要マシン数
+## 8. FlowConfig の現在形
 
-### 6.1 基本方針
+基本スループット値はゲーム仕様資料を正本とし、Lean 側では `FlowConfig` から参照する形を取る。
 
-`Capability` は、マシンまたは加工ラインが持つ処理能力を値として扱うための構造である。
-
-```lean
-structure Capability where
-  throughput : Throughput
-  inputCapacity : Capacity
-  outputCapacity : Capacity
-  requires : List Throughput
-  consumes : List Throughput
-  produces : List Throughput
-```
-
-`Throughput` / `Capacity` は具体数値を持ちうる型として設計するが、Flow 層の初期実装では基本スループット値を直接ハードコードしない。正本表の値は、後続の `FlowConfig` / `SpeedTier` 相当の設定から取り込める形にする。
-
-`FlowAmount` は `units : Nat` を持つ抽象量として開始している。台数計算ではまず `units` 上の自然数演算として下界を定義し、`個/分` や `L/分` への解釈は設定層に委ねる。
-
-### 6.2 解析対象
-
-必要マシン数の計算は、空間配置の最適化ではなく、処理能力の下界として開始する。
-
-| 段階 | 証明対象 |
+| 項目 | 現状 |
 |---|---|
-| 単一マシン | 1 台のマシンが満たせるスループット要求の上限 |
-| 直列加工ライン | 加工ライン全体のスループットはボトルネックで制限される |
-| 並列複製 | 同種マシンの複製により処理能力が加算される条件 |
-| 複数入力マシン | 各入力ストリームのスループット要求を同時に満たす条件 |
-| 液剤消費マシン | 液剤供給が Shape スループットを制限する条件 |
+| 基本速度 | `FlowConfig.basic` として実装済み |
+| マシン別速度 | `MachineKind` から参照する API の土台あり |
+| アップグレード倍率 | まだ意味論を固定していない |
+| 宇宙ベルト / 宇宙パイプ | C-1 通常フローとは分けて扱う予定 |
+| `GameConfig` との関係 | レイヤ上限設定とは混ぜない方針を維持する |
 
-### 6.3 下界計算の形
-
-将来的には、スループット要求と 1 台あたりの処理能力から必要マシン数の下界を導く。最初の実装対象は、ゼロ除算とストリーム種別不一致を除外できる形の ceiling division とする。
-
-```lean
-def ceilDiv (target perMachine : FlowAmount) : Option Nat :=
-  -- perMachine.units = 0 の場合は none
-  -- それ以外は ⌈target.units / perMachine.units⌉
-  none
-
-def minMachineCount (target machine : Throughput) : Option Nat :=
-  -- target.kind = machine.kind の場合に ceilDiv target.amount machine.amount
-  none
-```
-
-この単一ストリームの計算を土台に、次の順で拡張する。
-
-| 段階 | 計算 | 証明義務 |
-|---|---|---|
-| 単一マシン | `ceilDiv target machine` | 算出台数ぶんの処理能力が要求量以上になる |
-| 直列固定ライン | 各段の必要台数を算出し、全段の合計を取る | どの段も要求スループットを下回らない |
-| 既存ラインのボトルネック | 各段の実効スループットの最小値を取る | 出力スループットがボトルネックを超えない |
-| 同種並列複製 | 台数倍で同種マシンの処理能力を加算する | 加算後 capability が単体 capability の上界を保つ |
-| 複数入力マシン | 各入力ストリームの要求を同時に満たす | 入力不足時に評価できないことを示す |
-| 液剤消費マシン | `requires` / `consumes` / `produces` を要求に含める | Shape 側と液剤側の両制約を満たす |
-
-配置面積、ベルト合流の具体配線長、宇宙ベルトのレーン割当はこの下界計算には含めない。
-
-### 6.4 基本スループット値の参照
-
-具体的な基本スループット値の正本は [../shapez2/game-system-overview.md](../shapez2/game-system-overview.md) とする。本節は C-1 実装で参照する代表値の要約であり、正本表の重複維持を目的としない。
-
-前提:
-
-- 基本速度を基準値とする
-- アップグレード倍率は別設定として扱う
-- Shape の処理量は `個/分`、液剤の処理量は `L/分` で表す
-- 液剤系は、ゲーム内表記に合わせて「液剤ランチャー 1 台がカバーできるマシン数」も併記する
-
-| カテゴリ | 項目 | 基本値 | C-1 での扱い |
-|---|---|---|---|
-| ベルト搬送 | ベルト / ベルトランチャー / ベルトレシーバー | 120 個/分 | 通常ベルト 1 本分の基準 |
-| 宇宙ベルト | 宇宙ベルト | 480 個/分 / レーン、4 レーン / 層。3 層基準で 5,760 個/分 | 2 層 / 3 層は設定で切り替え可能にする |
-| パイプ搬送 | パイプ | 同一セグメント内は無限 | セグメントは接続されたパイプ設置物の連結単位。マシン越しは別セグメント |
-| パイプ接続 | 液剤ランチャー / 液剤レシーバー | 1,200 L/分 | 液剤供給の接続制約 |
-| 宇宙パイプ | 宇宙パイプ | 28,800 L/分 | 宇宙プラットフォーム間の液剤搬送制約 |
-| Shape マシン | 回転機 / 逆回転機 / 180度回転機 | 60 個/分 | 2 台でベルト 1 本分 |
-| Shape マシン | 切断処理機 / ピン押し機 | 40 個/分 | 3 台でベルト 1 本分 |
-| Shape マシン | 切断機 / スワップ機 / 積層機 | 30 個/分 | 4 台で入力ベルト 1 本分 |
-| 産出 | ミニ採掘機 | 30 個/分 | 4 台でベルト 1 本分 |
-| 液剤供給 | ミニポンプ | 300 L/分 | 4 台 / 液剤ランチャー |
-| Shape + 液剤 | 着色機 | 30 個/分、液剤 300 L/分 | 4 台でベルト 1 本分、4 台 / 液剤ランチャー |
-| 液剤 + 液剤 | 混色機 | 入力 300 L/分 x 2、出力 600 L/分 | 入力: 4 台 / 液剤ランチャー x 2、出力: 2 台 / 液剤ランチャー |
-| Shape + 液剤 | 結晶製造機 | 20 個/分、液剤 400 L/分 | 6 台でベルト 1 本分、3 台 / 液剤ランチャー |
-
-### 6.5 代表台数計算: 象限抽出ライン
-
-通常ベルト 1 本ぶん、すなわち `120 個/分` を既定スループット要求とする。
-NE 象限抽出の代表工程は次の固定加工ラインとして扱う。
-
-```text
-CuCuCuCu
-  -> Half-Destroyer
-  -> Reverse Rotator
-  -> Half-Destroyer
-  -> Cu------
-```
-
-基本速度では、切断処理機は `40 個/分`、逆回転機は `60 個/分` である。
-したがって通常ベルト 1 本を満たす下界は次の通り。
-
-| 段 | 1 台あたり | 要求 | 必要台数 |
-|---|---|---|---|
-| Half-Destroyer | 40 個/分 | 120 個/分 | `ceil(120 / 40) = 3` |
-| Reverse Rotator | 60 個/分 | 120 個/分 | `ceil(120 / 60) = 2` |
-| Half-Destroyer | 40 個/分 | 120 個/分 | `ceil(120 / 40) = 3` |
-
-この固定ラインの下界は合計 8 台である。これはマシン台数の処理能力下界であり、ベルト、ランチャー、配置面積、ワイヤー制御は含めない。
-
-### 6.6 代表台数計算: 4 レイヤ end-to-end ライン
-
-より複雑な end-to-end 代表例として、次の 4 レイヤシェイプを通常ベルト 1 本ぶん出力する固定加工ラインを扱う。
-
-```text
-Rb--Rb--:RuRuRuRu:Rb--Rb--:SuSuSuSu
-```
-
-ここでは Shape Code の左から右を下層から上層への積層順として読む。必要な外部入力ストリームは次の通り。
-
-| 入力 | 用途 | 要求 |
-|---|---|---|
-| `RuRuRuRu` | 1 本は `RbRbRbRb` への着色、1 本は 2 層目として積層 | 2 ベルト |
-| `SuSuSuSu` | 最上層として積層 | 1 ベルト |
-| color-b 液剤 | `RuRuRuRu` から `RbRbRbRb` への着色 | 1 ベルトぶんの着色量 |
-
-加工工程は次の composite subflow に分けて計画する。
-
-| subflow | 入力 | 出力 | 処理能力上の扱い |
-|---|---|---|---|
-| Paint-Ru-to-Rb | `RuRuRuRu` 1 ベルト + color-b 液剤 | `RbRbRbRb` 1 ベルト | Painter 4 台、液剤 1200 L/分を要求する |
-| Diagonal-Split | `RbRbRbRb` 1/2 ベルト | `Rb--Rb--` 1 ベルト | Cutter / Rotator / Swapper / Rotator の固定 DAG として扱う |
-| Diagonal-Split x2 | `RbRbRbRb` 1 ベルト | `Rb--Rb--` 2 ベルト | Diagonal-Split を 2 セット並列に置く |
-| Stack-4Layers | `Rb--Rb--` 2 ベルト + `RuRuRuRu` 1 ベルト + `SuSuSuSu` 1 ベルト | 目標シェイプ 1 ベルト | 3 段の Stacker 列として扱う |
-
-Diagonal-Split は、ne/sw のみを残すための固定 DAG として次のように分解する。
-
-```text
-input:
-  RbRbRbRb @ 60 個/分
-
-split:
-  Cutter x2
-    each: RbRbRbRb -> (RbRb----, ----RbRb)
-    merge first outputs  -> RbRb---- @ 60 個/分
-    merge second outputs -> ----RbRb @ 60 個/分
-
-rotate halves:
-  Rotator x1: RbRb---- -> --RbRb--
-  Rotator x1: ----RbRb -> Rb----Rb
-
-swap:
-  Swapper x2
-    each: --RbRb-- + Rb----Rb -> (Rb--Rb--, --Rb--Rb)
-    merge first outputs  -> Rb--Rb-- @ 60 個/分
-    merge second outputs -> --Rb--Rb @ 60 個/分
-
-rotate second diagonal:
-  Rotator x1: --Rb--Rb -> Rb--Rb--
-
-merge:
-  Rb--Rb-- @ 60 個/分 + Rb--Rb-- @ 60 個/分 -> Rb--Rb-- @ 120 個/分
-```
-
-この subflow は切断分離機（Cutter）が 2 台しかないため、入力は `60 個/分`、つまり通常ベルト 1/2 本ぶんまでしか処理できない。一方で、2 つの Swapper 出力を片方だけ追加回転してマージすることで、`Rb--Rb--` を通常ベルト 1 本ぶん出力できる。
-
-Diagonal-Split 1 セットの台数下界は次の通り。
-
-| 段 | 1 台あたり | 要求 | 必要台数 |
-|---|---|---|---|
-| Cutter | 30 個/分 | 60 個/分 | `ceil(60 / 30) = 2` |
-| Rotator for split halves | 60 個/分 | 60 個/分 x 2 系統 | 2 |
-| Swapper | 30 個/分 | 60 個/分 | `ceil(60 / 30) = 2` |
-| Rotator for second diagonal | 60 個/分 | 60 個/分 | `ceil(60 / 60) = 1` |
-
-したがって Diagonal-Split 1 セットは 7 台、2 セットでは 14 台を下界とする。
-
-Stack-4Layers は下から順に積む。
-
-```text
-stack1: Rb--Rb-- + RuRuRuRu -> Rb--Rb--:RuRuRuRu
-stack2: stack1   + Rb--Rb-- -> Rb--Rb--:RuRuRuRu:Rb--Rb--
-stack3: stack2   + SuSuSuSu -> Rb--Rb--:RuRuRuRu:Rb--Rb--:SuSuSuSu
-```
-
-既知の単体速度だけで確定できる下界は次の通り。
-
-| 段 | 1 台あたり | 要求 | 必要台数 |
-|---|---|---|---|
-| Painter | 30 個/分 | 120 個/分 | `ceil(120 / 30) = 4` |
-| Diagonal-Split x2 | 7 台 / set | 2 set | 14 |
-| Stacker stage 1 | 30 個/分 | 120 個/分 | `ceil(120 / 30) = 4` |
-| Stacker stage 2 | 30 個/分 | 120 個/分 | `ceil(120 / 30) = 4` |
-| Stacker stage 3 | 30 個/分 | 120 個/分 | `ceil(120 / 30) = 4` |
-
-このため、外部入力の採掘機、液剤生成、液剤ランチャー、ベルト、配置面積、ワイヤー制御を除く代表ライン全体では 30 台が下界になる。
+設定層の次の課題は、「値を置くこと」ではなく、正本表との同期方法、速度 tier の表現、通常ベルト以外の搬送単位をどの段階で取り込むかである。
 
 ---
 
-## 7. 評価関数
+## 9. 証明と等価性の現在形
 
-### 7.1 推奨モデル
-
-評価関数は、tick-indexed stream と finite observation window を基本にする。
-
-```lean
-def evaluate (graph : FlowGraph) (window : Nat) (inputs : FlowInputs) : Option FlowOutputs :=
-  -- 加工ラインの WellFormed 性、入力充足、資源充足を確認して評価する
-  none
-```
-
-`Option` は最初の候補であり、エラー理由を証明やテストで使いたくなった段階で `Except FlowEvalError` 相当へ拡張する。
-
-### 7.2 評価不能の例
-
-| 状態 | 扱い |
-|---|---|
-| ポートのストリーム種別不一致 | `WellFormed` で排除 |
-| 必須入力不足 | 評価不能 |
-| 液剤不足 | 評価不能または生産停止 |
-| DAG でない | `WellFormed` で排除 |
-| window 外の出力 | 観測しない |
-
-### 7.3 既存 Operations との接続
-
-Shape 加工の本体は既存関数へ委譲する。
-
-| Flow マシン | 委譲先 |
-|---|---|
-| Rotator | `Shape.rotateCW` |
-| Reverse Rotator | `Shape.rotateCCW` |
-| 180 Rotator | `Shape.rotate180` |
-| Half-Destroyer | `Shape.halfDestroy` |
-| Cutter | `Shape.cut` |
-| Stacker | `Shape.stack` |
-| Swapper | `Shape.swap` |
-| Painter | `Shape.paint` |
-| CrystalGenerator | `Shape.crystallize` |
-| ColorMixer | `Color.mix` / `Operations.mix` |
-
-### 7.4 代表固定フロー: 象限抽出
-
-最初の代表例は、MAM の Wire 系解析そのものではなく、実機処理でも読める固定加工ラインのサンプルとして表す。
-ゲーム上の MAM 解析で中心となる Shape Analyzer は Wire 系なので C-1 の対象外とし、ここでは `halfDestroy` と回転の合成仕様だけを確認する。
-このサンプルは公開 theorem ではなく、処理能力の台数下界テストとして扱う。
-
-```text
-input:  CuCuCuCu
-flow:   halfDestroyer -> reverseRotator -> halfDestroyer
-output: Cu------
-```
-
-実装順序は次の通り。
-
-1. `Test/Flow/Capability.lean` で `halfDestroyer -> reverseRotator -> halfDestroyer` の必要台数下界を検証する
-2. `FlowConfig.basic` の基本スループット値から Half-Destroyer 3 台、Reverse Rotator 2 台を確認する
-3. 2 段の Half-Destroyer と 1 段の Reverse Rotator を合計し、§6.5 の 8 台下界を固定する
-
-### 7.5 代表固定フロー: 4 レイヤ end-to-end
-
-より実用的な代表例として、着色、斜め抽出、並列 subflow、3 段積層を含む固定加工ラインを扱う。
-
-```text
-inputs:
-  RuRuRuRu @ 2 belts
-  SuSuSuSu @ 1 belt
-  color-b fluid for 1 belt of painting
-
-paint:
-  RuRuRuRu -> RbRbRbRb
-
-diagonal split:
-  RbRbRbRb @ 1 belt
-    -> Diagonal-Split A @ 1/2 belt -> Rb--Rb-- @ 1 belt
-    -> Diagonal-Split B @ 1/2 belt -> Rb--Rb-- @ 1 belt
-
-stack:
-  Rb--Rb--
-  RuRuRuRu
-  Rb--Rb--
-  SuSuSuSu
-
-output:
-  Rb--Rb--:RuRuRuRu:Rb--Rb--:SuSuSuSu
-```
-
-この例は C-1 の評価関数に対して、次の能力を要求する。
-
-| 要求 | 確認したいこと |
-|---|---|
-| 複数外部入力 | `RuRuRuRu` 2 ベルトと `SuSuSuSu` 1 ベルトを別ストリームとして受け取れる |
-| ベルト + パイプ入力 | Painter が Shape と color-b 液剤を同時に消費できる |
-| subflow の内部展開 | Diagonal-Split を Cutter / Rotator / Swapper / Rotator の固定 DAG として表せる |
-| subflow の並列複製 | Diagonal-Split を 2 セット置き、`Rb--Rb--` を 2 ベルト出力できる |
-| 複数段 Stacker | 下から順に 4 レイヤへ積み上げる評価を記述できる |
-| 処理能力解析 | Painter / Diagonal-Split / Stacker の各段が通常ベルト 1 本要求を満たすか確認できる |
-
-実装順序は次の通り。
-
-1. Operations 直呼びで `Shape.stack` を 3 回合成し、目標 Shape Code が得られることを検証する
-2. `Diagonal-Split` の内部を Cutter / Rotator / Swapper / Rotator の graph として表す
-3. `Diagonal-Split` を 2 セット並列に置いた end-to-end graph を表す
-4. `FlowGraph.WellFormed` と stream kind 一致を確認する
-5. `Flow/Eval.lean` の評価関数で同じ出力を得る
-6. §6.6 の throughput requirement を使い、既知段階と Diagonal-Split 展開後の必要台数下界を検証する
-
----
-
-## 8. フロー等価性と証明方針
-
-Flow 等価性は 2 種類に分ける。
+C-1 では Flow 等価性を次の 2 種類に分ける方針を維持する。
 
 | 等価性 | 意味 |
 |---|---|
-| 機能的等価性 | 同じ入力ストリームと観測 window に対して同じ出力を返す |
-| 処理能力等価性 | 同じスループット要求に対して同じ capability bound を持つ |
+| 機能的等価性 | 同じ入力 stream と window に対して同じ出力を返す |
+| 処理能力等価性 | 同じ throughput requirement に対して同じ capability bound を持つ |
 
-等変性は Layer A/B と同じ規約を使う。
-
-- CW 回転等変性を主証明にする
-- 180° / CCW は CW 版から機械導出する
-- E/W 参照操作は [../s2il/architecture-layer-ab.md](../s2il/architecture-layer-ab.md) の例外規約に従う
-- 液剤の `Color` は回転で変化しないものとして扱う
-
-代表的な theorem 目標は次の形になる。
-
-```lean
-theorem FlowGraph.evaluate_rotateCW_comm
-    (graph : FlowGraph) (window : Nat) (inputs : FlowInputs) :
-    -- 入力 Shape ストリームを CW 回転してから評価しても、出力 Shape ストリームを CW 回転したものと一致する
-    True := by
-  trivial
-```
-
-上記は形の例であり、実際の命題は `FlowInputs` / `FlowOutputs` の設計後に確定する。
+回転等変性は Layer A/B の規約に合わせ、CW を主目標にし、180° / CCW は派生扱いにする。現時点では Prop 型を確定済みであり、大きな証明を増やす前に評価意味論を固める。
 
 ---
 
-## 9. 推奨 Lean ディレクトリ構造
+## 10. 検証手順
 
-初期実装では、Layer A/B の facade 中心原則を継承する。
-
-```text
-S2IL/
-├── Flow.lean
-└── Flow/
-    ├── Types.lean
-    ├── Capability.lean
-    ├── MachineSpec.lean
-    ├── Graph.lean
-    ├── Eval.lean
-    ├── Examples.lean
-    ├── Equivariance.lean
-    └── Internal/
-        ├── GraphAcyclic.lean
-        ├── PortLookup.lean
-        └── CapabilityAlgebra.lean
-```
-
-| ファイル | 責務 |
-|---|---|
-| `S2IL/Flow.lean` | 公開 API の facade。150 行以内を維持する |
-| `Flow/Types.lean` | `StreamKind`, `Fluid`, `PortSpec`, id 型などの基礎型 |
-| `Flow/Capability.lean` | `Throughput`, `Capacity`, `ThroughputRequirement`, `Capability` |
-| `Flow/MachineSpec.lean` | マシン種別、port spec、既存 Operations との対応 |
-| `Flow/Graph.lean` | `FlowGraph`, `FlowEdge`, `WellFormed` |
-| `Flow/Eval.lean` | tick-indexed stream 評価関数 |
-| `Flow/Examples.lean` | 代表固定フローの graph 定義と実装例 |
-| `Flow/Equivariance.lean` | Flow 評価の回転等変性 |
-| `Flow/Internal/*` | graph lookup、DAG、capability 補助補題 |
-
-`S2IL.lean` への `import S2IL.Flow` は追加済みである。今後 `Flow/Eval.lean` などの新規公開サブモジュールを追加した場合は、`S2IL/Flow.lean` facade 経由で段階的に公開する。
-
----
-
-## 10. テスト計画
-
-後続実装では既存の `Test/Flow/` を拡張する。
-
-```text
-Test/
-└── Flow/
-    ├── Types.lean
-    ├── Capability.lean
-    ├── MachineSpec.lean
-    ├── Graph.lean
-    ├── Eval.lean
-    └── Examples.lean
-```
-
-| テスト | 目的 |
-|---|---|
-| ポート種別不一致 | `WellFormed` が不正接続を拒否すること |
-| capability lower bound | `ceil(120 / 40) = 3`、`ceil(120 / 60) = 2` を検証すること |
-| halfDestroy -> reverseRotator -> halfDestroy | 代表フローの必要台数下界を検証できること |
-| Diagonal-Split internal graph | Cutter / Rotator / Swapper / Rotator で `RbRbRbRb` 1/2 ベルトから `Rb--Rb--` 1 ベルトを得ること |
-| Rb/Ru/Su 4-layer end-to-end | 着色、Diagonal-Split x2、3 段 Stacker を含む代表フローを表現できること |
-| Stacker 加工ライン | 複数入力マシンを扱えること |
-| Painter 加工ライン | ベルト + パイプ入力を扱えること |
-| ColorMixer 加工ライン | パイプ + パイプ入力を扱えること |
-| bottleneck lower bound | 抽象処理能力から下界計算の形を検証すること |
-| rotateCW equivalence | Flow 評価の等変性 theorem の型を確認すること |
-
-`Test.lean` には `Test.Flow.*` が実体化した段階で import を追加する。
-
----
-
-## 11. 実装フェーズ
-
-### Phase C1-0: ドキュメント正本の設置
-
-- 本計画書を `docs/plans/` に置く
-- [README.md](README.md) から辿れるようにする
-- [MILESTONES.md](MILESTONES.md) の C-1 に本計画を正本としてリンクする
-
-### Phase C1-1: Flow 基礎型
-
-- `S2IL/Flow.lean` facade を作る
-- `StreamKind`, `Fluid`, `PortSpec`, `NodeId`, `PortId` を定義する
-- public 定義には日本語 docstring を付ける
-- REPL `#check` で主要型を確認する
-
-### Phase C1-2: Capability 抽象
-
-- `Throughput`, `Capacity`, `ThroughputRequirement`, `Capability` を定義する
-- 基本スループット値は直接 preset として置かず、後続の設定値として取り込める構造にする
-- 比較・加算・下界計算に必要な最小 API を決める
-
-### Phase C1-3: MachineSpec
-
-- Operations facade を import し、マシン種別と port spec を対応付ける
-- ベルトのみ、パイプのみ、ベルト + パイプの代表マシンを入れる
-- `GameConfig` が必要なマシンは明示引数として扱う
-
-### Phase C1-4: FlowGraph と WellFormed
-
-- マシン / 接続の構造を定義する
-- port lookup と kind 一致を theorem 化する
-- DAG 性は predicate として開始する
-
-### Phase C1-5: 評価関数
-
-- finite observation window を持つ tick-indexed evaluation を実装する
-- まず小規模加工ラインの評価を通す
-- エラー理由が必要になった段階で `Option` から `Except` 系へ拡張する
-
-### Phase C1-6: 処理能力解析
-
-- `Flow/Internal/CapabilityAlgebra.lean` で `ceilDiv` と単一マシンの capability bound を定義する
-- 直列加工ラインの bottleneck theorem を目標にする
-- 並列複製による下界改善を扱う
-  - 代表値として `120 / 40 -> 3`、`120 / 60 -> 2` を `Test/Flow/Capability.lean` で検証する
-
-### Phase C1-7: 等価性と代表フロー
-
-- 機能的等価性と処理能力等価性を定義する
-- `halfDestroyer -> reverseRotator -> halfDestroyer` などの代表フローを、公開 theorem ではなく処理能力テスト対象にする
-- `Rb--Rb--:RuRuRuRu:Rb--Rb--:SuSuSuSu` の end-to-end 代表フローを、Diagonal-Split の内部 graph まで含めて段階的に展開する
-- CW 等変性を主証明にする
-
----
-
-## 12. 検証手順
-
-Lean 実装に入った後は、次の順で検証する。
+Lean 実装を変更する場合は、次の順で検証する。
 
 | タイミング | 手順 |
 |---|---|
 | 新規 API 追加前 | REPL で `#check` 可能な型に落とす |
-| `S2IL/Flow.lean` 作成後 | `.github/skills/lean-tooling/scripts/build.ps1 -Target S2IL.Flow` |
-| `Test/Flow/*` 追加後 | `.github/skills/lean-tooling/scripts/build.ps1` |
-| 大きな proof 追加前 | `lean-theorem-investigator` で counterexample / goal shape を確認する |
+| Flow サブモジュール変更後 | `.github/skills/lean-tooling/scripts/build.ps1 -Target S2IL.Flow` |
+| Test/Flow 変更後 | `.github/skills/lean-tooling/scripts/build.ps1` |
+| 新規 theorem 追加前 | 反例チェック、ゴール形状確認、必要に応じて `lean-theorem-investigator` |
 
 ビルドの正本は build script の diagnostics とし、VS Code Problems は判断材料にしない。
 
 ---
 
-## 13. 未解決事項
+## 11. 完了済み項目
 
-| 項目 | 次アクション |
+完了済みの詳細 TODO はこの計画書では維持しない。現在の成果物は [../../S2IL/Flow.lean](../../S2IL/Flow.lean) の facade と [../../Test/Flow/](../../Test/Flow/) を正本にする。
+
+| 区分 | 状態 |
 |---|---|
-| 液剤の量単位 | スループット単位は L/分で扱う。Lean 内部の `FlowAmount` 離散化方針を決める |
-| マシン別スループット | [../shapez2/game-system-overview.md](../shapez2/game-system-overview.md) の基本スループット表を正本とし、Flow 設定への取り込み方針を決める |
-| マシン別容量 | 後続調査で正本表を作る |
-| 速度設定 | 基本速度、アップグレード倍率、宇宙ベルトの 2 層 / 3 層差を `GameConfig` とは別に表すかを決める |
-| 分岐時のストリーム複製 / 分配 | ベルト / パイプで同じ規則にするかを決める |
-| 合流時の順序 | ティックとレーンのどちらで順序付けるかを決める |
-| レーン同期 | 複数入力マシンの入力対応をどの粒度で型に入れるかを決める |
-| 空間制約 | C-1 拡張または別計画に分離する |
+| C1-DOC | 初期設計、用語整理、基本スループット正本リンク、Layer C 関連インデックス同期まで完了 |
+| C1-IMPL | Types / Capability / MachineSpec / Graph / Eval / Examples / Equivariance / Config まで完了 |
+| C1-TEST | 基本台数下界、代表 graph、代表出力、設定値の代表検証まで完了 |
+| C1-PROOF | port lookup、DAG 判定、等価性と回転等変性の型を分離済み |
+
+次の焦点は、§12 の TODO リストから順に仕様を固定し、小さな Lean API とテストへ落とすことである。
 
 ---
 
-## 14. TODO リスト
+## 12. 未解決事項
 
-本節は、Layer C-1 の完了済み項目と次に着手する作業を 1 箇所で追跡する TODO リストである。完了した行は `完了` にし、成果物 / 完了条件へ検証コマンドや参照先を追記する。
+この節は、今後のアクションを決めるための判断カードである。各項目では、問題の概要、推奨案、代替案、次アクションを分けて記載する。
 
-| ID | 状態 | 種別 | TODO | 成果物 / 完了条件 |
+### 12.1 TODO リスト
+
+この TODO リストは、手戻りを減らすため、評価意味論の境界を先に決め、その後に量・速度・容量・空間制約へ進む順で並べる。
+
+| 順位 | 状態 | TODO | 参照 | 完了条件 |
 |---|---|---|---|---|
-| C1-DOC-1 | 完了 | docs | 初期設計計画を作成する | 本計画書を作成し、C-1 の目的・スコープ・実装フェーズを整理済み |
-| C1-DOC-2 | 完了 | docs | 用語をゲーム寄せに整理する | ベルト / パイプ / 液剤 / マシン / 加工ライン / 必要マシン数へ表記を整理済み |
-| C1-DOC-3 | 完了 | docs | 基本スループット正本を整備する | [../shapez2/game-system-overview.md](../shapez2/game-system-overview.md) に基本速度の正本表を追加済み |
-| C1-DOC-4 | 完了 | docs | 液剤ランチャー換算を併記する | 着色機・混色機・ミニポンプ・結晶製造機の台数 / 液剤ランチャーを反映済み |
-| C1-DOC-5 | 完了 | docs | Layer C 関連インデックスを同期する | [README.md](README.md) / [MILESTONES.md](MILESTONES.md) の C-1 説明を更新済み |
-| C1-PLAN-1 | 完了 | plan | ワイヤーフリー固定加工ラインを明確化する | C-1 を Wires / Signal なしの固定 Shape Processing Flow として位置付け、C-2 / Layer D との境界を明記済み |
-| C1-PLAN-2 | 完了 | plan | 象限抽出の代表工程と台数計算を追加する | `halfDestroyer -> reverseRotator -> halfDestroyer` と通常ベルト 1 本ぶんの下界 8 台を実装目標に追加済み |
-| C1-PLAN-3 | 完了 | plan | 4 レイヤ end-to-end 代表例を追加する | `Rb--Rb--:RuRuRuRu:Rb--Rb--:SuSuSuSu` を、Painter / Diagonal-Split x2 / Stacker x3 の代表固定フローとして追加済み |
-| C1-PLAN-4 | 完了 | plan | Diagonal-Split 内部工程を分解する | `RbRbRbRb` 1/2 ベルトから `Rb--Rb--` 1 ベルトを得る Cutter / Rotator / Swapper / Rotator graph と 7 台下界を追加済み |
-| C1-IMPL-1 | 完了 | impl | `S2IL/Flow` scaffold を追加する | `S2IL/Flow.lean` と `S2IL/Flow/Types.lean` を追加し、`S2IL.lean` から公開済み |
-| C1-IMPL-2 | 完了 | impl | ストリーム / 液剤 / ポート基礎型を実装する | `StreamKind` / `FlowAmount` / `Fluid` / `PortSpec` / `NodeId` / `PortId` を実装し、REPL `#check` と build script で検証済み |
-| C1-IMPL-3 | 完了 | impl | 抽象処理能力を実装する | `S2IL/Flow/Capability.lean` を追加し、`Throughput` / `Capacity` / `ThroughputRequirement` / `Capability` を REPL `#check` と build script で検証済み |
-| C1-IMPL-4 | 完了 | impl | マシン仕様を実装する | `S2IL/Flow/MachineSpec.lean` を追加し、Operations facade と対応する `MachineKind` / `MachineSpec` を実装・代表テスト済み |
-| C1-IMPL-5 | 完了 | impl | 加工ライン妥当性を実装する | `S2IL/Flow/Graph.lean` と `Test/Flow/Graph.lean` を追加し、端点存在・種別一致・NodeId 順 DAG 近似の `FlowGraph.WellFormed` を代表テスト済み |
-| C1-NEXT-1 | 完了 | impl | `ceilDiv` と単一マシン必要台数を定義する | `S2IL/Flow/Internal/CapabilityAlgebra.lean` に `ceilDiv` / `minMachineCount` を追加し、`S2IL.Flow` facade から公開済み |
-| C1-NEXT-2 | 完了 | test | 基本下界計算を検証する | `Test/Flow/Capability.lean` で `ceil(120 / 40) = 3`、`ceil(120 / 60) = 2`、0 処理量、種別不一致を検証済み |
-| C1-NEXT-3 | 完了 | impl | finite observation window の評価関数を設計する | `S2IL/Flow/Eval.lean` に `FlowItem` / `FlowStream` / `FlowInputs` / `FlowOutputs` / `FlowGraph.evaluate` の有限観測 window API を追加済み |
-| C1-NEXT-4 | 完了 | example | 象限抽出代表フローを検証する | `Test/Flow/Capability.lean` で `halfDestroyer -> reverseRotator -> halfDestroyer` の §6.5 台数下界 8 台を検証済み |
-| C1-NEXT-5 | 完了 | example | Diagonal-Split 内部 graph を検証する | `S2IL/Flow/Examples.lean` / `Test/Flow/Examples.lean` で Cutter x2 / Rotator x2 / Swapper x2 / Rotator x1 の graph と `RbRbRbRb` から `Rb--Rb--` を得る代表 I/O を検証済み |
-| C1-NEXT-6 | 完了 | example | 4 レイヤ end-to-end graph を検証する | `S2IL/Flow/Examples.lean` / `Test/Flow/Examples.lean` で Painter / Diagonal-Split x2 / Stacker x3 の decomposed graph と構造的出力を検証し、`Test/Flow/Capability.lean` で §6.6 の 30 台下界を検証済み |
-| C1-NEXT-7 | 完了 | proof | port lookup 補題を分離する | `S2IL/Flow/Internal/PortLookup.lean` を追加し、node / port lookup と `edgePortsExist` / `edgeKindsMatch` の基本補題を分離済み |
-| C1-NEXT-8 | 完了 | proof | DAG 判定を一般化する | `S2IL/Flow/Internal/GraphAcyclic.lean` を追加し、NodeId 順 edge の十分条件を残しつつ、`FlowGraph.wellFormed` を到達可能性ベースの `acyclic` 判定へ拡張済み |
-| C1-NEXT-9 | 完了 | proof | 機能的等価性と回転等変性の型を確定する | `S2IL/Flow/Equivariance.lean` を追加し、`FlowGraph.FunctionallyEquivalent` と CW / 180° / CCW 回転等変性の Prop 型を確定済み |
-| C1-NEXT-10 | 完了 | config | 具体スループット値の設定層を設計する | `S2IL/Flow/Config.lean` を追加し、`SpeedTier` / `FlowConfig` / `FlowConfig.basic` と基本速度値の参照 API を実装済み |
+| 1 | 未着手 | 暗黙 fanout / merge の基本方針を決める | §12.6 / §12.7 | 暗黙接続を WellFormed で禁止するか、明示 policy / node で表すかを決める |
+| 2 | 未着手 | 複数入力同期の初期意味論を決める | §12.8 | FIFO zip / tick 同期 / buffer 方式のどれを C-1 標準にするかを決める |
+| 3 | 未着手 | 液剤量の単位解釈を決める | §12.2 | `Throughput.amount` と `Fluid.amount` の役割を docstring とテスト方針へ反映する |
+| 4 | 未着手 | マシン別スループットの取り込み口を固定する | §12.3 | `FlowConfig` を唯一の Lean 側取り込み口にするかを決め、代表値同期テストを設計する |
+| 5 | 未着手 | 速度 tier と通常ベルト基準を決める | §12.5 | C-1 標準を通常ベルト基準に固定するか、tier / multiplier API を追加するかを決める |
+| 6 | 未着手 | マシン別容量の扱いを決める | §12.4 | 抽象容量維持 / C-1 外出し / 代表値調査のどれで進めるかを決める |
+| 7 | 未着手 | 空間制約の扱いを決める | §12.9 | C-1 から分離するか、抽象 cost だけ取り込むかを決める |
+
+### 12.2 液剤の量単位
+
+**問題の概要**
+
+現在の `FlowAmount.units` は自然数の抽象量であり、Shape の `個/分` と液剤の `L/分` の両方に使える。一方で、評価 API 上の `Fluid.amount` が「1 観測 item に付随する量」なのか、「tick ごとの量」なのか、「throughput としての量」なのかはまだ固定していない。
+
+このままだと、Painter の `30 個/分` と `300 L/分`、CrystalGenerator の `20 個/分` と `400 L/分` のような対応を扱うときに、item 個数と液剤量の換算規則が曖昧になる。
+
+**推奨案: throughput 上の単位として固定し、評価 item 量とは分ける**
+
+`Throughput.amount` では、`belt` を `個/分`、`pipe` を `L/分` と読む。`Fluid.amount` は在庫または観測 item に付随する量として扱い、消費率とは別物にする。Painter / CrystalGenerator の液剤消費は `Capability.consumes` に置く。
+
+利点は、既存の `FlowAmount` と `minMachineCount` を大きく変えずに、処理能力計算を先に安定させられること。欠点は、tick 評価で液剤を実際に減らす段階では別の在庫モデルが必要になること。
+
+**代替案**
+
+| 案 | 内容 | 向いている場合 |
+|---|---|---|
+| A: 単位タグを追加 | `FlowUnit.shapeItem` / `FlowUnit.fluidLiter` のような型を加える | 単位不一致を Lean 型または predicate で強く防ぎたい場合 |
+| B: 型を分ける | `ShapeRate` と `FluidRate` を別型にする | API の明確さを最優先する場合 |
+| C: 有理数量へ拡張 | `Nat` ではなく `Rat` 相当で量を扱う | tick 変換や倍率で端数が必要になった場合 |
+
+**次アクション**
+
+まずは推奨案で設計メモを固め、`Throughput` と `Fluid.amount` の docstring を明確化する。その後、Painter / CrystalGenerator / ColorMixer の消費量テストを追加できるか確認する。
+
+### 12.3 マシン別スループット
+
+**問題の概要**
+
+基本スループット値の正本は game-system overview にあり、Lean 側には `FlowConfig.basic` がある。未解決なのは、正本表の更新をどのように Lean 側へ反映し、`MachineKind` ごとの参照 API をどこまで固定するかである。
+
+値を複数箇所に重複させると、計画書・仕様資料・Lean テストのどれが正しいか分からなくなる。
+
+**推奨案: `FlowConfig` を Lean 側の唯一の取り込み口にする**
+
+ゲーム仕様資料を正本とし、Lean では `FlowConfig` から `MachineKind` ごとの throughput を引く。テストでは代表値だけを `#guard` で固定し、正本表そのものはドキュメントに置く。
+
+利点は、値の参照点が明確になること。欠点は、ゲーム仕様表を更新したときに Lean 側の追随を手作業で確認する必要があること。
+
+**代替案**
+
+| 案 | 内容 | 向いている場合 |
+|---|---|---|
+| A: `MachineSpec` に直書き | 各 MachineSpec が基本 throughput を持つ | 設定層を薄くしたい場合。ただし更新に弱い |
+| B: 外部データ化 | JSON / TOML などから値を生成する | 値が増え、正本同期を自動化したい場合 |
+| C: 当面は代表値のみ | C-1 の検証に必要な値だけを持つ | 仕様確定前の変更を最小にしたい場合 |
+
+**次アクション**
+
+`FlowConfig.basic` の代表値が game-system overview の表と一致することをテストで確認し、未対応 MachineKind がある場合は一覧化する。
+
+### 12.4 マシン別容量
+
+**問題の概要**
+
+`Capability` には `inputCapacity` と `outputCapacity` があるが、マシン別の実ゲーム容量値は未確定である。容量を先に具体化すると、根拠の薄い値が theorem やテストに入り込む危険がある。
+
+また、現在の評価 API は有限 stream の構造評価であり、内部バッファの詰まりや backpressure をまだモデル化していない。
+
+**推奨案: C-1 では抽象容量のまま維持し、具体値は別調査に分離する**
+
+容量フィールドは残すが、代表フローの正しさや必要台数下界は throughput を中心に検証する。容量値が必要になった段階で、ゲーム仕様側に容量の正本表を作ってから `FlowConfig` へ取り込む。
+
+利点は、未確定値を証明に固定しないこと。欠点は、詰まりや停止の解析は後回しになること。
+
+**代替案**
+
+| 案 | 内容 | 向いている場合 |
+|---|---|---|
+| A: 容量を 1 tick 分に抽象化 | `capacity = throughput per tick` のように置く | tick 評価と接続したいが実測値がない場合 |
+| B: 容量を C-1 から外す | `Capability` から容量を使わず、別層へ送る | API を極小にしたい場合 |
+| C: 代表マシンだけ調査 | Painter / Stacker など必要なものだけ先に調べる | 液剤や複数入力の停止条件を早く扱いたい場合 |
+
+**次アクション**
+
+容量を使う theorem / テストを今は追加しない方針を明文化する。容量が必要なユースケースが出たら、正本表の調査タスクへ切り出す。
+
+### 12.5 速度設定
+
+**問題の概要**
+
+C-1 には `SpeedTier` と `FlowConfig.basic` があるが、アップグレード倍率、宇宙ベルトの 2 層 / 3 層差、宇宙パイプ、通常ベルトとの換算をどの粒度で入れるかは未確定である。
+
+`GameConfig` はレイヤ上限など Shape の構成制約を持つため、速度設定と混ぜると責務が曖昧になる。
+
+**推奨案: `FlowConfig` を `GameConfig` から独立させ、通常ベルト基準を C-1 の既定にする**
+
+C-1 の標準検証は通常ベルト 1 本を基準にする。アップグレード倍率や宇宙系搬送は `FlowConfig` の拡張として扱い、必要になるまで評価 API には直接混ぜない。
+
+利点は、C-1 の代表フローを安定させたまま、速度差を後から設定で差し込めること。欠点は、宇宙ベルトや宇宙パイプの本格解析は先送りになること。
+
+**代替案**
+
+| 案 | 内容 | 向いている場合 |
+|---|---|---|
+| A: basic のみ固定 | `FlowConfig.basic` 以外をまだ定義しない | C-1 の範囲を絞りたい場合 |
+| B: tier ごとに config を列挙 | `basic`, `upgraded`, `space` などを値として持つ | ゲーム内段階をそのまま比較したい場合 |
+| C: 倍率関数を持つ | 基本値に multiplier を掛ける API にする | 単調性や倍率証明をしたい場合 |
+
+**次アクション**
+
+通常ベルト基準を C-1 の標準として固定するか決める。固定する場合、宇宙ベルト / 宇宙パイプは拡張項目として別 subsection へ逃がす。
+
+### 12.6 分岐時のストリーム複製 / 分配
+
+**問題の概要**
+
+FlowGraph では 1 つの出力ポートから複数の接続を張れる余地がある。ここで、同じ item が複製されるのか、複数先へ分配されるのか、それとも不正 graph とするのかが未確定である。
+
+物理的なベルトでは、無制限の複製はできない。ここを曖昧にすると、処理能力解析で入力を無料で増やしてしまう可能性がある。
+
+**推奨案: C-1 の暗黙 fanout は禁止し、分岐は明示ノードまたは明示 policy にする**
+
+`WellFormed` では、通常の出力ポートは接続先 1 つまでを既定にする。分配が必要な場合は、将来の Splitter / Distributor などの明示マシン、または `FanoutPolicy` を持つ評価モードとして追加する。
+
+利点は、物理的にありえない複製を避けられること。欠点は、既存代表 graph に暗黙 fanout がある場合は明示構造へ直す必要があること。
+
+**代替案**
+
+| 案 | 内容 | 向いている場合 |
+|---|---|---|
+| A: 複製として扱う | 1 出力を全接続先へコピーする | 仕様探索を速くしたい場合。ただし処理能力上は危険 |
+| B: round-robin 分配 | 接続先へ順番に item を送る | ベルト分配に近い挙動を抽象化したい場合 |
+| C: 比率分配 | throughput を重みで分ける | 処理能力解析を主目的にする場合 |
+
+**次アクション**
+
+まず既存 graph が fanout を使っているか確認する。使っていないなら、暗黙 fanout 禁止を WellFormed の追加条件候補にする。
+
+### 12.7 合流時の順序
+
+**問題の概要**
+
+複数の出力が同じ stream に合流するとき、観測 stream の順序をどう決めるかが未確定である。tick 順、接続順、NodeId 順、入力 arrival 順など、選び方で `FlowGraph.evaluate` の出力が変わる。
+
+処理能力だけを見れば合流は加算で済むが、機能的等価性や代表 I/O では順序が問題になる。
+
+**推奨案: 暗黙 merge を避け、必要な場合は deterministic merge policy を明示する**
+
+通常の評価では、同じ入力ポートへの複数接続や同じ出力 stream への暗黙 merge を WellFormed で禁止する。合流を表したい場合は、明示的な Merge node または `MergePolicy` を導入し、まずは `(tick, source order)` の安定順で評価する。
+
+利点は、評価結果が決定的になること。欠点は、合流を使う graph の記述が少し重くなること。
+
+**代替案**
+
+| 案 | 内容 | 向いている場合 |
+|---|---|---|
+| A: NodeId / PortId 順 | 構造順で常に決める | 実装を軽くしたい場合 |
+| B: tick 内 round-robin | 同 tick の入力を接続先順に交互化する | 物理寄りの分配と合わせたい場合 |
+| C: multiset / bag として扱う | 順序を捨てる | 処理能力等価性だけを扱う場合 |
+
+**次アクション**
+
+機能的等価性で順序を必要とする theorem と、処理能力等価性で順序を捨てられる theorem を分ける。評価 API には deterministic merge policy を入れるか、暗黙 merge 禁止を先に入れる。
+
+### 12.8 レーン同期
+
+**問題の概要**
+
+Stacker / Swapper / Painter / CrystalGenerator などの複数入力マシンでは、入力 item 同士をどの粒度で対応付けるかが必要になる。候補には、同じ tick、各入力 stream の n 番目、FIFO buffer から取り出せた組、lane index の一致などがある。
+
+同期規則がないと、複数入力マシンの評価は代表例では動いても、速度差や片側不足を扱った瞬間に曖昧になる。
+
+**推奨案: C-1 初期意味論では port ごとの FIFO zip とし、throughput 整合性を別条件にする**
+
+各入力ポートの stream を FIFO として読み、n 番目同士を組にする。速度差や不足がある場合は短い側で停止または評価不能にし、処理能力側では必要 throughput が満たされることを別に確認する。
+
+利点は、代表フローと複数入力マシンを自然に扱えること。欠点は、tick 内の厳密な arrival timing や buffer 容量は表現しないこと。
+
+**代替案**
+
+| 案 | 内容 | 向いている場合 |
+|---|---|---|
+| A: tick 完全同期 | 同じ tick にある item だけを組にする | 離散時間物理を重視する場合 |
+| B: FIFO + buffer 容量 | 入力ごとに buffer を持ち、揃ったら処理する | 停止や詰まりを扱いたい場合 |
+| C: lane-indexed stream | レーンごとの stream を型に入れる | 宇宙ベルトや多レーン解析へ進む場合 |
+
+**次アクション**
+
+まず Stacker / Swapper の代表評価を FIFO zip として仕様化できるか確認する。その上で、片側不足・速度差・空 stream の扱いをテストケースにする。
+
+### 12.9 空間制約
+
+**問題の概要**
+
+現在の必要マシン数は、処理能力の下界であり、ベルト、ランチャー、配置面積、配線長、建物 footprint を含まない。したがって「必要台数 8 台」や「30 台」は、実際の敷設可能性や最小面積を意味しない。
+
+MAM 完全性や実機再現へ進む段階では空間制約が重要になるが、C-1 の評価意味論と同時に入れると問題が大きくなりすぎる。
+
+**推奨案: 空間制約は C-1 から分離し、処理能力下界とは別計画にする**
+
+C-1 では、FlowGraph が加工意味と throughput bound を表すことに集中する。空間制約は、必要になった段階で Layer C の別計画または Layer D 寄りの配置モデルとして切り出す。
+
+利点は、C-1 の証明対象を保てること。欠点は、実ゲーム配置としての完全性はまだ主張できないこと。
+
+**代替案**
+
+| 案 | 内容 | 向いている場合 |
+|---|---|---|
+| A: 抽象コストだけ追加 | 各 machine に面積 cost を持たせ、合計だけ見る | 配置までは不要だが規模比較をしたい場合 |
+| B: grid placement を導入 | 座標、占有領域、接続可能性を持つ | 実ゲーム配置の正しさを証明したい場合 |
+| C: launchers だけ追加 | ベルト / パイプ launcher の数だけ数える | 宇宙プラットフォーム間搬送を先に扱いたい場合 |
+
+**次アクション**
+
+この資料では「C-1 の台数下界は空間制約を含まない」と明記して維持する。空間制約が必要なユースケースが具体化したら、独立計画として起票する。
