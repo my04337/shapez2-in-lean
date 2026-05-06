@@ -20,6 +20,12 @@ Shapez2 in Lean (S2IL) プロジェクトの最終目標・大きな方針・層
 |---|---|
 | [../s2il/architecture-layer-ab.md](../s2il/architecture-layer-ab.md) | Layer A/B のディレクトリ構造・設計原則・主要 theorem チェーンの正本 |
 
+### Layer B 追加証明計画
+
+| ファイル | 概要 |
+|---|---|
+| [layer-b-mam-prereq-proof-plan.md](layer-b-mam-prereq-proof-plan.md) | `mam.md` §4-1〜§4-4 / §5 の精査に基づく、象限抽出・積層正しさの追加証明計画 |
+
 ### Layer C 実行計画
 
 | ファイル | 概要 |
