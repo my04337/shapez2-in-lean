@@ -10,11 +10,11 @@ Shapez2 in Lean (S2IL) プロジェクトの最終目標と、そこへ至る大
 
 **MAM (Make Anything Machine) の形式化と完全性証明** を頂点とし、その基盤として Shapez2 の加工モデル全体を Lean 4 で定義・検証する。
 
-頂点の定理（MAM 完全性）:
+頂点の定理（MAM 完全性）では、コミュニティで使われる MAM 分類を S2IL の predicate として定義し、それぞれの対象シェイプ集合と工程能力に対する完全性を証明する。
 
-1. 任意の無着色 1 レイヤシェイプを MAM で生成できる
-2. 任意の着色 1 レイヤシェイプを MAM で生成できる
-3. 任意の多レイヤシェイプを MAM で生成できる（レイヤ上限内）
+1. `ShapeLanguage` と `ProcessCapability` により、MAM 分類ごとの対象範囲と利用可能工程を定義する
+2. ROS-MAM / CROSMAM / CMAM / PMAM / TMAM の対象 predicate を満たすシェイプを生成できる
+3. 必要に応じて、従来の無着色 1 レイヤ / 着色 1 レイヤ / 多レイヤ完全性を各 tier の補助定理として証明する
 
 ---
 
@@ -23,9 +23,9 @@ Shapez2 in Lean (S2IL) プロジェクトの最終目標と、そこへ至る大
 大きく 4 つの層に分けて進める。層内の詳細度は「Lean コード上のディレクトリ / モジュール」と整合させる。
 
 ```
-Layer D (MAM)              ← 3 つの完全性定理
+Layer D (MAM)              ← 能力分類と tier 別完全性
     ↑
-Layer C (Flow)             ← 加工フロー / ワイヤーネットワーク
+Layer C (Flow)             ← ワイヤーなし加工フロー / ワイヤーネットワーク
     ↑
 Layer B (Behavior)         ← 振る舞い系証明（落下・砕け散り・安定化）
     ↑
@@ -38,8 +38,8 @@ Layer A (Data & Operations) ← 静的データ型と純粋関数
 |---|---|
 | Layer A | **主要基盤は実装済み・運用中**。Shape / Kernel / Operations の純粋関数群は現行コードの土台として使われている。Wires はスケルトン段階。 |
 | Layer B | **Gravity 中心に定理化が前進**。Wave Gravity の終端性・安定性・等変性は theorem 化済みで、Shatter / 複合操作へ接続済み。 |
-| Layer C | **C-1 設計計画を作成済み**。加工ライン、ベルト / パイプのストリーム、抽象処理能力を [layer-c1-shape-processing-flow-plan.md](layer-c1-shape-processing-flow-plan.md) に整理。Flow 側の主要ブロッカーだった Gravity の安定性・等変性は解消済み。 |
-| Layer D | **未着手**。MAM 完全性は Layer C のフロー形式化後に扱う。 |
+| Layer C | **C-1 初期実装済み、評価関数と処理能力解析が次段階**。ワイヤーなし固定加工ライン、ベルト / パイプのストリーム、抽象処理能力を [layer-c1-shape-processing-flow-plan.md](layer-c1-shape-processing-flow-plan.md) に整理。Flow 側の主要ブロッカーだった Gravity の安定性・等変性は解消済み。 |
+| Layer D | **MAM 分類の正本追加済み / 実装未着手**。MAM 分類の正本は [../shapez2/mam.md](../shapez2/mam.md) に置き、Layer C のフロー形式化後に tier 別完全性を扱う。 |
 
 ---
 
@@ -145,7 +145,7 @@ Layer B の基盤を使って証明される加工装置。
 
 ### C-1. Shape Processing フロー
 
-進捗: **設計計画を作成済み**。初期スコープは DAG 形式の加工ライン、ベルト / パイプの二種ストリーム、抽象スループット / 容量を含める。基本スループット値は [../shapez2/game-system-overview.md](../shapez2/game-system-overview.md) を正本とし、Flow 側では後から設定として取り込める形にする。正本計画は [layer-c1-shape-processing-flow-plan.md](layer-c1-shape-processing-flow-plan.md)。
+進捗: **初期実装済み**。初期スコープはワイヤーなしの固定 Shape Processing Flow とし、DAG 形式の加工ライン、ベルト / パイプの二種ストリーム、抽象スループット / 容量を含める。基本スループット値は [../shapez2/game-system-overview.md](../shapez2/game-system-overview.md) を正本とし、Flow 側では後から設定として取り込める形にする。正本計画は [layer-c1-shape-processing-flow-plan.md](layer-c1-shape-processing-flow-plan.md)。
 
 | 項目 | 概要 |
 |---|---|
@@ -153,7 +153,7 @@ Layer B の基盤を使って証明される加工装置。
 | C-1-2 | ベルト上の Shape とパイプ上の液剤を区別するストリームモデル |
 | C-1-3 | フローの評価関数（入力ストリーム → 出力ストリーム） |
 | C-1-4 | 抽象 throughput / capacity / throughput requirement / capability と必要マシン数下界 |
-| C-1-5 | 代表フロー（例: 切断 → 回転 → 切断、Painter、ColorMixer）の検証 |
+| C-1-5 | 代表フロー（例: 切断処理 → 逆回転 → 切断処理、4 レイヤ end-to-end、Painter、ColorMixer）の検証 |
 | C-1-6 | フロー等価性の定義と補助補題 |
 
 ### C-2. Wires and Logic フロー
@@ -167,6 +167,17 @@ Layer B の基盤を使って証明される加工装置。
 ---
 
 ## Layer D: MAM
+
+MAM 分類の用語・表現能力の正本は [../shapez2/mam.md](../shapez2/mam.md) に置く。本節では、それを Lean 実装・証明へ落とす順序だけを管理する。
+
+### D-0. MAM 能力分類と predicate 設計
+
+| 項目 | 概要 |
+|---|---|
+| D-0-1 | `ShapeLanguage`（対象シェイプ集合）を predicate として定義する |
+| D-0-2 | `ProcessCapability`（利用可能な加工・制御能力）を定義する |
+| D-0-3 | ROS-MAM / CROSMAM / CMAM / PMAM / TMAM を上記 2 軸の組として表す |
+| D-0-4 | 精錬シェイプ `X` / `Y` は現時点の TMAM 範囲から除外し、将来拡張点として保持する |
 
 ### D-1. ワイヤー系との統合
 
@@ -187,9 +198,12 @@ Layer B の基盤を使って証明される加工装置。
 
 | 項目 | 概要 |
 |---|---|
-| D-3-1 | 任意の無着色 1 レイヤシェイプを MAM で生成できる |
-| D-3-2 | 任意の着色 1 レイヤシェイプを MAM で生成できる |
-| D-3-3 | 任意の多レイヤシェイプを MAM で生成できる（レイヤ上限内） |
+| D-3-1 | ROS-MAM の対象 predicate を満たすシェイプを生成できる |
+| D-3-2 | CROSMAM の対象 predicate を満たすシェイプを生成できる |
+| D-3-3 | CMAM の対象 predicate を、結晶を砕かない工程能力内で生成できる |
+| D-3-4 | PMAM の工程能力（MAM 内 PinPusher 利用）を満たす生成手順を構成できる |
+| D-3-5 | TMAM の対象 predicate を満たすシェイプを生成できる（現時点では `X` / `Y` を除く） |
+| D-3-6 | 従来の無着色 1 レイヤ / 着色 1 レイヤ / 多レイヤ完全性を、上記 tier の補助定理として再利用できる |
 
 ### D-4. MAM 設計支援
 
@@ -205,6 +219,7 @@ Layer B の基盤を使って証明される加工装置。
 
 | ファイル | 概要 |
 |---|---|
+| [../shapez2/mam.md](../shapez2/mam.md) | MAM の種類と表現能力、および形式化に必要な theorem 群の正本 |
 | [../s2il/architecture-layer-ab.md](../s2il/architecture-layer-ab.md) | Layer A/B のディレクトリ構造・設計原則・主要 theorem チェーンの正本 |
 | [layer-c1-shape-processing-flow-plan.md](layer-c1-shape-processing-flow-plan.md) | Layer C-1 Shape Processing Flow の加工ライン、ベルト / パイプのストリーム、抽象処理能力の設計・実装計画 |
 
