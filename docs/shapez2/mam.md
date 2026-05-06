@@ -142,21 +142,12 @@ MaM の形式化・正しさの証明には以下の定理群が必要になる�
 
 これらは `Machine` 名前空間でまとめて `Option` 対応ラッパーとして提供される（`S2IL/Machine/Machine.lean`）。
 
-### 4-2. 象限抽出フロー例の正しさ（実装済み）
+### 4-2. 象限抽出フロー例の扱い
 
 MAM の実際の象限解析は図形分析器を中心とする Wire 系の処理であり、これは別スコープで扱う。
 一方で、`halfDestroy` と回転操作の合成は、固定加工ラインがどの象限を残すかを確認する代表例として有用である。
-S2IL ではこの代表例を `S2IL/Flow/QuadrantExtraction.lean` に置き、Operation API からは分離している。
-確定済みの方角対応表と theorem inventory は [../s2il/mam-foundation-theorems.md](../s2il/mam-foundation-theorems.md) を参照する。
-
-具体的には以下のサンプル theorem を用いる。
-
-| # | theorem | 概要 |
-|---|---|---|
-| T-1 | `Flow.QuadrantExtraction.halfDestroy_getQuarter` | 切断処理後の東半分が元のシェイプの NE・SE と一致する |
-| T-2 | `Flow.QuadrantExtraction.rotateCW_getDir` など | 回転後の方角変位を確認する |
-| T-3 | `Flow.QuadrantExtraction.extractAfterRotate*_getQuarter` | 2 回の切断処理でどの象限が残るかを点ごとに述べる |
-| T-4 | `Flow.QuadrantExtraction.complete` | 全象限について、対象象限だけを NE に残す固定工程が存在する |
+S2IL ではこの代表例を MAM の前提 theorem ではなく、C-1 Flow の処理能力テストとして `Test/Flow/Capability.lean` に置く。
+Operation API と MAM 証明チェーンには含めない。
 
 ### 4-3. 積層の正しさ（実装済み）
 
@@ -164,9 +155,9 @@ S2IL ではこの代表例を `S2IL/Flow/QuadrantExtraction.lean` に置き、Op
 
 | # | 性質 | 概要 | 状態 |
 |---|---|---|---|
-| T-5 | 浮遊なし入力の積層 | スタック出力が安定状態になる | ✅ `Shape.stack.isSettled` 実装済み |
-| T-6 | 単一象限積層 | 単一象限入力に対する基本 invariants | ✅ `Shape.stack.singleQuadrant_invariants` 実装済み |
-| T-7 | 積層のレイヤ数上界 | スタック結果のレイヤ数が上限以下 | ✅ `Shape.stack.layerCount_le` 実装済み |
+| T-1 | 浮遊なし入力の積層 | スタック出力が安定状態になる | ✅ `Shape.stack.isSettled` 実装済み |
+| T-2 | 単一象限積層 | 単一象限入力に対する基本 invariants | ✅ `Shape.stack.singleQuadrant_invariants` 実装済み |
+| T-3 | 積層のレイヤ数上界 | スタック結果のレイヤ数が上限以下 | ✅ `Shape.stack.layerCount_le` 実装済み |
 
 `Shape.stack.singleQuadrant_invariants` は出力の正確な位置を主張する theorem ではなく、単一象限入力でも `IsSettled` とレイヤ数上界が保たれることを述べる保守的な theorem である。
 位置挙動を強化する場合は、crystal / pin / truncate / normalized intermediate の条件を分離して扱う。
@@ -181,23 +172,23 @@ rotate180 などの他の回転の等変性はその帰結として導出する�
 
 | # | 等変性の対象 | 概要 | 状態 |
 |---|---|---|---|
-| T-8 | 回転操作間の整合性 | rotateCW を生成元とする回転群の代数的性質 | ✅ 証明済み |
-| T-9 | 切断の等変性 | 切断操作は E/W 参照のため CW では不成立。180° 等変性のみ扱う | ✅ 180° 証明済み |
-| T-10 | 落下処理の等変性 | 落下処理と CW 回転の可換性 | ✅ 証明済み |
-| T-11 | 積層の等変性 | 積層と CW 回転の可換性 | ✅ 証明済み |
-| T-12 | 着色の等変性 | 着色操作と CW 回転の可換性 | ✅ 証明済み |
+| T-4 | 回転操作間の整合性 | rotateCW を生成元とする回転群の代数的性質 | ✅ 証明済み |
+| T-5 | 切断の等変性 | 切断操作は E/W 参照のため CW では不成立。180° 等変性のみ扱う | ✅ 180° 証明済み |
+| T-6 | 落下処理の等変性 | 落下処理と CW 回転の可換性 | ✅ 証明済み |
+| T-7 | 積層の等変性 | 積層と CW 回転の可換性 | ✅ 証明済み |
+| T-8 | 着色の等変性 | 着色操作と CW 回転の可換性 | ✅ 証明済み |
 
 ### 4-5. MAM 能力分類と完全性（未着手）
 
-最終的なゴールとなる定理群。T-13〜T-15 は従来の段階的な完全性目標であり、Layer D ではこれを ROS-MAM / CROSMAM / CMAM / PMAM / TMAM の `ShapeLanguage` と `ProcessCapability` に接続する。
+最終的なゴールとなる定理群。T-9〜T-11 は従来の段階的な完全性目標であり、Layer D ではこれを ROS-MAM / CROSMAM / CMAM / PMAM / TMAM の `ShapeLanguage` と `ProcessCapability` に接続する。
 
 | # | 性質 | 概要 | 状態 |
 |---|---|---|---|
-| T-13 | 無着色 1 レイヤ完全性 | 任意の無着色 1 レイヤシェイプを MaM は生成できる | ⬜ 未着手 |
-| T-14 | 着色 1 レイヤ完全性 | 着色も含めた 1 レイヤシェイプを生成できる | ⬜ 未着手 |
-| T-15 | 多レイヤ完全性 | 多レイヤシェイプを生成できる（レイヤ制限内） | ⬜ 未着手 |
-| T-16 | MAM 分類 predicate | 各 MAM 分類の `ShapeLanguage` と `ProcessCapability` を定義する | ⬜ 未着手 |
-| T-17 | tier 別完全性 | 各分類の対象 predicate を満たすシェイプを、その分類の能力制約内で生成できる | ⬜ 未着手 |
+| T-9 | 無着色 1 レイヤ完全性 | 任意の無着色 1 レイヤシェイプを MaM は生成できる | ⬜ 未着手 |
+| T-10 | 着色 1 レイヤ完全性 | 着色も含めた 1 レイヤシェイプを生成できる | ⬜ 未着手 |
+| T-11 | 多レイヤ完全性 | 多レイヤシェイプを生成できる（レイヤ制限内） | ⬜ 未着手 |
+| T-12 | MAM 分類 predicate | 各 MAM 分類の `ShapeLanguage` と `ProcessCapability` を定義する | ⬜ 未着手 |
+| T-13 | tier 別完全性 | 各分類の対象 predicate を満たすシェイプを、その分類の能力制約内で生成できる | ⬜ 未着手 |
 
 ---
 
@@ -222,7 +213,7 @@ stack(bottom, top)
     = gravity(shatter_top_crystals(placeAbove(bottom, top)))
 ```
 
-このため、積層の等変性（T-11）は「落下処理の等変性（T-10）」に依存する。
+このため、積層の等変性（T-7）は「落下処理の等変性（T-6）」に依存する。
 落下処理の等変性は Wave Gravity で `Shape.gravity.rotateCW_comm` として証明済み。
 この合成チェーンの等変性は Lean 側で証明済みである。
 
@@ -231,7 +222,7 @@ stack(bottom, top)
 Gravity 層の Wave Gravity 化と CW 回転等変性の theorem 化は完了。
 旧 rotate180 ベースの Gravity プレースホルダーは `Shape.gravity.rotateCW_comm` とその 180° / CCW 系に置換済み。
 
-積層等変性（T-11）に加え、`Shape.stack` の出力安定性、単一象限入力 invariants、レイヤ数上界も public theorem 化済みである。
+積層等変性（T-7）に加え、`Shape.stack` の出力安定性、単一象限入力 invariants、レイヤ数上界も public theorem 化済みである。
 今後の焦点は、MAM 完全性側で必要になる `ShapeLanguage` / `ProcessCapability` predicate と、必要に応じた stacker 位置挙動 theorem の追加である。
 
 ---
@@ -241,18 +232,16 @@ Gravity 層の Wave Gravity 化と CW 回転等変性の theorem 化は完了。
 ```
 各操作の正確な定義（実装済み）
     │
-    ├─ 象限抽出フロー例 (T-1〜T-4) ✅ Flow サンプル済み ──┐
-    │                                                     │
-    ├─ 落下処理の等変性 (T-10) ✅ 証明済み               │
-    │       │                                             │
-    │       ▼                                             │
-    │   積層の等変性 (T-11) ✅ 証明済み                  │
-    │       │                                             │
-    │       ▼                                             ▼
-    └─── 着色・その他操作の等変性 (T-8,T-9,T-12) ✅ ──→  MAM 分類 predicate (T-16)
-                                                               │
-                                                               ▼
-                                                        tier 別完全性 (T-17)
+    ├─ 落下処理の等変性 (T-6) ✅ 証明済み
+    │       │
+    │       ▼
+    │   積層の等変性 (T-7) ✅ 証明済み
+    │       │
+    │       ▼
+    └─── 着色・その他操作の等変性 (T-4,T-5,T-8) ✅ ──→  MAM 分類 predicate (T-12)
+                                                                   │
+                                                                   ▼
+                                                            tier 別完全性 (T-13)
 ```
 
 出力安定性、単一象限入力 invariants、レイヤ数上界は public theorem 化済みである。

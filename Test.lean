@@ -18,9 +18,12 @@ import Test.Operations.PinPusher
 import Test.Operations.Settled
 import Test.Operations.Stacker
 import Test.Operations.Swapper
+import Test.Flow.Capability
 import Test.Flow.MachineSpec
 import Test.Flow.Graph
-import Test.Flow.QuadrantExtraction
+import Test.Flow.Examples
+import Test.Flow.Equivariance
+import Test.Flow.Config
 
 /-!
 # Test root
@@ -48,7 +51,10 @@ Layer A 単体テスト群のエントリポイント。`#guard` ベースで `l
 | `Test.Operations.Settled` | `IsSettled` 公開 API と等変性 |
 | `Test.Operations.Stacker` | stack 構成部品・等変性 |
 | `Test.Operations.Swapper` | swap 代表値・180° 等変性 |
+| `Test.Flow.Capability` | Flow capability の必要台数下界計算 |
 | `Test.Flow.MachineSpec` | Flow マシン仕様と Operations facade 対応 |
 | `Test.Flow.Graph` | FlowGraph well-formed 判定の代表例 |
-| `Test.Flow.QuadrantExtraction` | 象限抽出代表フローの代表値・型確認 |
+| `Test.Flow.Examples` | Diagonal-Split / 4 レイヤ代表 graph の検証 |
+| `Test.Flow.Equivariance` | Flow の機能的等価性と回転等変性 API |
+| `Test.Flow.Config` | FlowConfig 基本速度 preset |
 -/

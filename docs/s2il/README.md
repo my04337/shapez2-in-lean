@@ -19,7 +19,6 @@ S2IL（Shapez2 in Lean）プロジェクトに固有の技術知識・分析資�
 | ファイル | 概要 |
 |---|---|
 | [architecture-layer-ab.md](architecture-layer-ab.md) | Layer A/B のディレクトリ構造・設計原則・主要 theorem チェーンの正本 |
-| [mam-foundation-theorems.md](mam-foundation-theorems.md) | MAM 前提 theorem の完了済み inventory。象限抽出フロー例・Stacker correctness・残る強化条件 |
 | [proof-workflow-playbook.md](proof-workflow-playbook.md) | S2IL/AGENTS.md から移設した証明運用の詳細ルール（Proof-First-Test・REPL 優先・探索閾値） |
 
 ---
@@ -37,7 +36,6 @@ S2IL（Shapez2 in Lean）プロジェクトに固有の技術知識・分析資�
 | 作業 | 参照先 |
 |---|---|
 | 新しい証明に着手する前 | `proof-workflow-playbook.md` を確認 |
-| MAM 前提 theorem の現状を確認 | `mam-foundation-theorems.md` を確認 |
 | 等変性証明を書く | `architecture-layer-ab.md` の単一チェーン原則と主要 theorem チェーンを確認 |
 | sorry の状態を確認 | `S2IL/_agent/sorry-plan.json` |
 

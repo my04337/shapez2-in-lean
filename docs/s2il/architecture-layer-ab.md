@@ -115,7 +115,7 @@ $$s.\mathrm{rotate180}.\mathrm{cut} = (s.\mathrm{cut.2}.\mathrm{rotate180},\ s.\
 **原則**: E/W 参照操作の primitive（`eastHalf` / `westHalf` / `combineHalves`）については `rotate180_comm` を証明対象とし、CW_comm / CCW_comm は定義しない。合成操作（`cut` / `halfDestroy` / `swap`）の `rotate180_comm` は primitive 版の系として `theorem` 化する。
 
 `halfDestroy` と回転操作を組み合わせた象限抽出は、ゲーム上の独立操作ではなく固定加工ラインの代表例として扱う。
-そのため Layer A/B の Operation API には置かず、C-1 Flow 側の `S2IL/Flow/QuadrantExtraction.lean` でサンプルフロー theorem として管理する。
+そのため Layer A/B の Operation API や MAM 証明チェーンには置かず、C-1 Flow の処理能力テスト `Test/Flow/Capability.lean` で固定加工ラインの台数下界としてのみ扱う。
 
 ### 1.4.2 パイプライン操作（Stacker / PinPusher）
 
@@ -134,7 +134,8 @@ $$s.\mathrm{rotate180}.\mathrm{cut} = (s.\mathrm{cut.2}.\mathrm{rotate180},\ s.\
 Gravity 依存の等変性は `Shape.gravity.rotateCW_comm` の theorem 化後、合成チェーンとして導出済み。
 Stacker correctness の基礎 theorem として、`Shape.stack.isSettled`、`Shape.stack.layerCount_le`、`Shape.stack.singleQuadrant_invariants` を公開する。
 レイヤ数上界は `Shape.shatterTopCrystals.layerCount_le` と `Shape.gravity.layerCount_le` を経由して導出する。
-MAM 前提 theorem の完了済み inventory は [mam-foundation-theorems.md](mam-foundation-theorems.md) に置く。
+`Shape.stack.singleQuadrant_invariants` は保守的な invariants theorem であり、出力の正確な位置挙動までは主張しない。
+位置挙動を強化する場合は、少なくとも crystal を含むか、pin を含むか、`config.maxLayers` が十分か、中間形状が settled / normalized かを分離してから theorem 化する。
 
 ### 1.4.3 砕け散り操作（Shatter）
 

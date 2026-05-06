@@ -2,7 +2,7 @@
 
 - 作成日: 2026-05-05
 - 最終更新: 2026-05-06
-- ステータス: **設計ドラフト / 基本スループット反映済み / Layer C-1 初期実装完了**
+- ステータス: **設計ドラフト / 基本スループット反映済み / Layer C-1 初期実装 TODO 完了**
 - スコープ: ワイヤーなし Shape Processing フロー、ベルト / パイプのストリーム、固定加工ライン、抽象処理能力
 
 ---
@@ -20,7 +20,7 @@ Layer C-1 では、Layer A/B で定義済みの純粋な加工操作を、実際
 | 接続構造 | 線形パイプラインに限定せず、DAG 形式の加工ラインを初期対象に含める |
 | ストリーム | ベルト上の Shape とパイプ上の液剤を区別して扱う |
 | 処理能力 | スループット / 容量 / 消費量を first-class な抽象概念として導入する |
-| 代表工程 | `halfDestroyer -> reverseRotator -> halfDestroyer` のような加工列を Flow サンプルとして検証する |
+| 代表工程 | `halfDestroyer -> reverseRotator -> halfDestroyer` のような加工列を処理能力テストとして検証する |
 | 数値 | 基本スループット値はゲーム仕様側を正本とし、Lean 側では後から差し込める構造として扱う |
 
 具体的な基本スループット値は [../shapez2/game-system-overview.md](../shapez2/game-system-overview.md) を正本とする。本計画では、その値を後から差し込める Lean 側の構造と証明ロードマップを定める。容量値や Flow 設定への取り込み方針は、後続の実装フェーズで確定する。
@@ -434,7 +434,7 @@ Shape 加工の本体は既存関数へ委譲する。
 
 最初の代表例は、MAM の Wire 系解析そのものではなく、実機処理でも読める固定加工ラインのサンプルとして表す。
 ゲーム上の MAM 解析で中心となる Shape Analyzer は Wire 系なので C-1 の対象外とし、ここでは `halfDestroy` と回転の合成仕様だけを確認する。
-確定した方角対応と theorem 一覧は [../s2il/mam-foundation-theorems.md](../s2il/mam-foundation-theorems.md) を参照する。
+このサンプルは公開 theorem ではなく、処理能力の台数下界テストとして扱う。
 
 ```text
 input:  CuCuCuCu
@@ -444,11 +444,9 @@ output: Cu------
 
 実装順序は次の通り。
 
-1. `S2IL/Flow/QuadrantExtraction.lean` で `Shape.halfDestroy (Shape.rotateCCW (Shape.halfDestroy input)) = expected` 相当の点ごと仕様を検証する
-2. 同じ工程を `FlowGraph` と `MachineKind.semantics` で表す
-3. `FlowGraph.WellFormed` を確認する
-4. `Flow/Eval.lean` の評価関数で同じ出力を得る
-5. §6.5 の必要台数計算と同じ `ThroughputRequirement` を使って下界を検証する
+1. `Test/Flow/Capability.lean` で `halfDestroyer -> reverseRotator -> halfDestroyer` の必要台数下界を検証する
+2. `FlowConfig.basic` の基本スループット値から Half-Destroyer 3 台、Reverse Rotator 2 台を確認する
+3. 2 段の Half-Destroyer と 1 段の Reverse Rotator を合計し、§6.5 の 8 台下界を固定する
 
 ### 7.5 代表固定フロー: 4 レイヤ end-to-end
 
@@ -586,7 +584,7 @@ Test/
 |---|---|
 | ポート種別不一致 | `WellFormed` が不正接続を拒否すること |
 | capability lower bound | `ceil(120 / 40) = 3`、`ceil(120 / 60) = 2` を検証すること |
-| halfDestroy -> reverseRotator -> halfDestroy | 代表フローを加工ラインとして表現できること |
+| halfDestroy -> reverseRotator -> halfDestroy | 代表フローの必要台数下界を検証できること |
 | Diagonal-Split internal graph | Cutter / Rotator / Swapper / Rotator で `RbRbRbRb` 1/2 ベルトから `Rb--Rb--` 1 ベルトを得ること |
 | Rb/Ru/Su 4-layer end-to-end | 着色、Diagonal-Split x2、3 段 Stacker を含む代表フローを表現できること |
 | Stacker 加工ライン | 複数入力マシンを扱えること |
@@ -648,7 +646,7 @@ Test/
 ### Phase C1-7: 等価性と代表フロー
 
 - 機能的等価性と処理能力等価性を定義する
-- `halfDestroyer -> reverseRotator -> halfDestroyer` などの代表フローを証明対象にする（象限抽出の shape-level サンプル theorem は `S2IL/Flow/QuadrantExtraction.lean` で実装済み）
+- `halfDestroyer -> reverseRotator -> halfDestroyer` などの代表フローを、公開 theorem ではなく処理能力テスト対象にする
 - `Rb--Rb--:RuRuRuRu:Rb--Rb--:SuSuSuSu` の end-to-end 代表フローを、Diagonal-Split の内部 graph まで含めて段階的に展開する
 - CW 等変性を主証明にする
 
@@ -704,13 +702,13 @@ Lean 実装に入った後は、次の順で検証する。
 | C1-IMPL-3 | 完了 | impl | 抽象処理能力を実装する | `S2IL/Flow/Capability.lean` を追加し、`Throughput` / `Capacity` / `ThroughputRequirement` / `Capability` を REPL `#check` と build script で検証済み |
 | C1-IMPL-4 | 完了 | impl | マシン仕様を実装する | `S2IL/Flow/MachineSpec.lean` を追加し、Operations facade と対応する `MachineKind` / `MachineSpec` を実装・代表テスト済み |
 | C1-IMPL-5 | 完了 | impl | 加工ライン妥当性を実装する | `S2IL/Flow/Graph.lean` と `Test/Flow/Graph.lean` を追加し、端点存在・種別一致・NodeId 順 DAG 近似の `FlowGraph.WellFormed` を代表テスト済み |
-| C1-NEXT-1 | 未着手 | impl | `ceilDiv` と単一マシン必要台数を定義する | `Flow/Internal/CapabilityAlgebra.lean` を追加する |
-| C1-NEXT-2 | 未着手 | test | 基本下界計算を検証する | `Test/Flow/Capability.lean` で `ceil(120 / 40) = 3`、`ceil(120 / 60) = 2` を検証する |
-| C1-NEXT-3 | 未着手 | impl | finite observation window の評価関数を設計する | `Flow/Eval.lean` を追加し、入力ストリームから出力ストリームを得る形を確定する |
-| C1-NEXT-4 | 完了 | example | 象限抽出代表フローを検証する | `S2IL/Flow/QuadrantExtraction.lean` / `Test/Flow/QuadrantExtraction.lean` で `halfDestroyer -> reverseRotator -> halfDestroyer` 相当の点ごと仕様を検証済み |
-| C1-NEXT-5 | 未着手 | example | Diagonal-Split 内部 graph を検証する | `Flow/Examples.lean` / `Test/Flow/Examples.lean` で `RbRbRbRb` 1/2 ベルトから `Rb--Rb--` 1 ベルトを得る |
-| C1-NEXT-6 | 未着手 | example | 4 レイヤ end-to-end graph を検証する | `Flow/Examples.lean` / `Test/Flow/Examples.lean` で `Rb--Rb--:RuRuRuRu:Rb--Rb--:SuSuSuSu` の decomposed graph を検証する |
-| C1-NEXT-7 | 未着手 | proof | port lookup 補題を分離する | 必要に応じて `Flow/Internal/PortLookup.lean` を追加する |
-| C1-NEXT-8 | 未着手 | proof | DAG 判定を一般化する | `Flow/Internal/GraphAcyclic.lean` で NodeId 順 DAG 近似を一般の DAG 判定へ拡張する |
-| C1-NEXT-9 | 未着手 | proof | 機能的等価性と回転等変性の型を確定する | `Flow/Equivariance.lean` を追加する |
-| C1-NEXT-10 | 未着手 | config | 具体スループット値の設定層を設計する | `FlowConfig` / `SpeedTier` 相当を別フェーズで設計する |
+| C1-NEXT-1 | 完了 | impl | `ceilDiv` と単一マシン必要台数を定義する | `S2IL/Flow/Internal/CapabilityAlgebra.lean` に `ceilDiv` / `minMachineCount` を追加し、`S2IL.Flow` facade から公開済み |
+| C1-NEXT-2 | 完了 | test | 基本下界計算を検証する | `Test/Flow/Capability.lean` で `ceil(120 / 40) = 3`、`ceil(120 / 60) = 2`、0 処理量、種別不一致を検証済み |
+| C1-NEXT-3 | 完了 | impl | finite observation window の評価関数を設計する | `S2IL/Flow/Eval.lean` に `FlowItem` / `FlowStream` / `FlowInputs` / `FlowOutputs` / `FlowGraph.evaluate` の有限観測 window API を追加済み |
+| C1-NEXT-4 | 完了 | example | 象限抽出代表フローを検証する | `Test/Flow/Capability.lean` で `halfDestroyer -> reverseRotator -> halfDestroyer` の §6.5 台数下界 8 台を検証済み |
+| C1-NEXT-5 | 完了 | example | Diagonal-Split 内部 graph を検証する | `S2IL/Flow/Examples.lean` / `Test/Flow/Examples.lean` で Cutter x2 / Rotator x2 / Swapper x2 / Rotator x1 の graph と `RbRbRbRb` から `Rb--Rb--` を得る代表 I/O を検証済み |
+| C1-NEXT-6 | 完了 | example | 4 レイヤ end-to-end graph を検証する | `S2IL/Flow/Examples.lean` / `Test/Flow/Examples.lean` で Painter / Diagonal-Split x2 / Stacker x3 の decomposed graph と構造的出力を検証し、`Test/Flow/Capability.lean` で §6.6 の 30 台下界を検証済み |
+| C1-NEXT-7 | 完了 | proof | port lookup 補題を分離する | `S2IL/Flow/Internal/PortLookup.lean` を追加し、node / port lookup と `edgePortsExist` / `edgeKindsMatch` の基本補題を分離済み |
+| C1-NEXT-8 | 完了 | proof | DAG 判定を一般化する | `S2IL/Flow/Internal/GraphAcyclic.lean` を追加し、NodeId 順 edge の十分条件を残しつつ、`FlowGraph.wellFormed` を到達可能性ベースの `acyclic` 判定へ拡張済み |
+| C1-NEXT-9 | 完了 | proof | 機能的等価性と回転等変性の型を確定する | `S2IL/Flow/Equivariance.lean` を追加し、`FlowGraph.FunctionallyEquivalent` と CW / 180° / CCW 回転等変性の Prop 型を確定済み |
+| C1-NEXT-10 | 完了 | config | 具体スループット値の設定層を設計する | `S2IL/Flow/Config.lean` を追加し、`SpeedTier` / `FlowConfig` / `FlowConfig.basic` と基本速度値の参照 API を実装済み |

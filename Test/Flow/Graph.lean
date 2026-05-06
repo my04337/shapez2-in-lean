@@ -47,6 +47,12 @@ private def mixerNode : MachineNode := node 1 MachineKind.colorMixer
 #guard painterNode.inputPort? 0 == some (PortSpec.belt "shape")
 #guard painterNode.inputPort? 1 == some (PortSpec.pipe "fluid")
 
+example : rotatorNode.outputPort? 0 = rotatorNode.spec.ports.outputs[0]? :=
+  MachineNode.outputPort?_eq_getElem? rotatorNode 0
+
+example : painterNode.inputPort? 1 = painterNode.spec.ports.inputs[1]? :=
+  MachineNode.inputPort?_eq_getElem? painterNode 1
+
 -- ============================================================
 -- valid representative graph
 -- ============================================================
@@ -60,9 +66,16 @@ private def validGraph : FlowGraph :=
 #guard validGraph.edgePortsExist rotatorToPainter
 #guard validGraph.edgeKindsMatch rotatorToPainter
 #guard validGraph.edgeRespectsNodeOrder rotatorToPainter
+#guard validGraph.acyclic
 #guard validGraph.wellFormed
 
 example : FlowGraph.WellFormed validGraph := rfl
+
+example : validGraph.edgePortsExist rotatorToPainter = true :=
+  FlowGraph.edgePortsExist_eq_true_of_output_input rfl rfl
+
+example : validGraph.edgeKindsMatch rotatorToPainter = true :=
+  FlowGraph.edgeKindsMatch_eq_true_of_output_input rfl rfl rfl
 
 -- ============================================================
 -- invalid graph cases
@@ -93,7 +106,30 @@ private def backwardGraph : FlowGraph :=
 #guard backwardGraph.edgePortsExist backwardEdge
 #guard backwardGraph.edgeKindsMatch backwardEdge
 #guard !backwardGraph.edgeRespectsNodeOrder backwardEdge
-#guard !backwardGraph.wellFormed
+#guard backwardGraph.acyclic
+#guard backwardGraph.wellFormed
+
+private def cycleBackEdge : FlowEdge := edge 1 0 0 0
+
+private def cyclicGraph : FlowGraph :=
+  { nodes := [rotatorNode, painterNode], edges := [rotatorToPainter, cycleBackEdge] }
+
+#guard cyclicGraph.edgePortsExist cycleBackEdge
+#guard cyclicGraph.edgeKindsMatch cycleBackEdge
+#guard cyclicGraph.hasCycle
+#guard !cyclicGraph.acyclic
+#guard !cyclicGraph.wellFormed
+
+private def selfLoopEdge : FlowEdge := edge 0 0 0 0
+
+private def selfLoopGraph : FlowGraph :=
+  { nodes := [rotatorNode], edges := [selfLoopEdge] }
+
+#guard selfLoopGraph.edgePortsExist selfLoopEdge
+#guard selfLoopGraph.edgeKindsMatch selfLoopEdge
+#guard selfLoopGraph.hasCycle
+#guard !selfLoopGraph.acyclic
+#guard !selfLoopGraph.wellFormed
 
 private def duplicateIdGraph : FlowGraph :=
   { nodes := [node 0 MachineKind.rotator, node 0 MachineKind.painter], edges := [] }
