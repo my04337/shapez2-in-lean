@@ -1,3 +1,6 @@
+-- SPDX-FileCopyrightText: 2026 my04337
+-- SPDX-License-Identifier: MIT
+
 import S2IL.Kernel
 import S2IL.Operations.Common
 import S2IL.Operations.Shatter.Internal.Mask

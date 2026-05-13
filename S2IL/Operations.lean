@@ -2,7 +2,6 @@
 -- SPDX-License-Identifier: MIT
 
 import S2IL.Operations.Common
-import S2IL.Operations.HalfDestroyer
 import S2IL.Operations.Cutter
 import S2IL.Operations.Swapper
 import S2IL.Operations.Rotator
@@ -35,8 +34,7 @@ Layer C からは本 facade のみを参照すればよい。
 ## サブモジュール（公開）
 
 - `S2IL.Operations.Common`            — 共通ユーティリティ
-- `S2IL.Operations.HalfDestroyer`     — A-2-1（Cutter の東半分系）
-- `S2IL.Operations.Cutter`            — A-2-1 + B-4-2
+- `S2IL.Operations.Cutter`            — A-2-1 + B-4-2（`Shape.halfDestroy` を含む）
 - `S2IL.Operations.Swapper`           — A-2-1 + B-4-3
 - `S2IL.Operations.Rotator`           — A-2-2
 - `S2IL.Operations.Painter`           — A-2-3

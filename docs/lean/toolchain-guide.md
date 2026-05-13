@@ -62,7 +62,7 @@ Lean のビルドツール兼パッケージマネージャ。Rust における 
 
 | ファイル / ディレクトリ | 役割 |
 |---|---|
-| `lean-toolchain` | 使用する Lean バージョンを指定（例: `leanprover/lean4:v4.28.0`）。elan がこのファイルを読み、対応するバージョンを自動ダウンロード・使用する |
+| `lean-toolchain` | 使用する Lean バージョンを指定（例: `leanprover/lean4:v4.29.0`）。elan がこのファイルを読み、対応するバージョンを自動ダウンロード・使用する |
 | `lakefile.toml` | プロジェクト名・ライブラリ・実行ターゲット・依存パッケージを定義する設定ファイル（TOML 形式） |
 | `lakefile.lean` | `lakefile.toml` の代替。Lean DSL で記述する形式。より高度な設定が可能 |
 | `lake-manifest.json` | Lake が自動生成するロックファイル。依存パッケージの正確なリビジョンを記録する |

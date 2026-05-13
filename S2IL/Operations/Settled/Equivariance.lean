@@ -1,3 +1,6 @@
+-- SPDX-FileCopyrightText: 2026 my04337
+-- SPDX-License-Identifier: MIT
+
 import S2IL.Operations.Settled.Defs
 
 /-!
@@ -35,22 +38,6 @@ theorem IsStructurallyBonded.rotateCW (s : Shape) (a b : QuarterPos) :
   rw [QuarterPos.getQuarter_rotateCW, QuarterPos.getQuarter_rotateCW]
   have hd : a.2 + 1 = b.2 + 1 ↔ a.2 = b.2 := Direction.add_one_inj
   rw [hd, Direction.isAdjacent_rotateCW]
-
-/-- 構造結合は対称関係。隣接条件と `canFormBond` 条件が共に対称。 -/
-theorem IsStructurallyBonded.symm {s : Shape} {a b : QuarterPos}
-    (h : IsStructurallyBonded s a b) : IsStructurallyBonded s b a := by
-  obtain ⟨hadj, hcfa, hcfb⟩ := h
-  refine ⟨?_, hcfb, hcfa⟩
-  rcases hadj with ⟨hl, hd⟩ | ⟨hd, hl⟩
-  · exact Or.inl ⟨hl.symm, by
-      have : Direction.isAdjacent b.2 a.2 = true := by
-        unfold Direction.isAdjacent at hd ⊢
-        rw [Bool.or_comm]; exact hd
-      exact this⟩
-  · refine Or.inr ⟨hd.symm, ?_⟩
-    rcases hl with h1 | h1
-    · exact Or.inr h1
-    · exact Or.inl h1
 
 /-- `IsGroundingEdge` は CW 回転で保存される。 -/
 theorem IsGroundingEdge.rotateCW (s : Shape) (a b : QuarterPos) :

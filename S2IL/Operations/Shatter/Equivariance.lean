@@ -1,3 +1,6 @@
+-- SPDX-FileCopyrightText: 2026 my04337
+-- SPDX-License-Identifier: MIT
+
 import S2IL.Operations.Shatter.Defs
 
 /-!
@@ -134,9 +137,9 @@ theorem Shape.shatterOnCut.rotate180_comm (s : Shape) :
   · rintro ⟨t, hCry, hRel, ⟨pE, hRelE, hE⟩, ⟨pW, hRelW, hW⟩⟩
     refine ⟨t.rotateCW.rotateCW, ?_, ?_, ?_, ?_⟩
     · rw [QuarterPos.getQuarter_rotateCW, QuarterPos.getQuarter_rotateCW]; exact hCry
-    · exact (CrystalBondClusterRel.rotateCW_two s t p).mpr hRel
-    · exact ⟨pW.rotateCW.rotateCW, (CrystalBondClusterRel.rotateCW_two s t pW).mpr hRelW, hWE pW.2 hW⟩
-    · exact ⟨pE.rotateCW.rotateCW, (CrystalBondClusterRel.rotateCW_two s t pE).mpr hRelE, hEW pE.2 hE⟩
+    · exact (CrystalBondClusterRel.rotate180 s t p).mpr hRel
+    · exact ⟨pW.rotateCW.rotateCW, (CrystalBondClusterRel.rotate180 s t pW).mpr hRelW, hWE pW.2 hW⟩
+    · exact ⟨pE.rotateCW.rotateCW, (CrystalBondClusterRel.rotate180 s t pE).mpr hRelE, hEW pE.2 hE⟩
   · rintro ⟨t', hCry', hRel', ⟨pE', hRelE', hE'⟩, ⟨pW', hRelW', hW'⟩⟩
     refine ⟨t'.rotateCCW.rotateCCW, ?_, ?_, ?_, ?_⟩
     · rw [show t' = t'.rotateCCW.rotateCCW.rotateCW.rotateCW by
@@ -147,13 +150,13 @@ theorem Shape.shatterOnCut.rotate180_comm (s : Shape) :
                   t'.rotateCCW.rotateCCW.rotateCW.rotateCW
                   p.rotateCW.rotateCW := by
         simp [QuarterPos.rotateCW_rotateCCW]; exact hRel'
-      exact (CrystalBondClusterRel.rotateCW_two s t'.rotateCCW.rotateCCW p).mp hr
+      exact (CrystalBondClusterRel.rotate180 s t'.rotateCCW.rotateCCW p).mp hr
     · refine ⟨pW'.rotateCCW.rotateCCW, ?_, ?_⟩
       · have hr : CrystalBondClusterRel s.rotateCW.rotateCW
                   t'.rotateCCW.rotateCCW.rotateCW.rotateCW
                   pW'.rotateCCW.rotateCCW.rotateCW.rotateCW := by
           simp [QuarterPos.rotateCW_rotateCCW]; exact hRelW'
-        exact (CrystalBondClusterRel.rotateCW_two s t'.rotateCCW.rotateCCW pW'.rotateCCW.rotateCCW).mp hr
+        exact (CrystalBondClusterRel.rotate180 s t'.rotateCCW.rotateCCW pW'.rotateCCW.rotateCCW).mp hr
       · show Direction.isEast (pW'.2 - 1 - 1) = true
         rw [Direction.sub_two_eq_add_two]
         exact hWE pW'.2 hW'
@@ -162,7 +165,7 @@ theorem Shape.shatterOnCut.rotate180_comm (s : Shape) :
                   t'.rotateCCW.rotateCCW.rotateCW.rotateCW
                   pE'.rotateCCW.rotateCCW.rotateCW.rotateCW := by
           simp [QuarterPos.rotateCW_rotateCCW]; exact hRelE'
-        exact (CrystalBondClusterRel.rotateCW_two s t'.rotateCCW.rotateCCW pE'.rotateCCW.rotateCCW).mp hr
+        exact (CrystalBondClusterRel.rotate180 s t'.rotateCCW.rotateCCW pE'.rotateCCW.rotateCCW).mp hr
       · show Direction.isWest (pE'.2 - 1 - 1) = true
         rw [Direction.sub_two_eq_add_two]
         exact hEW pE'.2 hE'
