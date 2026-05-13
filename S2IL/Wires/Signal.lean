@@ -12,13 +12,15 @@ import S2IL.Shape
 namespace S2IL
 
 /-- ワイヤー上を流れるシグナル。 -/
-axiom WireSignal : Type
-
-namespace WireSignal
-axiom off : WireSignal
-axiom boolean : Bool → WireSignal
-axiom shape : Shape → WireSignal
-axiom color : Color → WireSignal
-end WireSignal
+inductive WireSignal where
+  /-- 信号なし。 -/
+  | off
+  /-- 真偽値。 -/
+  | boolean (b : Bool)
+  /-- シェイプ値。 -/
+  | shape (s : Shape)
+  /-- 色値。 -/
+  | color (c : Color)
+  deriving Repr
 
 end S2IL

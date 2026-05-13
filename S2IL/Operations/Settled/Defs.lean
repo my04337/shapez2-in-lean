@@ -1,3 +1,6 @@
+-- SPDX-FileCopyrightText: 2026 my04337
+-- SPDX-License-Identifier: MIT
+
 import S2IL.Kernel
 import Mathlib.Logic.Relation
 
@@ -70,6 +73,26 @@ theorem of_getQuarter_eq {s t : Shape} {a b : QuarterPos}
     (hb : QuarterPos.getQuarter t b = QuarterPos.getQuarter s b)
     (h : IsStructurallyBonded s a b) : IsStructurallyBonded t a b := by
   simpa only [IsStructurallyBonded, ha, hb] using h
+
+end IsStructurallyBonded
+
+namespace IsStructurallyBonded
+
+/-- 構造結合は対称関係。隣接条件と `canFormBond` 条件が共に対称。 -/
+theorem symm {s : Shape} {a b : QuarterPos}
+    (h : IsStructurallyBonded s a b) : IsStructurallyBonded s b a := by
+  obtain ⟨hadj, hcfa, hcfb⟩ := h
+  refine ⟨?_, hcfb, hcfa⟩
+  rcases hadj with ⟨hl, hd⟩ | ⟨hd, hl⟩
+  · exact Or.inl ⟨hl.symm, by
+      have : Direction.isAdjacent b.2 a.2 = true := by
+        unfold Direction.isAdjacent at hd ⊢
+        rw [Bool.or_comm]; exact hd
+      exact this⟩
+  · refine Or.inr ⟨hd.symm, ?_⟩
+    rcases hl with h1 | h1
+    · exact Or.inr h1
+    · exact Or.inl h1
 
 end IsStructurallyBonded
 

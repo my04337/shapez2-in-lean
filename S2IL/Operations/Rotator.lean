@@ -19,6 +19,6 @@ Rotator は Layer A のみの操作（Behavior なし）。CW 等変性は自明
 namespace S2IL.Operations
 
 /-- 回転機の 1 ターン処理（時計回り 90°）。 -/
-noncomputable def rotator (s : Shape) : Shape := s.rotateCW
+def rotator (s : Shape) : Shape := s.rotateCW
 
 end S2IL.Operations

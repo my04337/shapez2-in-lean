@@ -1,3 +1,6 @@
+-- SPDX-FileCopyrightText: 2026 my04337
+-- SPDX-License-Identifier: MIT
+
 /-!
 # S2IL.Shape.Types.Direction
 

@@ -24,9 +24,8 @@ Gravity 非依存の横断基盤 (Layer A)。
 
 ## Internal（外部 import 禁止）
 
-- `S2IL.Kernel.Internal.CrystalBondImpl`
-- `S2IL.Kernel.Internal.Rotate180Lemmas`
-
-NOTE: `crystalBondClusterList` / `allCrystalBondClusters` 等の計算的 List API および
-`S2IL.Kernel.Internal.CrystalBondClusterImpl` は 今後 MAM/Shatter が必要になってから追加する（[architecture §1.10](../docs/s2il/architecture-layer-ab.md)）。
+現時点では `Internal/` 配下に外部公開しない補助モジュールは存在しない。
+今後 `crystalBondClusterList` / `allCrystalBondClusters` 等の計算的 List API および
+`S2IL.Kernel.Internal.CrystalBondClusterImpl` は MAM/Shatter が必要になってから追加する
+（[architecture §1.10](../docs/s2il/architecture-layer-ab.md)）。
 -/

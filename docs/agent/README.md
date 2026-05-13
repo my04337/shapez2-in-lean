@@ -18,7 +18,6 @@ Skills・Hooks の追加・修正時にはまずここを参照すること。
 | [session-memory-guide.md](session-memory-guide.md) | セッションメモリ運用ガイド。テンプレート・更新ルール・クリーンアップ手順 |
 | [proof-plan-current-focus-guide.md](proof-plan-current-focus-guide.md) | 証明計画策定時の Current Focus 整備手順。計画ファイル・sorry-plan.json の一貫した作成チェックリスト |
 | [proof-retreat-pivot-guide.md](proof-retreat-pivot-guide.md) | 証明の撤退・pivot 判断手順。sorry-card マイルストーン記述テンプレート・`remaining_steps` status の使い分け |
-| [repl-session-state-guide.md](repl-session-state-guide.md) | REPL セッション状態ファイル (`Scratch/_state/`) の書式・運用 |
 | [powershell-conventions.md](powershell-conventions.md) | PowerShell 文字列置換の規則 |
 | [license-policy.md](license-policy.md) | 外部ライブラリのライセンス方針 |
 

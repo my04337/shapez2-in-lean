@@ -83,14 +83,14 @@ theorem CrystalBondClusterRel.rotateCW (s : Shape) (p q : QuarterPos) :
     exact h.lift QuarterPos.rotateCW (fun a b hab =>
       (IsCrystalBonded.rotateCW s a b).mpr hab)
 
-/-- `CrystalBondClusterRel` の 180° 等変性（CW を 2 段重ねた系）。 -/
-theorem CrystalBondClusterRel.rotateCW_two (s : Shape) (p q : QuarterPos) :
+/-- `CrystalBondClusterRel` の 180° 等変性（CW の 2 段重ね系）。 -/
+theorem CrystalBondClusterRel.rotate180 (s : Shape) (p q : QuarterPos) :
     CrystalBondClusterRel s.rotateCW.rotateCW p.rotateCW.rotateCW q.rotateCW.rotateCW ↔
       CrystalBondClusterRel s p q := by
   rw [CrystalBondClusterRel.rotateCW, CrystalBondClusterRel.rotateCW]
 
-/-- `CrystalBondClusterRel` の CCW 等変性（CW を 3 段重ねた系）。 -/
-theorem CrystalBondClusterRel.rotateCW_three (s : Shape) (p q : QuarterPos) :
+/-- `CrystalBondClusterRel` の CCW 等変性（CW の 3 段重ね系）。 -/
+theorem CrystalBondClusterRel.rotateCCW (s : Shape) (p q : QuarterPos) :
     CrystalBondClusterRel s.rotateCW.rotateCW.rotateCW p.rotateCW.rotateCW.rotateCW
         q.rotateCW.rotateCW.rotateCW ↔ CrystalBondClusterRel s p q := by
   rw [CrystalBondClusterRel.rotateCW, CrystalBondClusterRel.rotateCW,
