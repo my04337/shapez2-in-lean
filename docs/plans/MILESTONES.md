@@ -204,5 +204,6 @@ Layer B の基盤を使って証明される加工装置。
 | ファイル | 概要 |
 |---|---|
 | [../s2il/architecture-layer-ab.md](../s2il/architecture-layer-ab.md) | Layer A/B のディレクトリ構造・設計原則・主要 theorem チェーンの正本 |
+| [layer-c-flow-design-implementation-plan.md](layer-c-flow-design-implementation-plan.md) | Layer C Flow のスコープ、型付き Flow DSL 方針、C-1/C-2 実装ロードマップ |
 
 将来的に層ごとの個別計画が必要になった場合、`docs/plans/` に追加する（ケバブケース命名）。

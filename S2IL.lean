@@ -5,6 +5,7 @@ import S2IL.Shape
 import S2IL.Kernel
 import S2IL.Wires
 import S2IL.Operations
+import S2IL.Flow
 import S2IL.Machine
 
 /-!
@@ -18,6 +19,7 @@ import S2IL.Machine
 - `S2IL.Kernel`       — 共通理論（結晶結合 / 結晶結合クラスタ / Transform）
 - `S2IL.Wires`        — ワイヤー系（スケルトン）
 - `S2IL.Operations`   — 加工操作（Layer A 純粋部 + Layer B 振る舞い）
+- `S2IL.Flow`         — 加工フロー（Layer C-1）
 - `S2IL.Machine`      — Machine 統合層
 
 将来的に axiom による公開 API scaffold を追加予定。
