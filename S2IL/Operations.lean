@@ -8,6 +8,7 @@ import S2IL.Operations.Rotator
 import S2IL.Operations.Painter
 import S2IL.Operations.ColorMixer
 import S2IL.Operations.CrystalGenerator
+import S2IL.Operations.Trash
 import S2IL.Operations.Stacker
 import S2IL.Operations.PinPusher
 import S2IL.Operations.Gravity
@@ -23,6 +24,7 @@ Layer C からは本 facade のみを参照すればよい。
 ## 公開 API（主要）
 
 - 純粋関数：`rotator` / `Shape.paint` / `mix` / `Shape.crystallize` /
+  `Shape.trash` /
   `Shape.placeAbove` / `Shape.shatterTopCrystals` / `Shape.eastHalf` / `Shape.westHalf`
   / `Shape.combineHalves` / `Shape.cut` / `Shape.halfDestroy` / `Shape.swap`
   / `Shape.liftUp` / `Shape.generatePins`
@@ -40,6 +42,7 @@ Layer C からは本 facade のみを参照すればよい。
 - `S2IL.Operations.Painter`           — A-2-3
 - `S2IL.Operations.ColorMixer`        — A-2-3
 - `S2IL.Operations.CrystalGenerator`  — A-2-6
+- `S2IL.Operations.Trash`             — Trash（出力なし）
 - `S2IL.Operations.Stacker`           — A-2-4 + B-4-1
 - `S2IL.Operations.PinPusher`         — A-2-5 + B-4-4
 - `S2IL.Operations.Gravity`           — B-1

@@ -79,6 +79,14 @@ def dup : Flow α (α × α) :=
 def pairMap (firstFlow : Flow α β) (secondFlow : Flow γ δ) : Flow (α × γ) (β × δ) :=
   Flow.comp (Flow.first firstFlow) (Flow.second secondFlow)
 
+/-- ペアの第 1 成分を捨て、第 2 成分だけを残すフロー。 -/
+def dropFirst : Flow (α × β) β :=
+  Flow.prim (fun input => input.2)
+
+/-- ペアの第 2 成分を捨て、第 1 成分だけを残すフロー。 -/
+def dropSecond : Flow (α × β) α :=
+  Flow.prim (fun input => input.1)
+
 /-- `swap` フローの評価。 -/
 @[simp] theorem eval_swap (input : α × β) :
     eval (swap : Flow (α × β) (β × α)) input = (input.2, input.1) := rfl
@@ -91,6 +99,14 @@ def pairMap (firstFlow : Flow α β) (secondFlow : Flow γ δ) : Flow (α × γ)
 @[simp] theorem eval_pairMap (firstFlow : Flow α β) (secondFlow : Flow γ δ) (input : α × γ) :
     eval (pairMap firstFlow secondFlow) input =
       (eval firstFlow input.1, eval secondFlow input.2) := rfl
+
+/-- `dropFirst` フローの評価。 -/
+@[simp] theorem eval_dropFirst (input : α × β) :
+  eval (dropFirst : Flow (α × β) β) input = input.2 := rfl
+
+/-- `dropSecond` フローの評価。 -/
+@[simp] theorem eval_dropSecond (input : α × β) :
+  eval (dropSecond : Flow (α × β) α) input = input.1 := rfl
 
 /-- 入力を無視して固定値を返すフロー。 -/
 def constant (value : β) : Flow α β :=
@@ -132,6 +148,28 @@ def halfDestroy : Flow Shape Shape := Flow.prim Shape.halfDestroy
 
 /-- Cutter フロー。東半分と西半分のペアを出力する。 -/
 def cut : Flow Shape (Shape × Shape) := Flow.prim Shape.cut
+
+/-- Trash フロー。Shape を削除し、出力を持たない。 -/
+def trash : Flow Shape Unit := Flow.prim Shape.trash
+
+/-- ペアの第 1 成分 Shape を Trash に送り、第 2 成分だけを残す。 -/
+def trashFirstShape : Flow (Shape × α) α :=
+  Flow.comp (Flow.first trash) Flow.dropFirst
+
+/-- ペアの第 2 成分 Shape を Trash に送り、第 1 成分だけを残す。 -/
+def trashSecondShape : Flow (α × Shape) α :=
+  Flow.comp (Flow.second trash) Flow.dropSecond
+
+/-- `trash` フローの評価。 -/
+@[simp] theorem eval_trash (shape : Shape) : eval trash shape = () := rfl
+
+/-- `trashFirstShape` フローの評価。 -/
+@[simp] theorem eval_trashFirstShape (input : Shape × α) :
+    eval (trashFirstShape : Flow (Shape × α) α) input = input.2 := rfl
+
+/-- `trashSecondShape` フローの評価。 -/
+@[simp] theorem eval_trashSecondShape (input : α × Shape) :
+    eval (trashSecondShape : Flow (α × Shape) α) input = input.1 := rfl
 
 /-- Swapper フロー。2 つの Shape の西半分を入れ替える。 -/
 def swapShapes : Flow (Shape × Shape) (Shape × Shape) :=

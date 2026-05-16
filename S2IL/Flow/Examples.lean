@@ -51,6 +51,14 @@ def mixThenCrystallize : Flow (Shape × (Color × Color)) Shape :=
 def cutPaintBothCombine (color : Color) : Flow Shape Shape :=
   Flow.comp Flow.cut (Flow.comp (paintBoth color) Flow.combineHalves)
 
+/-- Cutter の西側出力を Trash に送り、東側出力だけを残す代表フロー。 -/
+def cutKeepEast : Flow Shape Shape :=
+  Flow.comp Flow.cut (Flow.trashSecondShape : Flow (Shape × Shape) Shape)
+
+/-- Cutter の東側出力を Trash に送り、西側出力だけを残す代表フロー。 -/
+def cutKeepWest : Flow Shape Shape :=
+  Flow.comp Flow.cut (Flow.trashFirstShape : Flow (Shape × Shape) Shape)
+
 /-- 現行 E/W 実装に基づく NE 象限抽出フロー。抽出後は元の NE 位置へ戻す。 -/
 def extractNE : Flow Shape Shape :=
   Flow.comp (Flow.comp Flow.halfDestroy Flow.rotateCW)
@@ -169,6 +177,14 @@ def stackThenPaint (config : GameConfig) (color : Color) : Flow (Shape × Shape)
 def swapThenStack (config : GameConfig) : Flow (Shape × Shape) Shape :=
   Flow.comp Flow.swapShapes (Flow.stack config)
 
+/-- Swapper の第 2 出力を Trash に送り、第 1 出力だけを残す代表フロー。 -/
+def swapKeepFirst : Flow (Shape × Shape) Shape :=
+  Flow.comp Flow.swapShapes (Flow.trashSecondShape : Flow (Shape × Shape) Shape)
+
+/-- Swapper の第 1 出力を Trash に送り、第 2 出力だけを残す代表フロー。 -/
+def swapKeepSecond : Flow (Shape × Shape) Shape :=
+  Flow.comp Flow.swapShapes (Flow.trashFirstShape : Flow (Shape × Shape) Shape)
+
 /-- 結晶生成後に Gravity を適用する生成系の代表フロー。 -/
 def crystallizeThenGravity (color : Color) : Flow Shape Shape :=
   Flow.comp (Flow.crystallize color) Flow.gravity
@@ -202,10 +218,26 @@ theorem mixThenCrystallize_eval (input : Shape × (Color × Color)) :
     Flow.eval mixThenCrystallize input =
       Shape.crystallize input.1 (S2IL.Operations.mix input.2.1 input.2.2) := rfl
 
+/-- `cutKeepEast` は Cutter の東側出力だけを残す。 -/
+theorem cutKeepEast_eval (shape : Shape) :
+  Flow.eval cutKeepEast shape = Shape.eastHalf shape := rfl
+
+/-- `cutKeepWest` は Cutter の西側出力だけを残す。 -/
+theorem cutKeepWest_eval (shape : Shape) :
+  Flow.eval cutKeepWest shape = Shape.westHalf shape := rfl
+
 /-- `swapThenStack` は Swapper の出力ペアを Stacker に渡す。 -/
 theorem swapThenStack_eval (config : GameConfig) (input : Shape × Shape) :
     Flow.eval (swapThenStack config) input =
       Shape.stack (Shape.swap input.1 input.2).1 (Shape.swap input.1 input.2).2 config := rfl
+
+/-- `swapKeepFirst` は Swapper の第 1 出力だけを残す。 -/
+theorem swapKeepFirst_eval (input : Shape × Shape) :
+  Flow.eval swapKeepFirst input = (Shape.swap input.1 input.2).1 := rfl
+
+/-- `swapKeepSecond` は Swapper の第 2 出力だけを残す。 -/
+theorem swapKeepSecond_eval (input : Shape × Shape) :
+  Flow.eval swapKeepSecond input = (Shape.swap input.1 input.2).2 := rfl
 
 end Flow.Examples
 end S2IL

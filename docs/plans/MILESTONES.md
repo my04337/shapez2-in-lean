@@ -69,6 +69,7 @@ Layer A (Data & Operations) ← 静的データ型と純粋関数
 | A-2-4 | Stacker の placeAbove（積層の事前変形、重力処理は Layer B） |
 | A-2-5 | Pin Pusher の変形部（重力処理は Layer B） |
 | A-2-6 | Crystal Generator（結晶充填）|
+| A-2-7 | Trash（Shape を削除し、出力なし） |
 
 ### A-3. Wires and Logic の静的定義
 

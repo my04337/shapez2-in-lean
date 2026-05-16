@@ -19,12 +19,12 @@
 | 区分 | 状態 | 主な成果物 |
 |---|---|---|
 | C-1a Flow Core | 実装済み | `Flow α β` / `Flow.eval` / primitive wrappers |
-| C-1b Product Flow | 実装済み | `Flow.swap` / `Flow.dup` / `Flow.pairMap` / `Flow.assocLeft` / `Flow.assocRight` / product congruence |
+| C-1b Product Flow | 実装済み | `Flow.swap` / `Flow.dup` / `Flow.pairMap` / `Flow.dropFirst` / `Flow.dropSecond` / `Flow.assocLeft` / `Flow.assocRight` / product congruence |
 | C-1c E/W・象限抽出 | 初期 theorem 化済み | `extractNE` / `extractSE` / `extractSW` / `extractNW` と `shapeOnlyDirection` 仕様 |
-| C-1d 生成フロー | 表現基盤実装済み | `swapShapes` / `mix` / `paintWith` / `crystallizeWith` / `stackThenPaint` / `swapThenStack` / `mixThenPaint` / `mixThenCrystallize` |
+| C-1d 生成フロー | 表現基盤実装済み | `swapShapes` / `mix` / `paintWith` / `crystallizeWith` / `trash` / `stackThenPaint` / `swapThenStack` / `mixThenPaint` / `mixThenCrystallize` |
 | C-2 Wires | 設計のみ | 非循環の純粋ネットワーク方針 |
 
-非Wireの加工フローは、Shape 系入力、Color 系入力、product 入出力、固定ソースを組み合わせて一通り表現できる段階に入った。次の焦点は、ゲーム内の特徴的な加工フローを `Flow.Examples` と `Test.Flow.Examples` に追加し、必要に応じて settled / gravity theorem を接続することである。
+非Wireの加工フローは、Shape 系入力、Color 系入力、product 入出力、固定ソース、片側出力の破棄を組み合わせて一通り表現できる段階に入った。次の焦点は、ゲーム内の特徴的な加工フローを `Flow.Examples` と `Test.Flow.Examples` に追加し、必要に応じて settled / gravity theorem を接続することである。
 
 ---
 
@@ -118,6 +118,7 @@ primitive node は whitelist 方針で公開する。最初の候補は次の通
 | crystallize with input color | `Shape.crystallize` | `Shape × Color → Shape` |
 | paint | `Shape.paint` | 色パラメータを固定した primitive |
 | crystallize | `Shape.crystallize` | 色パラメータを固定した primitive |
+| trash | `Shape.trash` | `Shape → Unit` として「出力なし」を表す primitive |
 | gravity | `Shape.gravity` | Layer B の total function として呼ぶ |
 | stack | `Shape.stack` | `GameConfig` を固定した primitive |
 | pin push | `Shape.pinPush` | `GameConfig` を固定した primitive |

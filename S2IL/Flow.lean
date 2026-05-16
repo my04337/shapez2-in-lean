@@ -16,15 +16,17 @@ Layer C-1 Shape Processing Flow の統合入口。
 - `Flow α β` — 型付きフロー DSL
 - `Flow.eval` — フローの純粋評価関数
 - product combinators: `Flow.swap` / `Flow.dup` / `Flow.pairMap` /
-  `Flow.assocLeft` / `Flow.assocRight`
+  `Flow.dropFirst` / `Flow.dropSecond` / `Flow.assocLeft` / `Flow.assocRight`
 - source/helper: `Flow.constant`
 - primitive wrappers: `Flow.rotateCW` / `Flow.rotate180` / `Flow.rotateCCW` /
   `Flow.halfDestroy` / `Flow.cut` / `Flow.swapShapes` / `Flow.combineHalves` /
   `Flow.mix` / `Flow.paintWith` / `Flow.crystallizeWith` / `Flow.paint` /
-  `Flow.crystallize` / `Flow.gravity` / `Flow.stack` / `Flow.pinPush`
+  `Flow.crystallize` / `Flow.trash` / `Flow.trashFirstShape` /
+  `Flow.trashSecondShape` / `Flow.gravity` / `Flow.stack` / `Flow.pinPush`
 - `Flow.Equivalent` — `Flow.eval` による外延的等価性
 - `Flow.CWEquivariant` / `Flow.HalfTurnEquivariant` / `Flow.HalfTurnSwapEquivariant`
 - `Flow.CWPairInputEquivariant` / `Flow.HalfTurnPairInputEquivariant`
+- `Flow.CWUnitInvariant` / `Flow.HalfTurnUnitInvariant` / `Flow.CCWUnitInvariant`
 - `Flow.Examples.*` — 代表フロー
 
 ## サブモジュール（公開）

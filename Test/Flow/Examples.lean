@@ -51,6 +51,12 @@ example :
 #guard Shape.toString (Flow.eval (Flow.Examples.cutPaintBothCombine .blue) sampleShape) ==
   Shape.toString (Shape.paint sampleShape .blue)
 
+#guard Shape.toString (Flow.eval Flow.Examples.cutKeepEast sampleShape) ==
+  Shape.toString (Shape.eastHalf sampleShape)
+
+#guard Shape.toString (Flow.eval Flow.Examples.cutKeepWest sampleShape) ==
+  Shape.toString (Shape.westHalf sampleShape)
+
 example :
     Flow.eval (Flow.Examples.rotateThenPaint .red) sampleShape =
       Shape.paint (Shape.rotateCW sampleShape) .red := rfl
@@ -58,6 +64,14 @@ example :
 example :
     Flow.eval Flow.Examples.cutThenCombine sampleShape = sampleShape := by
   exact Flow.Examples.cutThenCombine_equivalent_id sampleShape
+
+example :
+    Flow.eval Flow.Examples.cutKeepEast sampleShape = Shape.eastHalf sampleShape :=
+  Flow.Examples.cutKeepEast_eval sampleShape
+
+example :
+    Flow.eval Flow.Examples.cutKeepWest sampleShape = Shape.westHalf sampleShape :=
+  Flow.Examples.cutKeepWest_eval sampleShape
 
 noncomputable section
 
@@ -81,6 +95,16 @@ example :
       Shape.stack (Shape.swap sampleShape sampleShape).1
         (Shape.swap sampleShape sampleShape).2 GameConfig.vanilla4 :=
   Flow.Examples.swapThenStack_eval GameConfig.vanilla4 (sampleShape, sampleShape)
+
+example :
+    Flow.eval Flow.Examples.swapKeepFirst (sampleShape, Shape.empty) =
+      (Shape.swap sampleShape Shape.empty).1 :=
+  Flow.Examples.swapKeepFirst_eval (sampleShape, Shape.empty)
+
+example :
+    Flow.eval Flow.Examples.swapKeepSecond (sampleShape, Shape.empty) =
+      (Shape.swap sampleShape Shape.empty).2 :=
+  Flow.Examples.swapKeepSecond_eval (sampleShape, Shape.empty)
 
 end
 

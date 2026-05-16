@@ -49,6 +49,18 @@ def HalfTurnPairInputEquivariant (flow : Flow (Shape × Shape) Shape) : Prop :=
     Shape.rotate180 (Flow.eval flow input) =
       Flow.eval flow (Shape.rotate180 input.1, Shape.rotate180 input.2)
 
+/-- Unit 出力 flow が CW 回転入力に依存しないこと。 -/
+def CWUnitInvariant (flow : Flow Shape Unit) : Prop :=
+  ∀ shape, Flow.eval flow (Shape.rotateCW shape) = Flow.eval flow shape
+
+/-- Unit 出力 flow が 180° 回転入力に依存しないこと。 -/
+def HalfTurnUnitInvariant (flow : Flow Shape Unit) : Prop :=
+  ∀ shape, Flow.eval flow (Shape.rotate180 shape) = Flow.eval flow shape
+
+/-- Unit 出力 flow が CCW 回転入力に依存しないこと。 -/
+def CCWUnitInvariant (flow : Flow Shape Unit) : Prop :=
+  ∀ shape, Flow.eval flow (Shape.rotateCCW shape) = Flow.eval flow shape
+
 /-- `id` flow は CW 等変。 -/
 theorem CWEquivariant.id : CWEquivariant (Flow.id : Flow Shape Shape) := by
   intro shape
@@ -89,6 +101,11 @@ theorem CWEquivariant.pinPush (config : GameConfig) : CWEquivariant (Flow.pinPus
   intro shape
   exact Shape.pinPush.rotateCW_comm shape config
 
+/-- Trash flow は CW 回転入力に依存しない。 -/
+theorem CWUnitInvariant.trash : CWUnitInvariant Flow.trash := by
+  intro shape
+  exact Shape.trash.rotateCW_comm shape
+
 /-- `id` flow は 180° 等変。 -/
 theorem HalfTurnEquivariant.id : HalfTurnEquivariant (Flow.id : Flow Shape Shape) := by
   intro shape
@@ -125,6 +142,16 @@ theorem HalfTurnEquivariant.pinPush (config : GameConfig) :
     HalfTurnEquivariant (Flow.pinPush config) := by
   intro shape
   exact Shape.pinPush.rotate180_comm shape config
+
+/-- Trash flow は 180° 回転入力に依存しない。 -/
+theorem HalfTurnUnitInvariant.trash : HalfTurnUnitInvariant Flow.trash := by
+  intro shape
+  exact Shape.trash.rotate180_comm shape
+
+/-- Trash flow は CCW 回転入力に依存しない。 -/
+theorem CCWUnitInvariant.trash : CCWUnitInvariant Flow.trash := by
+  intro shape
+  exact Shape.trash.rotateCCW_comm shape
 
 /-- Cutter flow は 180° 回転で出力成分が swap される。 -/
 theorem HalfTurnSwapEquivariant.cut : HalfTurnSwapEquivariant Flow.cut := by

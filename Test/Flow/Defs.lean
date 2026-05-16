@@ -35,6 +35,10 @@ private def sampleShape : Shape := [sampleLayer]
       (Flow.prim (fun flag : Bool => !flag)))
     (3, false) == (4, true)
 
+#guard Flow.eval (Flow.dropFirst : Flow (Nat × Bool) Bool) (3, true) == true
+
+#guard Flow.eval (Flow.dropSecond : Flow (Nat × Bool) Nat) (3, true) == 3
+
 #guard Flow.eval (Flow.constant .blue : Flow Shape Color) sampleShape == Color.blue
 
 #guard Flow.eval (Flow.assocRight : Flow ((Nat × Bool) × Color) (Nat × (Bool × Color)))
@@ -48,6 +52,16 @@ private def sampleShape : Shape := [sampleLayer]
 
 #guard (Flow.eval Flow.cut sampleShape).1.length == 1
 #guard (Flow.eval Flow.cut sampleShape).2.length == 1
+
+#guard Flow.eval Flow.trash sampleShape == ()
+
+#guard Shape.toString
+    (Flow.eval (Flow.trashSecondShape : Flow (Shape × Shape) Shape) (sampleShape, Shape.empty)) ==
+  Shape.toString sampleShape
+
+#guard Shape.toString
+    (Flow.eval (Flow.trashFirstShape : Flow (Shape × Shape) Shape) (Shape.empty, sampleShape)) ==
+  Shape.toString sampleShape
 
 #guard Shape.toString
     (Flow.eval Flow.combineHalves (Shape.eastHalf sampleShape, Shape.westHalf sampleShape)) ==
@@ -88,5 +102,8 @@ example :
 
 example : Flow.CWEquivariant (Flow.id : Flow Shape Shape) :=
   Flow.CWEquivariant.id
+
+example : Flow.CWUnitInvariant Flow.trash :=
+  Flow.CWUnitInvariant.trash
 
 end Test.Flow.Defs
