@@ -21,6 +21,8 @@ import Test.Operations.Swapper
 import Test.Operations.Trash
 import Test.Flow.Defs
 import Test.Flow.Examples
+import Test.Flow.CharacteristicExamples
+-- import Test.Flow.CrazyFinal  -- Layer B/C 修正フェーズ完了後に再有効化
 
 /-!
 # Test root
@@ -51,4 +53,6 @@ Layer A 単体テスト群のエントリポイント。`#guard` ベースで `l
 | `Test.Operations.Trash` | trash の出力なしセマンティクス・回転不変性 |
 | `Test.Flow.Defs` | Layer C-1 Flow core の評価・等価性 smoke tests |
 | `Test.Flow.Examples` | Layer C-1 代表フローの smoke tests |
+| `Test.Flow.CharacteristicExamples` | ゲーム内の特徴的な加工フロー smoke tests |
+| `Test.Flow.CrazyFinal` | vanilla5 の難解な 5 レイヤ加工フロー smoke test（Layer B/C 修正中は無効化） |
 -/

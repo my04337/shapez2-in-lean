@@ -12,13 +12,19 @@ Shapez2 in Lean (S2IL) プロジェクトの最終目標・大きな方針・層
 
 | ファイル | 概要 |
 |---|---|
-| [MILESTONES.md](MILESTONES.md) | MAM 完全性に至る最終目標と、Data / Behavior / Flow / MAM の層構造 |
+| [MILESTONES.md](MILESTONES.md) | MAM 完全性・非Wire加工逆算ソルバーに至る最終目標と、Data / Behavior / Flow / MAM の層構造 |
 
 ### Layer C 設計 / 実装計画
 
 | ファイル | 概要 |
 |---|---|
 | [layer-c-flow-design-implementation-plan.md](layer-c-flow-design-implementation-plan.md) | Layer C Flow のスコープ、型付き Flow DSL 方針、C-1/C-2 実装ロードマップ |
+
+### Layer B/C モデリング修正計画
+
+| ファイル | 概要 |
+|---|---|
+| [layer-bc-device-modeling-repair-plan.md](layer-bc-device-modeling-repair-plan.md) | Layer B の装置セマンティクス疑義、ゲーム検証ケース、Layer C 追従 TODO |
 
 ### 確立済みアーキテクチャ資料
 
@@ -34,6 +40,7 @@ Shapez2 in Lean (S2IL) プロジェクトの最終目標・大きな方針・層
 |---|---|
 | プロジェクト全体の位置付けを確認 | `MILESTONES.md` |
 | Layer C Flow の設計・実装に着手 | `layer-c-flow-design-implementation-plan.md` |
+| Layer B/C の装置モデリング修正を進める | `layer-bc-device-modeling-repair-plan.md` |
 | Layer A/B の構造原則を確認 | `../s2il/architecture-layer-ab.md` |
 | 個別 sorry の現状を確認 | `../../S2IL/_agent/sorry-plan.json` / `../../S2IL/_agent/sorry-goals.md` |
 | 新しい証明計画を策定する | `../agent/proof-plan-current-focus-guide.md` |
